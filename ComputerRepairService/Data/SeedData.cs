@@ -147,6 +147,46 @@ namespace ComputerRepairService.Data
                     logger.LogInformation($"Сотрудник '{employeeEmail}' уже существует");
                 }
 
+                // Для существующего/нового сотрудника всегда гарантируем роль и Technician-профиль
+                if (!await userManager.IsInRoleAsync(employeeUser, "Employee"))
+                {
+                    await userManager.AddToRoleAsync(employeeUser, "Employee");
+                    logger.LogInformation($"Роль 'Employee' назначена пользователю '{employeeEmail}'");
+                }
+
+                var linkedTechnician = await context.Technicians
+                    .FirstOrDefaultAsync(t => t.UserId == employeeUser.Id);
+
+                if (linkedTechnician == null)
+                {
+                    var technicianByEmail = await context.Technicians
+                        .FirstOrDefaultAsync(t => t.Email == employeeEmail);
+
+                    if (technicianByEmail != null)
+                    {
+                        technicianByEmail.UserId = employeeUser.Id;
+                        logger.LogInformation($"Technician '{employeeEmail}' привязан к Identity UserId");
+                    }
+                    else
+                    {
+                        context.Technicians.Add(new Technician
+                        {
+                            FirstName = employeeUser.FirstName ?? "Сотрудник",
+                            LastName = employeeUser.LastName ?? "Сервиса",
+                            Email = employeeEmail,
+                            Phone = "+79991112233",
+                            Specialization = "Общий ремонт",
+                            HireDate = DateTime.UtcNow.AddYears(-1),
+                            HourlyRate = 500.00m,
+                            IsActive = true,
+                            UserId = employeeUser.Id
+                        });
+                        logger.LogInformation($"Создан Technician для существующего пользователя '{employeeEmail}'");
+                    }
+
+                    await context.SaveChangesAsync();
+                }
+
                 // 4. Создание тестового клиента
                 var clientEmail = "client@example.com";
                 var clientUser = await userManager.FindByEmailAsync(clientEmail);
@@ -209,6 +249,45 @@ namespace ComputerRepairService.Data
                 {
                     Console.WriteLine($"Клиент уже существует: {clientEmail}");
                     logger.LogInformation($"Клиент '{clientEmail}' уже существует");
+                }
+
+                // Для существующего/нового клиента всегда гарантируем роль и Customer-профиль
+                if (!await userManager.IsInRoleAsync(clientUser, "Client"))
+                {
+                    await userManager.AddToRoleAsync(clientUser, "Client");
+                    logger.LogInformation($"Роль 'Client' назначена пользователю '{clientEmail}'");
+                }
+
+                var linkedCustomer = await context.Customers
+                    .FirstOrDefaultAsync(c => c.UserId == clientUser.Id);
+
+                if (linkedCustomer == null)
+                {
+                    var customerByEmail = await context.Customers
+                        .FirstOrDefaultAsync(c => c.Email == clientEmail);
+
+                    if (customerByEmail != null)
+                    {
+                        customerByEmail.UserId = clientUser.Id;
+                        logger.LogInformation($"Customer '{clientEmail}' привязан к Identity UserId");
+                    }
+                    else
+                    {
+                        context.Customers.Add(new Customer
+                        {
+                            FirstName = clientUser.FirstName ?? "Клиент",
+                            LastName = clientUser.LastName ?? "Сервиса",
+                            Email = clientEmail,
+                            Phone = "+79991234567",
+                            Address = "ул. Тестовая, д. 1",
+                            RegistrationDate = DateTime.UtcNow.AddDays(-30),
+                            IsActive = true,
+                            UserId = clientUser.Id
+                        });
+                        logger.LogInformation($"Создан Customer для существующего пользователя '{clientEmail}'");
+                    }
+
+                    await context.SaveChangesAsync();
                 }
 
                 Console.WriteLine("=== SEED DATA COMPLETED SUCCESSFULLY ===");

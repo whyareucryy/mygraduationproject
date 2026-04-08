@@ -102,6 +102,20 @@ namespace ComputerRepairService.Controllers
             var technician = await _context.Technicians
                 .FirstOrDefaultAsync(t => t.UserId == user.Id);
 
+            // Fallback для старых записей: профиль Technician мог быть создан раньше,
+            // но без привязки UserId к Identity-пользователю.
+            if (technician == null && !string.IsNullOrWhiteSpace(user.Email))
+            {
+                technician = await _context.Technicians
+                    .FirstOrDefaultAsync(t => t.Email == user.Email);
+
+                if (technician != null && string.IsNullOrWhiteSpace(technician.UserId))
+                {
+                    technician.UserId = user.Id;
+                    await _context.SaveChangesAsync();
+                }
+            }
+
             if (technician == null)
             {
                 TempData["ErrorMessage"] = "Профиль мастера не найден. Обратитесь к администратору.";
