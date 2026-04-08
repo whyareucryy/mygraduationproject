@@ -83,6 +83,9 @@ namespace ComputerRepairService.Controllers
                 ModelState.AddModelError(nameof(inventory.ReorderLevel), "Минимальный запас не может быть отрицательным.");
             }
 
+            ModelState.Remove(nameof(Inventory.PartCategory));
+            ModelState.Remove(nameof(Inventory.OrderParts));
+
             if (ModelState.IsValid)
             {
                 inventory.IsActive = true;
