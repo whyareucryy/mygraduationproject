@@ -1,0 +1,43 @@
+﻿@model ComputerRepairService.Models.Entities.Inventory
+
+@{
+    ViewData["Title"] = "Удаление позиции склада";
+}
+
+<div class="container mt-4">
+    <h2 class="mb-4 text-danger"><i class="fas fa-trash"></i> Удаление позиции</h2>
+
+    <div class="alert alert-warning">
+        Позиция не удаляется физически из базы — она будет скрыта из активного списка склада.
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-danger text-white">
+            Подтвердите удаление
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-3">Название</dt>
+                <dd class="col-sm-9">@Model.PartName</dd>
+
+                <dt class="col-sm-3">Категория</dt>
+                <dd class="col-sm-9">@Model.PartCategory?.CategoryName</dd>
+
+                <dt class="col-sm-3">Остаток</dt>
+                <dd class="col-sm-9">@Model.QuantityInStock</dd>
+
+                <dt class="col-sm-3">Цена</dt>
+                <dd class="col-sm-9">@Model.UnitPrice.ToString("C")</dd>
+            </dl>
+        </div>
+        <div class="card-footer">
+            <form asp-action="Delete">
+                <input type="hidden" asp-for="PartId" />
+                <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-trash"></i> Подтвердить удаление
+                </button>
+                <a asp-action="Index" class="btn btn-secondary ms-2">Отмена</a>
+            </form>
+        </div>
+    </div>
+</div>

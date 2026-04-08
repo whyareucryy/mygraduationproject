@@ -1,0 +1,42 @@
+﻿@model ComputerRepairService.Models.Entities.Inventory
+
+@{
+    ViewData["Title"] = "Пополнение склада";
+}
+
+<div class="container mt-4">
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle"></i> @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <h2 class="mb-4"><i class="fas fa-plus-circle"></i> Пополнение: @Model.PartName</h2>
+
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">Текущее состояние</div>
+                <div class="card-body">
+                    <p class="mb-2"><strong>Категория:</strong> @Model.PartCategory?.CategoryName</p>
+                    <p class="mb-2"><strong>Текущий остаток:</strong> @Model.QuantityInStock</p>
+                    <p class="mb-0"><strong>Мин. запас:</strong> @Model.ReorderLevel</p>
+                </div>
+            </div>
+
+            <form asp-action="Restock" method="post">
+                <input type="hidden" name="id" value="@Model.PartId" />
+                <div class="mb-3">
+                    <label for="quantity" class="form-label">Количество для пополнения</label>
+                    <input id="quantity" name="quantity" type="number" class="form-control" min="1" required />
+                </div>
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-save"></i> Подтвердить пополнение
+                </button>
+                <a asp-action="Index" class="btn btn-secondary ms-2">Отмена</a>
+            </form>
+        </div>
+    </div>
+</div>

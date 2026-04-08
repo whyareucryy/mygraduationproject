@@ -1,0 +1,52 @@
+﻿@model IEnumerable<ComputerRepairService.Models.Entities.Inventory>
+
+@{
+    ViewData["Title"] = "Низкий запас";
+    var items = Model.ToList();
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0 text-warning"><i class="fas fa-exclamation-triangle"></i> Низкий запас</h2>
+        <a asp-action="Index" class="btn btn-outline-secondary"><i class="fas fa-arrow-left"></i> К складу</a>
+    </div>
+
+    @if (!items.Any())
+    {
+        <div class="alert alert-success">Отлично! Критически низких остатков нет.</div>
+    }
+    else
+    {
+        <div class="card shadow-sm">
+            <div class="table-responsive">
+                <table class="table table-striped mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Название</th>
+                            <th>Категория</th>
+                            <th>Остаток</th>
+                            <th>Мин. запас</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in items)
+                        {
+                            <tr>
+                                <td>@item.PartName</td>
+                                <td>@item.PartCategory?.CategoryName</td>
+                                <td class="text-danger fw-bold">@item.QuantityInStock</td>
+                                <td>@item.ReorderLevel</td>
+                                <td>
+                                    <a asp-action="Restock" asp-route-id="@item.PartId" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-plus-circle"></i> Пополнить
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>

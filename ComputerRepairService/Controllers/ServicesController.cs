@@ -44,14 +44,14 @@ namespace ComputerRepairService.Controllers
         }
 
         // GET: Services/Create
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Employee")]
         public IActionResult Create()
         {
             return View();
         }
 
         // POST: Services/Create
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Employee")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Service service)
@@ -67,7 +67,7 @@ namespace ComputerRepairService.Controllers
         }
 
         // GET: Services/Edit/5
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Employee")]
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
@@ -84,7 +84,7 @@ namespace ComputerRepairService.Controllers
         }
 
         // POST: Services/Edit/5
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Employee")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, Service service)
@@ -118,7 +118,7 @@ namespace ComputerRepairService.Controllers
         }
 
         // GET: Services/Delete/5
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Employee")]
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
@@ -137,7 +137,7 @@ namespace ComputerRepairService.Controllers
         }
 
         // POST: Services/Delete/5
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Employee")]
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)

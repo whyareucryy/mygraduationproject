@@ -2,55 +2,215 @@
 
 @{
     ViewData["Title"] = "Склад запчастей";
+
+    var items = Model.OrderBy(i => i.PartName).ToList();
+    var lowStockCount = items.Count(i => i.QuantityInStock <= i.ReorderLevel);
+    var inStockCount = items.Count(i => i.QuantityInStock > i.ReorderLevel * 2);
+    var mediumStockCount = items.Count(i => i.QuantityInStock > i.ReorderLevel && i.QuantityInStock <= i.ReorderLevel * 2);
+    var totalValue = items.Sum(i => i.QuantityInStock * i.UnitPrice);
 }
 
-<h2>📦 Склад запчастей</h2>
+<div class="container mt-4">
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
 
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Название</th>
-            <th>Категория</th>
-            <th>Количество на складе</th>
-            <th>Цена за единицу</th>
-            <th>Минимальный запас</th>
-            <th>Статус</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model)
-        {
-            <tr>
-                <td>@item.PartName</td>
-                <td>@item.PartCategory?.CategoryName</td>
-                <td>
-                    <span class="@(item.QuantityInStock <= item.ReorderLevel ? "text-danger fw-bold" : "")">
-                        @item.QuantityInStock
-                    </span>
-                </td>
-                <td>@item.UnitPrice.ToString("C")</td>
-                <td>@item.ReorderLevel</td>
-                <td>
-                    @if (item.QuantityInStock <= item.ReorderLevel)
-                    {
-                        <span class="badge bg-danger">Низкий запас</span>
-                    }
-                    else if (item.QuantityInStock <= item.ReorderLevel * 2)
-                    {
-                        <span class="badge bg-warning">Средний запас</span>
-                    }
-                    else
-                    {
-                        <span class="badge bg-success">В норме</span>
-                    }
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle"></i> @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
 
-<div class="mt-4">
-    <a asp-controller="Dashboard" asp-action="Index" class="btn btn-secondary">
-        <i class="fas fa-arrow-left"></i> Назад к дашборду
-    </a>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <h2 class="mb-0"><i class="fas fa-boxes"></i> Склад запчастей</h2>
+        <div class="btn-group" role="group">
+            <a asp-action="Create" class="btn btn-success">
+                <i class="fas fa-plus"></i> Добавить позицию
+            </a>
+            <a asp-action="LowStock" class="btn btn-warning">
+                <i class="fas fa-exclamation-triangle"></i> Низкий запас
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body text-center">
+                    <h4 class="mb-1">@items.Count</h4>
+                    <p class="small mb-0">Всего позиций</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body text-center">
+                    <h4 class="mb-1">@inStockCount</h4>
+                    <p class="small mb-0">В норме</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body text-center">
+                    <h4 class="mb-1">@mediumStockCount</h4>
+                    <p class="small mb-0">Средний запас</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card bg-danger text-white h-100">
+                <div class="card-body text-center">
+                    <h4 class="mb-1">@lowStockCount</h4>
+                    <p class="small mb-0">Низкий запас</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-6">
+                    <label for="searchInput" class="form-label">Поиск</label>
+                    <input id="searchInput" class="form-control" type="text" placeholder="Название, категория, поставщик..." />
+                </div>
+                <div class="col-md-3">
+                    <label for="statusFilter" class="form-label">Статус запаса</label>
+                    <select id="statusFilter" class="form-select">
+                        <option value="all">Все</option>
+                        <option value="low">Низкий</option>
+                        <option value="medium">Средний</option>
+                        <option value="ok">В норме</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label d-block">Итоговая стоимость</label>
+                    <span class="badge bg-dark fs-6">@totalValue.ToString("C")</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (!items.Any())
+    {
+        <div class="card border-info">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-warehouse fa-3x text-info mb-3"></i>
+                <h4>Склад пока пуст</h4>
+                <p class="text-muted">Добавьте первую позицию, чтобы начать учет расходников.</p>
+                <a asp-action="Create" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Добавить позицию
+                </a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card shadow-sm">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="inventoryTable">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Название</th>
+                            <th>Категория</th>
+                            <th>Остаток</th>
+                            <th>Мин. запас</th>
+                            <th>Цена</th>
+                            <th>Поставщик</th>
+                            <th>Статус</th>
+                            <th class="text-end">Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in items)
+                        {
+                            var stockStatus = item.QuantityInStock <= item.ReorderLevel
+                                ? "low"
+                                : (item.QuantityInStock <= item.ReorderLevel * 2 ? "medium" : "ok");
+                            <tr data-status="@stockStatus" data-search="@($"{item.PartName} {item.PartCategory?.CategoryName} {item.SupplierInfo}".ToLower())">
+                                <td>
+                                    <div class="fw-semibold">@item.PartName</div>
+                                    <small class="text-muted">#@item.PartId</small>
+                                </td>
+                                <td>@(item.PartCategory?.CategoryName ?? "—")</td>
+                                <td>
+                                    <span class="@(item.QuantityInStock <= item.ReorderLevel ? "text-danger fw-bold" : "")">@item.QuantityInStock</span>
+                                </td>
+                                <td>@item.ReorderLevel</td>
+                                <td>@item.UnitPrice.ToString("C")</td>
+                                <td>@(string.IsNullOrWhiteSpace(item.SupplierInfo) ? "Не указан" : item.SupplierInfo)</td>
+                                <td>
+                                    @if (stockStatus == "low")
+                                    {
+                                        <span class="badge bg-danger">Низкий запас</span>
+                                    }
+                                    else if (stockStatus == "medium")
+                                    {
+                                        <span class="badge bg-warning text-dark">Средний запас</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success">В норме</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a asp-action="Details" asp-route-id="@item.PartId" class="btn btn-info" title="Детали">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a asp-action="Restock" asp-route-id="@item.PartId" class="btn btn-secondary" title="Пополнить">
+                                            <i class="fas fa-plus-circle"></i>
+                                        </a>
+                                        <a asp-action="Edit" asp-route-id="@item.PartId" class="btn btn-warning" title="Редактировать">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a asp-action="Delete" asp-route-id="@item.PartId" class="btn btn-danger" title="Удалить">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
 </div>
+
+@section Scripts {
+    <script>
+        const searchInput = document.getElementById('searchInput');
+        const statusFilter = document.getElementById('statusFilter');
+        const rows = document.querySelectorAll('#inventoryTable tbody tr');
+
+        function applyFilters() {
+            const text = (searchInput?.value || '').toLowerCase().trim();
+            const status = statusFilter?.value || 'all';
+
+            rows.forEach(row => {
+                const rowStatus = row.dataset.status;
+                const rowSearch = row.dataset.search || '';
+
+                const statusMatch = status === 'all' || rowStatus === status;
+                const textMatch = !text || rowSearch.includes(text);
+
+                row.style.display = statusMatch && textMatch ? '' : 'none';
+            });
+        }
+
+        searchInput?.addEventListener('input', applyFilters);
+        statusFilter?.addEventListener('change', applyFilters);
+
+        setTimeout(function () {
+            $('.alert').alert('close');
+        }, 5000);
+    </script>
+}

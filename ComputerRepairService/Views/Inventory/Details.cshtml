@@ -1,0 +1,58 @@
+﻿@model ComputerRepairService.Models.Entities.Inventory
+
+@{
+    ViewData["Title"] = "Детали позиции склада";
+    var usageCount = Model.OrderParts?.Count ?? 0;
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0"><i class="fas fa-info-circle"></i> @Model.PartName</h2>
+        <div class="btn-group">
+            <a asp-action="Edit" asp-route-id="@Model.PartId" class="btn btn-warning"><i class="fas fa-edit"></i> Редактировать</a>
+            <a asp-action="Restock" asp-route-id="@Model.PartId" class="btn btn-secondary"><i class="fas fa-plus-circle"></i> Пополнить</a>
+            <a asp-action="Index" class="btn btn-outline-secondary"><i class="fas fa-arrow-left"></i> Назад</a>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">Информация</div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">ID</dt>
+                        <dd class="col-sm-8">@Model.PartId</dd>
+
+                        <dt class="col-sm-4">Категория</dt>
+                        <dd class="col-sm-8">@Model.PartCategory?.CategoryName</dd>
+
+                        <dt class="col-sm-4">Описание</dt>
+                        <dd class="col-sm-8">@(string.IsNullOrWhiteSpace(Model.Description) ? "Нет описания" : Model.Description)</dd>
+
+                        <dt class="col-sm-4">Поставщик</dt>
+                        <dd class="col-sm-8">@(string.IsNullOrWhiteSpace(Model.SupplierInfo) ? "Не указан" : Model.SupplierInfo)</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card mb-3">
+                <div class="card-header bg-info text-white">Складские данные</div>
+                <div class="card-body">
+                    <p class="mb-2"><strong>Остаток:</strong> @Model.QuantityInStock</p>
+                    <p class="mb-2"><strong>Мин. запас:</strong> @Model.ReorderLevel</p>
+                    <p class="mb-0"><strong>Цена:</strong> @Model.UnitPrice.ToString("C")</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header bg-dark text-white">Использование</div>
+                <div class="card-body">
+                    <p class="mb-0">Использована в заказах: <span class="badge bg-secondary">@usageCount</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

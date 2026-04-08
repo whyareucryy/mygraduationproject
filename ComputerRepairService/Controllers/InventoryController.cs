@@ -2,6 +2,7 @@
 using ComputerRepairService.Models.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 
 namespace ComputerRepairService.Controllers
@@ -16,16 +17,21 @@ namespace ComputerRepairService.Controllers
             _context = context;
         }
 
+        [Authorize(Roles = "Admin,Employee")]
         // GET: Inventory
         public async Task<IActionResult> Index()
         {
             var inventory = await _context.Inventory
                 .Include(i => i.PartCategory)
                 .Where(i => i.IsActive)
+                .OrderBy(i => i.QuantityInStock <= i.ReorderLevel)
+                .ThenBy(i => i.PartName)
                 .ToListAsync();
+
             return View(inventory);
         }
 
+        [Authorize(Roles = "Admin,Employee")]
         // GET: Inventory/Details/5
         public async Task<IActionResult> Details(int? id)
         {
@@ -38,7 +44,7 @@ namespace ComputerRepairService.Controllers
                 .Include(i => i.PartCategory)
                 .Include(i => i.OrderParts)
                     .ThenInclude(op => op.ServiceOrder)
-                .FirstOrDefaultAsync(m => m.PartId == id);
+                .FirstOrDefaultAsync(m => m.PartId == id && m.IsActive);
 
             if (inventory == null)
             {
@@ -48,33 +54,50 @@ namespace ComputerRepairService.Controllers
             return View(inventory);
         }
 
+        [Authorize(Roles = "Admin,Employee")]
         // GET: Inventory/Create
-        [Authorize(Roles = "Admin")]
         public IActionResult Create()
         {
-            ViewData["CategoryId"] = _context.PartCategories.ToList();
-            return View();
+            LoadCategories();
+            return View(new Inventory());
         }
 
+        [Authorize(Roles = "Admin,Employee")]
         // POST: Inventory/Create
-        [Authorize(Roles = "Admin")]
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(Inventory inventory)
+        public async Task<IActionResult> Create([Bind("PartName,Description,CategoryId,QuantityInStock,UnitPrice,ReorderLevel,SupplierInfo")] Inventory inventory)
         {
+            if (inventory.QuantityInStock < 0)
+            {
+                ModelState.AddModelError(nameof(inventory.QuantityInStock), "Количество не может быть отрицательным.");
+            }
+
+            if (inventory.UnitPrice < 0)
+            {
+                ModelState.AddModelError(nameof(inventory.UnitPrice), "Цена не может быть отрицательной.");
+            }
+
+            if (inventory.ReorderLevel < 0)
+            {
+                ModelState.AddModelError(nameof(inventory.ReorderLevel), "Минимальный запас не может быть отрицательным.");
+            }
+
             if (ModelState.IsValid)
             {
                 inventory.IsActive = true;
                 _context.Add(inventory);
                 await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = "Позиция успешно добавлена на склад.";
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["CategoryId"] = _context.PartCategories.ToList();
+
+            LoadCategories(inventory.CategoryId);
             return View(inventory);
         }
 
+        [Authorize(Roles = "Admin,Employee")]
         // GET: Inventory/Edit/5
-        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
@@ -82,24 +105,42 @@ namespace ComputerRepairService.Controllers
                 return NotFound();
             }
 
-            var inventory = await _context.Inventory.FindAsync(id);
+            var inventory = await _context.Inventory
+                .FirstOrDefaultAsync(i => i.PartId == id && i.IsActive);
+
             if (inventory == null)
             {
                 return NotFound();
             }
-            ViewData["CategoryId"] = _context.PartCategories.ToList();
+
+            LoadCategories(inventory.CategoryId);
             return View(inventory);
         }
 
+        [Authorize(Roles = "Admin,Employee")]
         // POST: Inventory/Edit/5
-        [Authorize(Roles = "Admin")]
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, Inventory inventory)
+        public async Task<IActionResult> Edit(int id, [Bind("PartId,PartName,Description,CategoryId,QuantityInStock,UnitPrice,ReorderLevel,SupplierInfo,IsActive")] Inventory inventory)
         {
             if (id != inventory.PartId)
             {
                 return NotFound();
+            }
+
+            if (inventory.QuantityInStock < 0)
+            {
+                ModelState.AddModelError(nameof(inventory.QuantityInStock), "Количество не может быть отрицательным.");
+            }
+
+            if (inventory.UnitPrice < 0)
+            {
+                ModelState.AddModelError(nameof(inventory.UnitPrice), "Цена не может быть отрицательной.");
+            }
+
+            if (inventory.ReorderLevel < 0)
+            {
+                ModelState.AddModelError(nameof(inventory.ReorderLevel), "Минимальный запас не может быть отрицательным.");
             }
 
             if (ModelState.IsValid)
@@ -108,6 +149,7 @@ namespace ComputerRepairService.Controllers
                 {
                     _context.Update(inventory);
                     await _context.SaveChangesAsync();
+                    TempData["SuccessMessage"] = "Позиция склада успешно обновлена.";
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -115,19 +157,19 @@ namespace ComputerRepairService.Controllers
                     {
                         return NotFound();
                     }
-                    else
-                    {
-                        throw;
-                    }
+
+                    throw;
                 }
+
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["CategoryId"] = _context.PartCategories.ToList();
+
+            LoadCategories(inventory.CategoryId);
             return View(inventory);
         }
 
+        [Authorize(Roles = "Admin,Employee")]
         // GET: Inventory/Delete/5
-        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
@@ -137,7 +179,8 @@ namespace ComputerRepairService.Controllers
 
             var inventory = await _context.Inventory
                 .Include(i => i.PartCategory)
-                .FirstOrDefaultAsync(m => m.PartId == id);
+                .FirstOrDefaultAsync(m => m.PartId == id && m.IsActive);
+
             if (inventory == null)
             {
                 return NotFound();
@@ -147,7 +190,7 @@ namespace ComputerRepairService.Controllers
         }
 
         // POST: Inventory/Delete/5
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Employee")]
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
@@ -157,22 +200,27 @@ namespace ComputerRepairService.Controllers
             {
                 inventory.IsActive = false;
                 _context.Update(inventory);
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = "Позиция удалена из активного склада.";
             }
 
-            await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 
+        [Authorize(Roles = "Admin,Employee")]
         // GET: Inventory/LowStock
         public async Task<IActionResult> LowStock()
         {
             var lowStockItems = await _context.Inventory
                 .Include(i => i.PartCategory)
                 .Where(i => i.QuantityInStock <= i.ReorderLevel && i.IsActive)
+                .OrderBy(i => i.QuantityInStock)
                 .ToListAsync();
+
             return View(lowStockItems);
         }
 
+        [Authorize(Roles = "Admin,Employee")]
         // GET: Inventory/Restock/5
         public async Task<IActionResult> Restock(int? id)
         {
@@ -181,7 +229,10 @@ namespace ComputerRepairService.Controllers
                 return NotFound();
             }
 
-            var inventory = await _context.Inventory.FindAsync(id);
+            var inventory = await _context.Inventory
+                .Include(i => i.PartCategory)
+                .FirstOrDefaultAsync(i => i.PartId == id && i.IsActive);
+
             if (inventory == null)
             {
                 return NotFound();
@@ -190,25 +241,35 @@ namespace ComputerRepairService.Controllers
             return View(inventory);
         }
 
+        [Authorize(Roles = "Admin,Employee")]
         // POST: Inventory/Restock/5
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Restock(int id, int quantity)
         {
             var inventory = await _context.Inventory.FindAsync(id);
-            if (inventory == null)
+            if (inventory == null || !inventory.IsActive)
             {
                 return NotFound();
             }
 
-            if (quantity > 0)
+            if (quantity <= 0)
             {
-                inventory.QuantityInStock += quantity;
-                _context.Update(inventory);
-                await _context.SaveChangesAsync();
+                TempData["ErrorMessage"] = "Количество пополнения должно быть больше нуля.";
+                return RedirectToAction(nameof(Restock), new { id });
             }
 
+            inventory.QuantityInStock += quantity;
+            _context.Update(inventory);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Остаток успешно пополнен.";
             return RedirectToAction(nameof(Index));
+        }
+
+        private void LoadCategories(int? selectedCategoryId = null)
+        {
+            ViewData["CategoryId"] = new SelectList(_context.PartCategories.OrderBy(c => c.CategoryName), "CategoryId", "CategoryName", selectedCategoryId);
         }
 
         private bool InventoryExists(int id)
