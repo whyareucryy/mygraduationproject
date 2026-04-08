@@ -99,10 +99,12 @@ namespace ComputerRepairService.Controllers
         public async Task<IActionResult> MyAssignedOrders()
         {
             var user = await _userManager.GetUserAsync(User);
-            var technician = await _context.Technicians
-                .FirstOrDefaultAsync(t => t.UserId == user.Id);
+            var technicianIds = await _context.Technicians
+               .Where(t => t.UserId == user.Id || (!string.IsNullOrWhiteSpace(user.Email) && t.Email == user.Email))
+               .Select(t => t.TechnicianId)
+               .ToListAsync();
 
-            // Fallback для старых записей: профиль Technician мог быть создан раньше,
+            /* //Fallback для старых записей: профиль Technician мог быть создан раньше,
             // но без привязки UserId к Identity-пользователю.
             if (technician == null && !string.IsNullOrWhiteSpace(user.Email))
             {
@@ -114,21 +116,38 @@ namespace ComputerRepairService.Controllers
                     technician.UserId = user.Id;
                     await _context.SaveChangesAsync();
                 }
-            }
+            } 
+            */
 
-            if (technician == null)
+            if (!technicianIds.Any())
             {
                 TempData["ErrorMessage"] = "Профиль мастера не найден. Обратитесь к администратору.";
                 return RedirectToAction("Index", "Home");
             }
 
+            // Самовосстановление связи UserId для legacy-записей Technician
+            var unlinkedTechnicians = await _context.Technicians
+                .Where(t => technicianIds.Contains(t.TechnicianId) && string.IsNullOrWhiteSpace(t.UserId))
+                .ToListAsync();
+
+            if (unlinkedTechnicians.Any())
+            {
+                foreach (var tech in unlinkedTechnicians)
+                {
+                    tech.UserId = user.Id;
+                }
+                await _context.SaveChangesAsync();
+            }
+
             var serviceOrders = await _context.ServiceOrders
-                .Where(so => so.OrderTechnicians.Any(ot => ot.TechnicianId == technician.TechnicianId))
+                .Where(so =>
+                    so.OrderTechnicians.Any(ot => technicianIds.Contains(ot.TechnicianId))) //убрал часть кода потому что была ошибка
                 .Include(so => so.Customer)
                 .Include(so => so.DeviceType)
                 .Include(so => so.OrderStatus)
                 .Include(so => so.OrderTechnicians)
                     .ThenInclude(ot => ot.Technician)
+                .Distinct()
                 .OrderByDescending(so => so.CreatedDate)
                 .ToListAsync();
 

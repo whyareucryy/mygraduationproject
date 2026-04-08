@@ -41,7 +41,7 @@
         <div class="col-md-3">
             <div class="card bg-warning text-dark">
                 <div class="card-body text-center py-3">
-                    <h4 class="card-title mb-1">@Model.Count(o => o.OrderStatus?.StatusName == "Диагностика")</h4>
+                    <h4 class="card-title mb-1">@Model.Count(o => o.StatusId == 2)</h4>
                     <p class="card-text small mb-0">На диагностике</p>
                 </div>
             </div>
@@ -50,14 +50,14 @@
             <div class="card bg-info text-white">
                 <div class="card-body text-center py-3">
                     <h4 class="card-title mb-1">@Model.Count(o => o.OrderStatus?.StatusName == "В ремонте")</h4>
-                    <p class="card-text small mb-0">В ремонте</p>
+                    <h4 class="card-title mb-1">@Model.Count(o => o.StatusId == 4)</h4>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card bg-danger text-white">
                 <div class="card-body text-center py-3">
-                    <h4 class="card-title mb-1">@Model.Count(o => o.Priority == 3)</h4>
+                    <h4 class="card-title mb-1">@Model.Count(o => o.Priority >= 3)</h4>
                     <p class="card-text small mb-0">Высокий приоритет</p>
                 </div>
             </div>
@@ -96,7 +96,7 @@
                 <tbody>
                     @foreach (var order in Model.OrderByDescending(o => o.Priority).ThenByDescending(o => o.CreatedDate))
                     {
-                        <tr data-status="@order.OrderStatus?.StatusName?.ToLower()">
+                        <tr data-status-id="@order.StatusId">
                             <td><strong>#@order.OrderId</strong></td>
                             <td>
                                 @if (order.Customer != null)
@@ -173,18 +173,18 @@
             const rows = document.querySelectorAll('#ordersTable tbody tr');
 
             rows.forEach(row => {
-                const status = row.getAttribute('data-status');
+                const statusId = parseInt(row.getAttribute('data-status-id'));
                 let show = true;
 
                 switch(filter) {
                     case 'active':
-                        show = status === 'диагностика' || status === 'в ремонте' || status === 'ожидание запчастей';
+                        show = statusId === 2 || statusId === 3 || statusId === 4;
                         break;
                     case 'diagnostics':
-                        show = status === 'диагностика';
+                        show = statusId === 2;
                         break;
                     case 'repair':
-                        show = status === 'в ремонте';
+                        show = statusId === 4;
                         break;
                     // 'all' - показываем все
                 }
