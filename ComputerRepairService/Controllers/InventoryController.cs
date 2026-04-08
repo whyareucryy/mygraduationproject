@@ -121,13 +121,8 @@ namespace ComputerRepairService.Controllers
         // POST: Inventory/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("PartId,PartName,Description,CategoryId,QuantityInStock,UnitPrice,ReorderLevel,SupplierInfo,IsActive")] Inventory inventory)
+        public async Task<IActionResult> Edit([Bind("PartId,PartName,Description,CategoryId,QuantityInStock,UnitPrice,ReorderLevel,SupplierInfo,IsActive")] Inventory inventory)
         {
-            if (id != inventory.PartId)
-            {
-                return NotFound();
-            }
-
             if (inventory.QuantityInStock < 0)
             {
                 ModelState.AddModelError(nameof(inventory.QuantityInStock), "Количество не может быть отрицательным.");
@@ -143,29 +138,35 @@ namespace ComputerRepairService.Controllers
                 ModelState.AddModelError(nameof(inventory.ReorderLevel), "Минимальный запас не может быть отрицательным.");
             }
 
-            if (ModelState.IsValid)
+            ModelState.Remove(nameof(Inventory.PartCategory));
+            ModelState.Remove(nameof(Inventory.OrderParts));
+
+            if (!ModelState.IsValid)
             {
-                try
-                {
-                    _context.Update(inventory);
-                    await _context.SaveChangesAsync();
-                    TempData["SuccessMessage"] = "Позиция склада успешно обновлена.";
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!InventoryExists(inventory.PartId))
-                    {
-                        return NotFound();
-                    }
-
-                    throw;
-                }
-
-                return RedirectToAction(nameof(Index));
+                LoadCategories(inventory.CategoryId);
+                return View(inventory);
             }
 
-            LoadCategories(inventory.CategoryId);
-            return View(inventory);
+            var existingInventory = await _context.Inventory
+                .FirstOrDefaultAsync(i => i.PartId == inventory.PartId && i.IsActive);
+
+            if (existingInventory == null)
+            {
+                return NotFound();
+            }
+
+            existingInventory.PartName = inventory.PartName;
+            existingInventory.Description = inventory.Description;
+            existingInventory.CategoryId = inventory.CategoryId;
+            existingInventory.QuantityInStock = inventory.QuantityInStock;
+            existingInventory.UnitPrice = inventory.UnitPrice;
+            existingInventory.ReorderLevel = inventory.ReorderLevel;
+            existingInventory.SupplierInfo = inventory.SupplierInfo;
+
+            await _context.SaveChangesAsync();
+            TempData["SuccessMessage"] = "Позиция склада успешно обновлена.";
+
+            return RedirectToAction(nameof(Index));
         }
 
         [Authorize(Roles = "Admin,Employee")]
