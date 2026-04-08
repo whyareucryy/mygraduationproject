@@ -1,0 +1,71 @@
+﻿@model IEnumerable<ComputerRepairService.Models.Entities.Service>
+
+@{
+    ViewData["Title"] = "Услуги сервиса";
+    Layout = "_Layout";
+}
+
+<div class="container mt-4">
+    <h1 class="mb-4">Услуги сервиса</h1>
+
+    <p>
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Добавить услугу
+        </a>
+    </p>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">
+            Нет доступных услуг. Начните с добавления новой услуги.
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Название услуги</th>
+                        <th>Описание</th>
+                        <th>Базовая цена</th>
+                        <th>Длительность (мин)</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.ServiceId</td>
+                            <td>@item.ServiceName</td>
+                            <td>@(item.Description ?? "Нет описания")</td>
+                            <td>@item.BasePrice.ToString("C")</td>
+                            <td>@(item.EstimatedDuration?.ToString() ?? "Не указана")</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a asp-action="Details" asp-route-id="@item.ServiceId"
+                                       class="btn btn-sm btn-info" title="Подробнее">
+                                        <i class="fas fa-info-circle"></i>
+                                    </a>
+                                    @if (User.IsInRole("Admin"))
+                                    {
+                                        <a asp-action="Edit" asp-route-id="@item.ServiceId"
+                                           class="btn btn-sm btn-warning" title="Редактировать">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a asp-action="Delete" asp-route-id="@item.ServiceId"
+                                           class="btn btn-sm btn-danger" title="Удалить">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

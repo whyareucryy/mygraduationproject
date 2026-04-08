@@ -1,0 +1,108 @@
+﻿@model IEnumerable<ComputerRepairService.Models.Entities.Customer>
+
+@{
+    ViewData["Title"] = "Клиенты";
+}
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fas fa-check-circle"></i> @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>👥 Клиенты</h2>
+    <a asp-action="Create" class="btn btn-success">
+        <i class="fas fa-plus"></i> Добавить клиента
+    </a>
+</div>
+
+<!-- Поиск -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form asp-action="Search" method="get" class="row g-3">
+            <div class="col-md-8">
+                <input type="text" name="searchString" class="form-control" placeholder="Поиск по имени, фамилии, email или телефону..." value="@ViewBag.SearchString">
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="fas fa-search"></i> Найти
+                </button>
+                <a asp-action="Index" class="btn btn-outline-secondary">Сбросить</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        @if (Model.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Имя</th>
+                            <th>Email</th>
+                            <th>Телефон</th>
+                            <th>Адрес</th>
+                            <th>Дата регистрации</th>
+                            <th>Статус</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var customer in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <strong>@customer.FirstName @customer.LastName</strong>
+                                </td>
+                                <td>@customer.Email</td>
+                                <td>@customer.Phone</td>
+                                <td>@customer.Address</td>
+                                <td>@customer.RegistrationDate.ToString("dd.MM.yyyy")</td>
+                                <td>
+                                    @if (customer.IsActive)
+                                    {
+                                        <span class="badge bg-success">Активен</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Неактивен</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a asp-action="Details" asp-route-id="@customer.CustomerId" class="btn btn-info btn-sm" title="Детали">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a asp-action="Edit" asp-route-id="@customer.CustomerId" class="btn btn-warning btn-sm" title="Редактировать">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a asp-action="Delete" asp-route-id="@customer.CustomerId" class="btn btn-danger btn-sm" title="Удалить">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-4">
+                <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                <h4>Клиенты не найдены</h4>
+                <p class="text-muted">Начните с добавления первого клиента.</p>
+                <a asp-action="Create" class="btn btn-success">
+                    <i class="fas fa-plus"></i> Добавить клиента
+                </a>
+            </div>
+        }
+    </div>
+</div>

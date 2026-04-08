@@ -1,0 +1,207 @@
+﻿@model ComputerRepairService.Controllers.AccountInfoViewModel
+@using Microsoft.AspNetCore.Identity
+
+@{
+    ViewData["Title"] = "Информация об аккаунте";
+    Layout = "_Layout";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Главная</a></li>
+                    <li class="breadcrumb-item"><a asp-controller="Profile" asp-action="Index">Личный кабинет</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Информация об аккаунте</li>
+                </ol>
+            </nav>
+
+            <h2 class="mb-4">Информация об аккаунте</h2>
+
+            <div class="row">
+                <!-- Основная информация -->
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">Основная информация</h5>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row">
+                                <dt class="col-sm-4">Имя:</dt>
+                                <dd class="col-sm-8">@Model.User.FirstName @Model.User.LastName</dd>
+
+                                <dt class="col-sm-4">Email:</dt>
+                                <dd class="col-sm-8">
+                                    @Model.User.Email
+                                    @if (Model.EmailConfirmed)
+                                    {
+                                        <span class="badge bg-success ms-2">Подтвержден</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning ms-2">Не подтвержден</span>
+                                    }
+                                </dd>
+
+                                <dt class="col-sm-4">Телефон:</dt>
+                                <dd class="col-sm-8">
+                                    @(Model.User.PhoneNumber ?? "Не указан")
+                                    @if (Model.PhoneNumberConfirmed)
+                                    {
+                                        <span class="badge bg-success ms-2">Подтвержден</span>
+                                    }
+                                </dd>
+
+                                <dt class="col-sm-4">Адрес:</dt>
+                                <dd class="col-sm-8">@(Model.User.Address ?? "Не указан")</dd>
+
+                                <dt class="col-sm-4">Дата регистрации:</dt>
+                                <dd class="col-sm-8">@Model.User.RegistrationDate.ToString("dd.MM.yyyy HH:mm")</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Безопасность и роли -->
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0">Безопасность и роли</h5>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row">
+                                <dt class="col-sm-4">Роли:</dt>
+                                <dd class="col-sm-8">
+                                    @foreach (var role in Model.Roles)
+                                    {
+                                        <span class="badge bg-primary me-1">@role</span>
+                                    }
+                                </dd>
+
+                                <dt class="col-sm-4">2FA:</dt>
+                                <dd class="col-sm-8">
+                                    @if (Model.TwoFactorEnabled)
+                                    {
+                                        <span class="badge bg-success">Включена</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Выключена</span>
+                                    }
+                                </dd>
+
+                                <dt class="col-sm-4">Блокировка:</dt>
+                                <dd class="col-sm-8">
+                                    @if (Model.LockoutEnd.HasValue && Model.LockoutEnd > DateTimeOffset.Now)
+                                    {
+                                        <span class="badge bg-danger">Заблокирован до @Model.LockoutEnd.Value.ToString("dd.MM.yyyy HH:mm")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success">Активен</span>
+                                    }
+                                </dd>
+
+                                <dt class="col-sm-4">Неудачных попыток:</dt>
+                                <dd class="col-sm-8">@Model.AccessFailedCount</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Внешние логины -->
+            @if (Model.Logins.Any())
+            {
+                <div class="card mb-4">
+                    <div class="card-header bg-warning">
+                        <h5 class="mb-0">Внешние сервисы входа</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group">
+                            @foreach (var login in Model.Logins)
+                            {
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>@login.LoginProvider</strong>
+                                        <small class="text-muted ms-2">@login.ProviderDisplayName</small>
+                                    </div>
+                                    <span class="badge bg-info">@login.ProviderKey</span>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            }
+
+            <!-- Claims -->
+            @if (Model.Claims.Any())
+            {
+                <div class="card">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">Claims (утверждения)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Тип</th>
+                                        <th>Значение</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var claim in Model.Claims)
+                                    {
+                                        <tr>
+                                            <td><code>@claim.Type</code></td>
+                                            <td>@claim.Value</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Кнопки действий -->
+            <div class="mt-4">
+                <a asp-action="EditProfile" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Редактировать профиль
+                </a>
+                <a asp-action="ChangePassword" class="btn btn-warning ms-2">
+                    <i class="fas fa-key"></i> Сменить пароль
+                </a>
+                <a asp-controller="Profile" asp-action="Index" class="btn btn-secondary ms-2">
+                    <i class="fas fa-arrow-left"></i> Назад в кабинет
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .card {
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            border-radius: 0.375rem 0.375rem 0 0 !important;
+        }
+
+        dt {
+            font-weight: 600;
+        }
+
+        .breadcrumb {
+            background-color: #f8f9fa;
+            border-radius: 0.375rem;
+            padding: 0.75rem 1rem;
+        }
+    </style>
+}

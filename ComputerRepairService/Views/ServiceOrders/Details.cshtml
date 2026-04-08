@@ -1,0 +1,150 @@
+﻿@model ComputerRepairService.Models.Entities.ServiceOrder
+
+@{
+    ViewData["Title"] = "Детали заказа";
+}
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="card-title mb-0">
+                    <i class="fas fa-clipboard-list"></i> Детали заказа #@Model.OrderId
+                </h4>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-3">Клиент:</dt>
+                    <dd class="col-sm-9">@Model.Customer?.FirstName @Model.Customer?.LastName</dd>
+
+                    <dt class="col-sm-3">Email:</dt>
+                    <dd class="col-sm-9">@Model.Customer?.Email</dd>
+
+                    <dt class="col-sm-3">Телефон:</dt>
+                    <dd class="col-sm-9">@Model.Customer?.Phone</dd>
+
+                    <dt class="col-sm-3">Тип устройства:</dt>
+                    <dd class="col-sm-9">@Model.DeviceType?.TypeName</dd>
+
+                    <dt class="col-sm-3">Бренд/Модель:</dt>
+                    <dd class="col-sm-9">@Model.DeviceBrand @Model.DeviceModel</dd>
+
+                    <dt class="col-sm-3">Серийный номер:</dt>
+                    <dd class="col-sm-9">@Model.SerialNumber</dd>
+
+                    <dt class="col-sm-3">Статус:</dt>
+                    <dd class="col-sm-9">
+                        <span class="badge bg-secondary">@Model.OrderStatus?.StatusName</span>
+                    </dd>
+
+                    <dt class="col-sm-3">Приоритет:</dt>
+                    <dd class="col-sm-9">
+                        @{
+                            var priorityText = Model.Priority switch
+                            {
+                                1 => "Низкий",
+                                2 => "Средний",
+                                3 => "Высокий",
+                                4 => "Срочный",
+                                5 => "Критичный",
+                                _ => "Неизвестно"
+                            };
+                        }
+                        <span class="badge bg-warning text-dark">@priorityText</span>
+                    </dd>
+
+                    <dt class="col-sm-3">Дата создания:</dt>
+                    <dd class="col-sm-9">@Model.CreatedDate.ToString("dd.MM.yyyy HH:mm")</dd>
+
+                    <dt class="col-sm-3">Предполагаемое завершение:</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.EstimatedCompletionDate.HasValue)
+                        {
+                            @Model.EstimatedCompletionDate.Value.ToString("dd.MM.yyyy")
+                        }
+                        else
+                        {
+                            <span class="text-muted">Не указана</span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-3">Фактическое завершение:</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.ActualCompletionDate.HasValue)
+                        {
+                            @Model.ActualCompletionDate.Value.ToString("dd.MM.yyyy HH:mm")
+                        }
+                        else
+                        {
+                            <span class="text-muted">Не завершен</span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-3">Общая стоимость:</dt>
+                    <dd class="col-sm-9">
+                        <span class="fw-bold text-success">@Model.TotalCost.ToString("C")</span>
+                    </dd>
+                </dl>
+
+                <div class="mt-3">
+                    <h5>Описание проблемы:</h5>
+                    <p class="card-text">@Model.ProblemDescription</p>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.DiagnosticNotes))
+                {
+                    <div class="mt-3">
+                        <h5>Диагностические заметки:</h5>
+                        <p class="card-text">@Model.DiagnosticNotes</p>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.TechnicianNotes))
+                {
+                    <div class="mt-3">
+                        <h5>Заметки мастера:</h5>
+                        <p class="card-text">@Model.TechnicianNotes</p>
+                    </div>
+                }
+
+                <div class="mt-4">
+                    <a asp-action="Edit" asp-route-id="@Model.OrderId" class="btn btn-warning">
+                        <i class="fas fa-edit"></i> Редактировать
+                    </a>
+                    <a asp-action="ChangeStatus" asp-route-id="@Model.OrderId" class="btn btn-info">
+                        <i class="fas fa-sync-alt"></i> Изменить статус
+                    </a>
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Назад к списку
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Назначенные мастера</h5>
+            </div>
+            <div class="card-body">
+                @if (Model.OrderTechnicians.Any())
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var orderTech in Model.OrderTechnicians)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                @orderTech.Technician?.FirstName @orderTech.Technician?.LastName
+                                <span class="badge bg-light text-dark">@orderTech.AssignedDate.ToString("dd.MM.yy")</span>
+                            </li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <p class="text-muted text-center mb-0">Мастера не назначены</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>

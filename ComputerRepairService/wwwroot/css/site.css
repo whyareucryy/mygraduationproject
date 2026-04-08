@@ -1,0 +1,231 @@
+/* Основные стили для компьютерного сервиса */
+:root {
+    --primary-color: #2c3e50;
+    --secondary-color: #3498db;
+    --accent-color: #e74c3c;
+    --success-color: #27ae60;
+    --warning-color: #f39c12;
+}
+
+/* Общие стили */
+body {
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Навигационная панель */
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.5rem;
+}
+
+.navbar-dark.bg-primary {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #34495e 100%) !important;
+}
+
+/* Карточки */
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+    }
+
+.card-header {
+    background: linear-gradient(135deg, var(--secondary-color) 0%, #2980b9 100%);
+    color: white;
+    border-radius: 10px 10px 0 0 !important;
+    font-weight: bold;
+}
+
+/* Таблицы */
+.table {
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+    .table thead {
+        background: linear-gradient(135deg, var(--primary-color) 0%, #34495e 100%);
+        color: white;
+    }
+
+    .table th {
+        border: none;
+        font-weight: 600;
+        padding: 15px;
+    }
+
+    .table td {
+        padding: 12px 15px;
+        border-color: #e9ecef;
+    }
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(52, 152, 219, 0.05);
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(52, 152, 219, 0.1);
+    transform: scale(1.01);
+    transition: all 0.2s ease;
+}
+
+/* Кнопки */
+.btn {
+    border-radius: 6px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--secondary-color) 0%, #2980b9 100%);
+    border: none;
+}
+
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #2980b9 0%, var(--secondary-color) 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+    }
+
+.btn-success {
+    background: linear-gradient(135deg, var(--success-color) 0%, #229954 100%);
+    border: none;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, var(--accent-color) 0%, #c0392b 100%);
+    border: none;
+}
+
+/* Заголовки */
+.display-4 {
+    color: var(--primary-color);
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+h2 {
+    color: var(--primary-color);
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 3px solid var(--secondary-color);
+}
+
+/* Навигационные вкладки */
+.nav-tabs .nav-link {
+    color: var(--primary-color);
+    font-weight: 500;
+    border: none;
+    padding: 12px 24px;
+}
+
+    .nav-tabs .nav-link.active {
+        background: linear-gradient(135deg, var(--secondary-color) 0%, #2980b9 100%);
+        color: white;
+        border-radius: 8px 8px 0 0;
+        font-weight: 600;
+    }
+
+    .nav-tabs .nav-link:hover {
+        border: none;
+        color: var(--secondary-color);
+    }
+
+/* Футер */
+.footer {
+    background-color: var(--primary-color);
+    color: white;
+    margin-top: 3rem;
+    padding: 1.5rem 0;
+}
+
+/* Анимации */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.container main {
+    animation: fadeIn 0.6s ease-out;
+}
+
+/* Статусы заказов */
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.status-new {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-in-progress {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.status-completed {
+    background-color: #cce7ff;
+    color: #004085;
+}
+
+.status-cancelled {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+/* Иконки в навигации */
+.navbar-nav .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .display-4 {
+        font-size: 2rem;
+    }
+
+    .card {
+        margin-bottom: 1rem;
+    }
+
+    .table-responsive {
+        font-size: 0.9rem;
+    }
+}
+
+/* Специальные стили для нашего сервиса */
+.service-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.tech-card {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+.order-card {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+}

@@ -1,0 +1,60 @@
+﻿@model ComputerRepairService.Models.Entities.ServiceOrder
+
+@{
+    ViewData["Title"] = $"Изменение статуса заказа #{Model.OrderId}";
+}
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h4 class="card-title">Изменение статуса заказа #@Model.OrderId</h4>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6>Клиент:</h6>
+                    <p>@Model.Customer?.FirstName @Model.Customer?.LastName</p>
+                </div>
+
+                <div class="mb-3">
+                    <h6>Устройство:</h6>
+                    <p>@Model.DeviceType?.TypeName - @Model.DeviceBrand @Model.DeviceModel</p>
+                </div>
+
+                <div class="mb-3">
+                    <h6>Текущий статус:</h6>
+                    <span class="badge bg-secondary">@Model.OrderStatus?.StatusName</span>
+                </div>
+
+                <form asp-action="ChangeStatus" method="post">
+                    <input type="hidden" name="id" value="@Model.OrderId" />
+
+                    <div class="form-group mb-3">
+                        <label class="form-label">Новый статус:</label>
+                        <select name="statusId" class="form-select" required>
+                            <option value="">-- Выберите статус --</option>
+                            @foreach (var status in ViewBag.Statuses)
+                            {
+                                <option value="@status.StatusId">@status.StatusName</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label">Примечания:</label>
+                        <textarea name="notes" class="form-control" rows="3" placeholder="Укажите причину изменения статуса..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check"></i> Обновить статус
+                        </button>
+                        <a asp-action="Details" asp-route-id="@Model.OrderId" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Отмена
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

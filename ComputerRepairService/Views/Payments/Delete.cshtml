@@ -1,0 +1,126 @@
+﻿@model ComputerRepairService.Models.Entities.Payment
+
+@{
+    ViewData["Title"] = "Удалить платеж";
+    Layout = "_Layout";
+}
+
+<div class="container mt-4">
+    <h1 class="mb-4">Удалить платеж</h1>
+
+    <div class="alert alert-danger">
+        <h4><i class="fas fa-exclamation-triangle"></i> Внимание!</h4>
+        <p>Вы уверены, что хотите удалить этот платеж? Это действие нельзя отменить.</p>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">Подтверждение удаления</h4>
+                </div>
+                <div class="card-body">
+                    <h5>Информация о платеже:</h5>
+                    <dl class="row">
+                        <dt class="col-sm-4">ID платежа:</dt>
+                        <dd class="col-sm-8">@Model.PaymentId</dd>
+
+                        <dt class="col-sm-4">Заказ:</dt>
+                        <dd class="col-sm-8">
+                            @if (Model.ServiceOrder != null)
+                            {
+                                @:Заказ #@Model.OrderId - @Model.ServiceOrder.Customer?.FirstName @Model.ServiceOrder.Customer?.LastName
+                            }
+                            else
+                            {
+                                @:Заказ #@Model.OrderId
+                            }
+                        </dd>
+
+                        <dt class="col-sm-4">Сумма:</dt>
+                        <dd class="col-sm-8">@Model.Amount.ToString("C")</dd>
+
+                        <dt class="col-sm-4">Дата:</dt>
+                        <dd class="col-sm-8">@Model.PaymentDate.ToString("dd.MM.yyyy HH:mm")</dd>
+
+                        <dt class="col-sm-4">Метод оплаты:</dt>
+                        <dd class="col-sm-8">
+                            @switch (Model.PaymentMethod)
+                            {
+                                case "Cash":
+                                    <span>Наличные</span>
+                                    break;
+                                case "Card":
+                                    <span>Карта</span>
+                                    break;
+                                case "Bank Transfer":
+                                    <span>Банковский перевод</span>
+                                    break;
+                                default:
+                                    <span>@Model.PaymentMethod</span>
+                                    break;
+                            }
+                        </dd>
+
+                        <dt class="col-sm-4">Статус:</dt>
+                        <dd class="col-sm-8">
+                            @switch (Model.Status)
+                            {
+                                case "Completed":
+                                    <span class="badge bg-success">Завершен</span>
+                                    break;
+                                case "Pending":
+                                    <span class="badge bg-warning">Ожидание</span>
+                                    break;
+                                case "Failed":
+                                    <span class="badge bg-danger">Ошибка</span>
+                                    break;
+                                default:
+                                    <span class="badge bg-secondary">@Model.Status</span>
+                                    break;
+                            }
+                        </dd>
+                    </dl>
+
+                    <div class="alert alert-warning mt-3">
+                        <h5><i class="fas fa-exclamation-circle"></i> Важное предупреждение!</h5>
+                        <p>
+                            Удаление платежа может повлиять на финансовую отчетность.
+                            Рассмотрите возможность изменения статуса на "Отменен" вместо удаления.
+                        </p>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <form asp-action="Delete">
+                        <input type="hidden" asp-for="PaymentId" />
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash"></i> Удалить платеж
+                        </button>
+                        <a asp-action="Details" asp-route-id="@Model.PaymentId" class="btn btn-secondary ms-2">
+                            <i class="fas fa-times"></i> Отмена
+                        </a>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-lightbulb"></i> Альтернатива</h5>
+                    <p class="card-text">
+                        Вместо удаления вы можете:
+                        <ul class="mt-2">
+                            <li>Изменить статус на "Отменен"</li>
+                            <li>Добавить примечание об ошибке</li>
+                            <li>Скорректировать сумму</li>
+                        </ul>
+                        <a asp-action="Edit" asp-route-id="@Model.PaymentId" class="btn btn-outline-primary btn-sm mt-2">
+                            <i class="fas fa-edit"></i> Редактировать вместо удаления
+                        </a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

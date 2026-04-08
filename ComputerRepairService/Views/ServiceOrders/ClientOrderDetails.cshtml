@@ -1,0 +1,343 @@
+﻿@model ComputerRepairService.Models.Entities.ServiceOrder
+
+@{
+    ViewData["Title"] = $"Заказ #{Model.OrderId}";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-action="MyOrders">Мои заказы</a></li>
+                    <li class="breadcrumb-item active">Заказ #@Model.OrderId</li>
+                </ol>
+            </nav>
+            <h2><i class="fas fa-file-alt"></i> Заказ #@Model.OrderId</h2>
+        </div>
+        <partial name="_OrderStatusBadge" model="Model.OrderStatus?.StatusName" />
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="row">
+        <!-- Основная информация -->
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Информация о заказе</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <h6 class="text-muted small">Дата создания</h6>
+                            <p class="fw-bold">@Model.CreatedDate.ToString("dd.MM.yyyy HH:mm")</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <h6 class="text-muted small">Приоритет</h6>
+                            <p class="fw-bold">
+                                @switch (Model.Priority)
+                                {
+                                    case 1:
+                                        <span class="badge bg-success">Низкий</span>
+                                        ; break;
+                                    case 2:
+
+                                        <span class="badge bg-warning text-dark">Средний</span>
+                                        ; break;
+                                    case 3:
+
+                                        <span class="badge bg-danger">Высокий</span>
+                                        ; break;
+                                    default:
+
+                                        <span class="badge bg-secondary">Не указан</span>
+                                        ; break;
+                                }
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <h6 class="text-muted small">Тип устройства</h6>
+                        <p class="fw-bold">
+                            @if (Model.DeviceType != null)
+                            {
+                                <span class="badge bg-secondary me-2">@Model.DeviceType.TypeName</span>
+                            }
+                            @Model.DeviceBrand @Model.DeviceModel
+                        </p>
+                    </div>
+
+                    <div class="mb-3">
+                        <h6 class="text-muted small">Серийный номер</h6>
+                        <p class="fw-bold">@(Model.SerialNumber ?? "Не указан")</p>
+                    </div>
+
+                    <div class="mb-3">
+                        <h6 class="text-muted small">Описание проблемы</h6>
+                        <div class="card bg-light p-3">
+                            @Model.ProblemDescription
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(Model.DiagnosticNotes))
+                    {
+                        <div class="mb-3">
+                            <h6 class="text-muted small">Диагностика</h6>
+                            <div class="card bg-info text-white p-3">
+                                <i class="fas fa-stethoscope"></i> @Model.DiagnosticNotes
+                            </div>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Model.TechnicianNotes))
+                    {
+                        <div class="mb-3">
+                            <h6 class="text-muted small">Комментарий мастера</h6>
+                            <div class="card bg-warning text-dark p-3">
+                                <i class="fas fa-tools"></i> @Model.TechnicianNotes
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- История статусов -->
+            @if (Model.OrderStatusHistories != null && Model.OrderStatusHistories.Any())
+            {
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="fas fa-history"></i> История статусов</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="timeline">
+                            @foreach (var history in Model.OrderStatusHistories.OrderByDescending(h => h.ChangedDate))
+                            {
+                                <div class="timeline-item mb-3">
+                                    <div class="timeline-marker bg-primary"></div>
+                                    <div class="timeline-content">
+                                        <div class="d-flex justify-content-between">
+                                            <h6 class="mb-1">@history.OrderStatus?.StatusName</h6>
+                                            <small class="text-muted">@history.ChangedDate.ToString("dd.MM.yyyy HH:mm")</small>
+                                        </div>
+                                        @if (!string.IsNullOrEmpty(history.Notes))
+                                        {
+                                            <p class="mb-1 small">@history.Notes</p>
+                                        }
+                                        <small class="text-muted">@history.ChangedBy</small>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Боковая панель -->
+        <div class="col-lg-4">
+            <!-- Мастера -->
+            @if (Model.OrderTechnicians != null && Model.OrderTechnicians.Any())
+            {
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="fas fa-user-cog"></i> Назначенные мастера</h5>
+                    </div>
+                    <div class="card-body">
+                        @foreach (var tech in Model.OrderTechnicians)
+                        {
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0">@tech.Technician?.FirstName @tech.Technician?.LastName</h6>
+                                    <small class="text-muted">@tech.Technician?.Specialization</small>
+                                    <br>
+                                    <small class="text-muted">Назначен: @tech.AssignedDate.ToString("dd.MM.yyyy")</small>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- Услуги -->
+            @if (Model.OrderServices != null && Model.OrderServices.Any())
+            {
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="fas fa-concierge-bell"></i> Выполненные услуги</h5>
+                    </div>
+                    <div class="card-body">
+                        @foreach (var service in Model.OrderServices)
+                        {
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div>
+                                    <h6 class="mb-0">@service.Service?.ServiceName</h6>
+                                    <small class="text-muted">@service.ServiceDate.ToString("dd.MM.yyyy")</small>
+                                </div>
+                                <span class="badge bg-success">@service.TotalPrice.ToString("C")</span>
+                            </div>
+                        }
+                        <hr>
+                        <div class="d-flex justify-content-between fw-bold">
+                            <span>Итого по услугам:</span>
+                            <span>@Model.OrderServices.Sum(s => s.TotalPrice).ToString("C")</span>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Запчасти -->
+            @if (Model.OrderParts != null && Model.OrderParts.Any())
+            {
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="fas fa-microchip"></i> Использованные запчасти</h5>
+                    </div>
+                    <div class="card-body">
+                        @foreach (var part in Model.OrderParts)
+                        {
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div>
+                                    <h6 class="mb-0">@part.Inventory?.PartName</h6>
+                                    <small class="text-muted">@part.QuantityUsed шт. × @part.UnitPriceAtTime.ToString("C")</small>
+                                </div>
+                                <span class="badge bg-info">@part.TotalPrice.ToString("C")</span>
+                            </div>
+                        }
+                        <hr>
+                        <div class="d-flex justify-content-between fw-bold">
+                            <span>Итого по запчастям:</span>
+                            <span>@Model.OrderParts.Sum(p => p.TotalPrice).ToString("C")</span>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Платежи -->
+            @if (Model.Payments != null && Model.Payments.Any())
+            {
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="fas fa-credit-card"></i> Платежи</h5>
+                    </div>
+                    <div class="card-body">
+                        @foreach (var payment in Model.Payments)
+                        {
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div>
+                                    <h6 class="mb-0">@payment.PaymentDate.ToString("dd.MM.yyyy")</h6>
+                                    <small class="text-muted">@payment.PaymentMethod - @payment.Status</small>
+                                </div>
+                                <span class="badge bg-@(payment.Status == "Completed" ? "success" : "warning")">
+                                    @payment.Amount.ToString("C")
+                                </span>
+                            </div>
+                        }
+                        <hr>
+                        <div class="d-flex justify-content-between fw-bold">
+                            <span>Итого оплачено:</span>
+                            <span>@Model.Payments.Where(p => p.Status == "Completed").Sum(p => p.Amount).ToString("C")</span>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Итоговая стоимость -->
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Итоговая стоимость</h5>
+                    <h2 class="display-6">@Model.TotalCost.ToString("C")</h2>
+                    <p class="card-text mb-0">
+                        @if (Model.ActualCompletionDate.HasValue)
+                        {
+                            <small>Завершен: @Model.ActualCompletionDate.Value.ToString("dd.MM.yyyy")</small>
+                        }
+                        else if (Model.EstimatedCompletionDate.HasValue)
+                        {
+                            <small>Ориентировочно до: @Model.EstimatedCompletionDate.Value.ToString("dd.MM.yyyy")</small>
+                        }
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a asp-action="MyOrders" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Вернуться к списку
+        </a>
+
+        @if (Model.OrderStatus?.StatusName == "Новая" || Model.OrderStatus?.StatusName == "Диагностика")
+        {
+            <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#cancelModal">
+                <i class="fas fa-times-circle"></i> Отменить заказ
+            </button>
+        }
+    </div>
+</div>
+
+<!-- Модальное окно отмены заказа -->
+<div class="modal fade" id="cancelModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Отмена заказа</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Вы уверены, что хотите отменить заказ #@Model.OrderId?</p>
+                <p class="text-danger"><small>Отмена заказа может быть невозможна после начала ремонта.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                <form asp-action="CancelOrder" asp-route-id="@Model.OrderId" method="post">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">Да, отменить</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-left: 20px;
+        }
+
+        .timeline-marker {
+            position: absolute;
+            left: -9px;
+            top: 0;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+        }
+
+        .timeline-content {
+            padding-bottom: 10px;
+            border-left: 2px solid #dee2e6;
+            padding-left: 20px;
+        }
+
+        .avatar {
+            font-size: 18px;
+        }
+    </style>
+}

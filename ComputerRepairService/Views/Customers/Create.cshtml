@@ -1,0 +1,86 @@
+﻿@model ComputerRepairService.Models.Entities.Customer
+
+@{
+    ViewData["Title"] = "Добавить клиента";
+}
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">Добавить нового клиента</h4>
+            </div>
+            <div class="card-body">
+                <!-- Добавляем отладочную информацию -->
+                @if (!ViewData.ModelState.IsValid)
+                {
+                    <div class="alert alert-danger">
+                        <h5>Ошибки валидации:</h5>
+                        <ul>
+                            @foreach (var key in ViewData.ModelState.Keys)
+                            {
+                                foreach (var error in ViewData.ModelState[key]!.Errors)
+                                {
+                                    <li><strong>@key:</strong> @error.ErrorMessage</li>
+                                }
+                            }
+                        </ul>
+                    </div>
+                }
+
+                <form asp-action="Create" method="post">
+                    @Html.AntiForgeryToken() <!-- ДОБАВЛЯЕМ ЭТО -->
+
+                    <div class="form-group mb-3">
+                        <label asp-for="FirstName" class="form-label">Имя *</label>
+                        <input asp-for="FirstName" class="form-control" />
+                        <span asp-validation-for="FirstName" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label asp-for="LastName" class="form-label">Фамилия *</label>
+                        <input asp-for="LastName" class="form-control" />
+                        <span asp-validation-for="LastName" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label asp-for="Email" class="form-label">Email *</label>
+                        <input asp-for="Email" type="email" class="form-control" />
+                        <span asp-validation-for="Email" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label asp-for="Phone" class="form-label">Телефон *</label>
+                        <input asp-for="Phone" class="form-control" placeholder="+79991234567" />
+                        <span asp-validation-for="Phone" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label asp-for="Address" class="form-label">Адрес</label>
+                        <textarea asp-for="Address" class="form-control" rows="3"></textarea>
+                        <span asp-validation-for="Address" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> Сохранить
+                        </button>
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Назад к списку
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        console.log('Create customer form loaded');
+    </script>
+}

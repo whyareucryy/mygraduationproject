@@ -1,0 +1,196 @@
+﻿@model IEnumerable<ComputerRepairService.Models.Entities.Payment>
+
+@{
+    ViewData["Title"] = "Платежи";
+    Layout = "_Layout";
+}
+
+<div class="container mt-4">
+    <h1 class="mb-4">Платежи</h1>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <a asp-action="Create" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Добавить платеж
+            </a>
+        </div>
+        <div class="col-md-6 text-end">
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="fas fa-filter"></i> Фильтр по статусу
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="?status=">Все платежи</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="?status=Completed">Завершенные</a></li>
+                    <li><a class="dropdown-item" href="?status=Pending">Ожидающие</a></li>
+                    <li><a class="dropdown-item" href="?status=Failed">Ошибки</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">
+            Нет платежей. Начните с добавления нового платежа.
+        </div>
+    }
+    else
+    {
+        <!-- Статистика -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body">
+                        <h6 class="card-title">Завершенные</h6>
+                        <h4>@Model.Count(p => p.Status == "Completed")</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-warning text-dark">
+                    <div class="card-body">
+                        <h6 class="card-title">Ожидающие</h6>
+                        <h4>@Model.Count(p => p.Status == "Pending")</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-danger text-white">
+                    <div class="card-body">
+                        <h6 class="card-title">Ошибки</h6>
+                        <h4>@Model.Count(p => p.Status == "Failed")</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body">
+                        <h6 class="card-title">Общая сумма</h6>
+                        <h4>@Model.Where(p => p.Status == "Completed").Sum(p => p.Amount).ToString("C")</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Заказ</th>
+                        <th>Клиент</th>
+                        <th>Сумма</th>
+                        <th>Дата</th>
+                        <th>Метод</th>
+                        <th>Статус</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.PaymentId</td>
+                            <td>
+                                @if (item.ServiceOrder != null)
+                                {
+                                    <a asp-controller="ServiceOrders" asp-action="Details" asp-route-id="@item.OrderId">
+                                        Заказ #@item.OrderId
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Заказ #@item.OrderId</span>
+                                }
+                            </td>
+                            <td>
+                                @if (item.ServiceOrder?.Customer != null)
+                                {
+                                    @($"{item.ServiceOrder.Customer.FirstName} {item.ServiceOrder.Customer.LastName}")
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Неизвестно</span>
+                                }
+                            </td>
+                            <td>@item.Amount.ToString("C")</td>
+                            <td>@item.PaymentDate.ToString("dd.MM.yyyy HH:mm")</td>
+                            <td>
+                                @switch (item.PaymentMethod)
+                                {
+                                    case "Cash":
+                                        <span class="badge bg-secondary"><i class="fas fa-money-bill"></i> Наличные</span>
+                                        break;
+                                    case "Card":
+                                        <span class="badge bg-primary"><i class="fas fa-credit-card"></i> Карта</span>
+                                        break;
+                                    case "Bank Transfer":
+                                        <span class="badge bg-info"><i class="fas fa-university"></i> Перевод</span>
+                                        break;
+                                    default:
+                                        <span class="badge bg-light text-dark">@item.PaymentMethod</span>
+                                        break;
+                                }
+                            </td>
+                            <td>
+                                @switch (item.Status)
+                                {
+                                    case "Completed":
+                                        <span class="badge bg-success">Завершен</span>
+                                        break;
+                                    case "Pending":
+                                        <span class="badge bg-warning">Ожидание</span>
+                                        break;
+                                    case "Failed":
+                                        <span class="badge bg-danger">Ошибка</span>
+                                        break;
+                                    default:
+                                        <span class="badge bg-secondary">@item.Status</span>
+                                        break;
+                                }
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a asp-action="Details" asp-route-id="@item.PaymentId"
+                                       class="btn btn-sm btn-info" title="Подробнее">
+                                        <i class="fas fa-info-circle"></i>
+                                    </a>
+                                    @if (User.IsInRole("Admin"))
+                                    {
+                                        <a asp-action="Edit" asp-route-id="@item.PaymentId"
+                                           class="btn btn-sm btn-warning" title="Редактировать">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a asp-action="Delete" asp-route-id="@item.PaymentId"
+                                           class="btn btn-sm btn-danger" title="Удалить">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@section Styles {
+    <style>
+        .card {
+            transition: transform 0.2s;
+        }
+
+            .card:hover {
+                transform: translateY(-5px);
+            }
+
+        .badge {
+            font-size: 0.8em;
+            padding: 0.4em 0.6em;
+        }
+    </style>
+}

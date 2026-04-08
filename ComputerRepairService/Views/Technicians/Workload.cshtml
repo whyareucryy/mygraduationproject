@@ -1,0 +1,244 @@
+﻿@{
+    ViewData["Title"] = "Нагрузка мастеров";
+}
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fas fa-check-circle"></i> @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>📊 Нагрузка мастеров</h2>
+    <a asp-action="Index" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Назад к списку
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header bg-info text-white">
+        <h4 class="card-title mb-0">
+            <i class="fas fa-chart-bar"></i> Статистика нагрузки мастеров
+        </h4>
+    </div>
+    <div class="card-body">
+        @if (ViewBag.TechniciansWorkload != null && ((IEnumerable<dynamic>)ViewBag.TechniciansWorkload).Any())
+        {
+            var workloadList = (IEnumerable<dynamic>)ViewBag.TechniciansWorkload;
+
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Мастер</th>
+                            <th>Специализация</th>
+                            <th>Активных заказов</th>
+                            <th>Всего часов работы</th>
+                            <th>Статус нагрузки</th>
+                            <th>Примерная стоимость работ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in workloadList)
+                        {
+                            var technician = item.Technician;
+                            var activeOrders = (int)item.ActiveOrders;
+                            var techTotalHours = (decimal)item.TotalHours;
+
+                            string workloadStatus;
+                            string statusClass;
+
+                            if (activeOrders <= 2)
+                            {
+                                workloadStatus = "Низкая";
+                                statusClass = "bg-success";
+                            }
+                            else if (activeOrders <= 5)
+                            {
+                                workloadStatus = "Средняя";
+                                statusClass = "bg-info";
+                            }
+                            else if (activeOrders <= 8)
+                            {
+                                workloadStatus = "Высокая";
+                                statusClass = "bg-warning";
+                            }
+                            else
+                            {
+                                workloadStatus = "Очень высокая";
+                                statusClass = "bg-danger";
+                            }
+
+                            decimal estimatedCost = 0;
+                            // ИСПРАВЛЕНИЕ: Проверяем HourlyRate на null и что он не равен 0
+                            if (technician.HourlyRate != null && Convert.ToDecimal(technician.HourlyRate) > 0)
+                            {
+                                estimatedCost = techTotalHours * Convert.ToDecimal(technician.HourlyRate);
+                            }
+
+                            <tr>
+                                <td>
+                                    <strong>@technician.FirstName @technician.LastName</strong>
+                                    <br>
+                                    <small class="text-muted">@technician.Email</small>
+                                </td>
+                                <td>@technician.Specialization</td>
+                                <td>
+                                    <span class="badge @(activeOrders > 0 ? "bg-primary" : "bg-secondary")">
+                                        @activeOrders
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-dark">
+                                        @techTotalHours.ToString("F1") ч
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge @statusClass">@workloadStatus</span>
+                                </td>
+                                <td>
+                                    <!-- ИСПРАВЛЕНИЕ: Упрощаем проверку -->
+                                    @if (estimatedCost > 0)
+                                    {
+                                        <span class="text-success fw-bold">@estimatedCost.ToString("C")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Дополнительная статистика -->
+            <div class="row mt-4">
+                <div class="col-md-3">
+                    <div class="card text-white bg-primary">
+                        <div class="card-body text-center">
+                            <h4>@workloadList.Count()</h4>
+                            <p class="mb-0">Всего мастеров</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-white bg-success">
+                        <div class="card-body text-center">
+                            @{
+                                int totalActiveOrders = 0;
+                                foreach (var item in workloadList)
+                                {
+                                    totalActiveOrders += (int)item.ActiveOrders;
+                                }
+                            }
+                            <h4>@totalActiveOrders</h4>
+                            <p class="mb-0">Активных заказов</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-white bg-warning">
+                        <div class="card-body text-center">
+                            @{
+                                decimal allTotalHours = 0;
+                                foreach (var item in workloadList)
+                                {
+                                    allTotalHours += (decimal)item.TotalHours;
+                                }
+                            }
+                            <h4>@allTotalHours.ToString("F1")</h4>
+                            <p class="mb-0">Часов работы</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-white bg-info">
+                        <div class="card-body text-center">
+                            @{
+                                double avgWorkload = workloadList.Count() > 0 ?
+                                workloadList.Average(item => (int)item.ActiveOrders) : 0;
+                            }
+                            <h4>@avgWorkload.ToString("F1")</h4>
+                            <p class="mb-0">Средняя нагрузка</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Визуализация нагрузки -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Визуализация нагрузки</h5>
+                </div>
+                <div class="card-body">
+                    @foreach (var item in workloadList)
+                    {
+                        var technician = item.Technician;
+                        var activeOrders = (int)item.ActiveOrders;
+                        var maxOrders = 10; // Максимальное количество заказов для 100%
+                        var percentage = Math.Min((activeOrders / (double)maxOrders) * 100, 100);
+
+                        string progressBarClass;
+                        if (percentage < 30)
+                        {
+                            progressBarClass = "bg-success";
+                        }
+                        else if (percentage < 60)
+                        {
+                            progressBarClass = "bg-info";
+                        }
+                        else if (percentage < 80)
+                        {
+                            progressBarClass = "bg-warning";
+                        }
+                        else
+                        {
+                            progressBarClass = "bg-danger";
+                        }
+
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>@technician.FirstName @technician.LastName</span>
+                                <span>@activeOrders заказов</span>
+                            </div>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar @progressBarClass"
+                                     role="progressbar"
+                                     style="width: @percentage%;"
+                                     aria-valuenow="@activeOrders"
+                                     aria-valuemin="0"
+                                     aria-valuemax="@maxOrders">
+                                    @activeOrders
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-4">
+                <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                <h4>Нет данных о нагрузке</h4>
+                <p class="text-muted">Данные о нагрузке мастеров появятся после назначения заказов.</p>
+                <a asp-action="Index" class="btn btn-primary">
+                    <i class="fas fa-users"></i> К списку мастеров
+                </a>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Workload view loaded');
+            console.log('Technicians count: @(ViewBag.TechniciansWorkload != null ? ((IEnumerable<dynamic>)ViewBag.TechniciansWorkload).Count() : 0)');
+        });
+    </script>
+}

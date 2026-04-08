@@ -1,0 +1,56 @@
+﻿@model IEnumerable<ComputerRepairService.Models.Entities.Inventory>
+
+@{
+    ViewData["Title"] = "Склад запчастей";
+}
+
+<h2>📦 Склад запчастей</h2>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Название</th>
+            <th>Категория</th>
+            <th>Количество на складе</th>
+            <th>Цена за единицу</th>
+            <th>Минимальный запас</th>
+            <th>Статус</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.PartName</td>
+                <td>@item.PartCategory?.CategoryName</td>
+                <td>
+                    <span class="@(item.QuantityInStock <= item.ReorderLevel ? "text-danger fw-bold" : "")">
+                        @item.QuantityInStock
+                    </span>
+                </td>
+                <td>@item.UnitPrice.ToString("C")</td>
+                <td>@item.ReorderLevel</td>
+                <td>
+                    @if (item.QuantityInStock <= item.ReorderLevel)
+                    {
+                        <span class="badge bg-danger">Низкий запас</span>
+                    }
+                    else if (item.QuantityInStock <= item.ReorderLevel * 2)
+                    {
+                        <span class="badge bg-warning">Средний запас</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-success">В норме</span>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<div class="mt-4">
+    <a asp-controller="Dashboard" asp-action="Index" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Назад к дашборду
+    </a>
+</div>

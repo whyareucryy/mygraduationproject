@@ -1,0 +1,173 @@
+﻿@model ComputerRepairService.Models.Entities.Payment
+
+@{
+    ViewData["Title"] = "Редактировать платеж";
+    Layout = "_Layout";
+
+    var serviceOrders = ViewBag.ServiceOrders as List<ComputerRepairService.Models.Entities.ServiceOrder>;
+}
+
+<div class="container mt-4">
+    <h1 class="mb-4">Редактировать платеж</h1>
+
+    <div class="row">
+        <div class="col-md-8">
+            <form asp-action="Edit">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                <input type="hidden" asp-for="PaymentId" />
+
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Основная информация</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group mb-3">
+                            <label asp-for="OrderId" class="form-label">Заказ</label>
+                            <select asp-for="OrderId" class="form-select" disabled>
+                                <option value="">-- Выберите заказ --</option>
+                                @if (serviceOrders != null)
+                                {
+                                    foreach (var order in serviceOrders)
+                                    {
+                                        <option value="@order.OrderId" selected="@(Model.OrderId == order.OrderId)">
+                                            Заказ #@order.OrderId - @order.Customer?.FirstName @order.Customer?.LastName
+                                            (@order.TotalCost.ToString("C"))
+                                        </option>
+                                    }
+                                }
+                            </select>
+                            <input type="hidden" asp-for="OrderId" />
+                            <small class="form-text text-muted">Заказ нельзя изменить после создания платежа</small>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label asp-for="Amount" class="form-label">Сумма платежа</label>
+                            <div class="input-group">
+                                <input asp-for="Amount" class="form-control" type="number" step="0.01" min="0" />
+                                <span class="input-group-text">₽</span>
+                            </div>
+                            <span asp-validation-for="Amount" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">Детали оплаты</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label asp-for="PaymentMethod" class="form-label">Метод оплаты</label>
+                                    <select asp-for="PaymentMethod" class="form-select">
+                                        <option value="">-- Выберите метод --</option>
+                                        <option value="Cash">Наличные</option>
+                                        <option value="Card">Банковская карта</option>
+                                        <option value="Bank Transfer">Банковский перевод</option>
+                                        <option value="Online">Онлайн-оплата</option>
+                                    </select>
+                                    <span asp-validation-for="PaymentMethod" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label asp-for="Status" class="form-label">Статус платежа</label>
+                                    <select asp-for="Status" class="form-select">
+                                        <option value="Pending">Ожидание</option>
+                                        <option value="Completed">Завершен</option>
+                                        <option value="Failed">Ошибка</option>
+                                        <option value="Refunded">Возврат</option>
+                                    </select>
+                                    <span asp-validation-for="Status" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label asp-for="TransactionId" class="form-label">ID транзакции</label>
+                            <input asp-for="TransactionId" class="form-control" />
+                            <small class="form-text text-muted">ID транзакции из платежной системы</small>
+                            <span asp-validation-for="TransactionId" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">Дополнительная информация</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="form-label">Дата платежа</label>
+                                    <input type="text" class="form-control"
+                                           value="@Model.PaymentDate.ToString("dd.MM.yyyy HH:mm")" readonly />
+                                    <small class="form-text text-muted">Дата создания платежа</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label asp-for="Notes" class="form-label">Примечания</label>
+                            <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
+                            <span asp-validation-for="Notes" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save"></i> Сохранить изменения
+                    </button>
+                    <a asp-action="Details" asp-route-id="@Model.PaymentId" class="btn btn-secondary ms-2">
+                        <i class="fas fa-times"></i> Отмена
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Информация</h5>
+                </div>
+                <div class="card-body">
+                    <dl>
+                        <dt>ID платежа:</dt>
+                        <dd>@Model.PaymentId</dd>
+
+                        <dt>Дата создания:</dt>
+                        <dd>@Model.PaymentDate.ToString("dd.MM.yyyy HH:mm")</dd>
+
+                        <dt>Текущий статус:</dt>
+                        <dd>
+                            @switch (Model.Status)
+                            {
+                                case "Completed":
+                                    <span class="badge bg-success">Завершен</span>
+                                    break;
+                                case "Pending":
+                                    <span class="badge bg-warning">Ожидание</span>
+                                    break;
+                                case "Failed":
+                                    <span class="badge bg-danger">Ошибка</span>
+                                    break;
+                                default:
+                                    <span class="badge bg-secondary">@Model.Status</span>
+                                    break;
+                            }
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

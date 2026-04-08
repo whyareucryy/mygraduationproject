@@ -1,0 +1,36 @@
+﻿@model ComputerRepairService.Models.Entities.DeviceType
+
+@{
+    ViewData["Title"] = "Подробности о типе устройства";
+    Layout = "_Layout";
+}
+
+<div class="container mt-4">
+    <h1 class="mb-4">Подробности о типе устройства</h1>
+
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">Информация о типе</h4>
+        </div>
+        <div class="card-body">
+            <dl class="row">
+                <dt class="col-sm-3">ID:</dt>
+                <dd class="col-sm-9">@Model.DeviceTypeId</dd>
+
+                <dt class="col-sm-3">Название типа:</dt>
+                <dd class="col-sm-9">@Model.TypeName</dd>
+
+                <dt class="col-sm-3">Описание:</dt>
+                <dd class="col-sm-9">@(Model.Description ?? "Нет описания")</dd>
+            </dl>
+        </div>
+        <div class="card-footer">
+            <a asp-action="Edit" asp-route-id="@Model.DeviceTypeId" class="btn btn-warning">
+                <i class="fas fa-edit"></i> Редактировать
+            </a>
+            <a asp-action="Index" class="btn btn-secondary ms-2">
+                <i class="fas fa-arrow-left"></i> Назад к списку
+            </a>
+        </div>
+    </div>
+</div>

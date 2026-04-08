@@ -1,0 +1,52 @@
+﻿@model ComputerRepairService.Models.Entities.ServiceOrder
+
+@{
+    ViewData["Title"] = "Удалить заказ";
+}
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h4 class="card-title">Удаление заказа</h4>
+            </div>
+            <div class="card-body">
+                <h5>Вы уверены, что хотите удалить этот заказ?</h5>
+
+                <div class="alert alert-warning">
+                    <strong>Внимание:</strong> Это действие нельзя отменить.
+                </div>
+
+                <dl class="row">
+                    <dt class="col-sm-4">ID заказа:</dt>
+                    <dd class="col-sm-8">#@Model.OrderId</dd>
+
+                    <dt class="col-sm-4">Клиент:</dt>
+                    <dd class="col-sm-8">@Model.Customer?.FirstName @Model.Customer?.LastName</dd>
+
+                    <dt class="col-sm-4">Устройство:</dt>
+                    <dd class="col-sm-8">@Model.DeviceType?.TypeName</dd>
+
+                    <dt class="col-sm-4">Бренд/Модель:</dt>
+                    <dd class="col-sm-8">@Model.DeviceBrand @Model.DeviceModel</dd>
+
+                    <dt class="col-sm-4">Статус:</dt>
+                    <dd class="col-sm-8">@Model.OrderStatus?.StatusName</dd>
+
+                    <dt class="col-sm-4">Дата создания:</dt>
+                    <dd class="col-sm-8">@Model.CreatedDate.ToString("dd.MM.yyyy")</dd>
+                </dl>
+
+                <form asp-action="Delete">
+                    <input type="hidden" asp-for="OrderId" />
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> Удалить
+                    </button>
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Отмена
+                    </a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,132 @@
+﻿@{
+    ViewData["Title"] = "Панель управления";
+}
+
+<div class="container">
+    <h1 class="display-4 mb-4">📊 Панель управления сервисным центром</h1>
+
+    <!-- Статистика в карточках -->
+    <div class="row mb-5">
+        <div class="col-md-2 mb-3">
+            <div class="card text-white bg-primary">
+                <div class="card-body text-center">
+                    <i class="fas fa-users fa-2x mb-2"></i>
+                    <h5 class="card-title">Клиенты</h5>
+                    <p class="card-text display-6">@ViewBag.DashboardData.TotalCustomers</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 mb-3">
+            <div class="card text-white bg-success">
+                <div class="card-body text-center">
+                    <i class="fas fa-clipboard-list fa-2x mb-2"></i>
+                    <h5 class="card-title">Всего заказов</h5>
+                    <p class="card-text display-6">@ViewBag.DashboardData.TotalOrders</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 mb-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body text-center">
+                    <i class="fas fa-tools fa-2x mb-2"></i>
+                    <h5 class="card-title">Активные заказы</h5>
+                    <p class="card-text display-6">@ViewBag.DashboardData.ActiveOrders</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 mb-3">
+            <div class="card text-white bg-info">
+                <div class="card-body text-center">
+                    <i class="fas fa-user-cog fa-2x mb-2"></i>
+                    <h5 class="card-title">Мастера</h5>
+                    <p class="card-text display-6">@ViewBag.DashboardData.TotalTechnicians</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 mb-3">
+            <div class="card text-white bg-danger">
+                <div class="card-body text-center">
+                    <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                    <h5 class="card-title">Низкий запас</h5>
+                    <p class="card-text display-6">@ViewBag.DashboardData.LowStockItems</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Быстрая навигация -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h3>Быстрый доступ</h3>
+            <div class="d-flex flex-wrap gap-2">
+                <a asp-controller="Customers" asp-action="Index" class="btn btn-primary btn-lg">
+                    <i class="fas fa-users"></i> Управление клиентами
+                </a>
+                <a asp-controller="ServiceOrders" asp-action="Index" class="btn btn-success btn-lg">
+                    <i class="fas fa-clipboard-list"></i> Управление заказами
+                </a>
+                <a asp-controller="Technicians" asp-action="Index" class="btn btn-info btn-lg">
+                    <i class="fas fa-user-cog"></i> Управление мастерами
+                </a>
+                <a asp-controller="Inventory" asp-action="Index" class="btn btn-warning btn-lg">
+                    <i class="fas fa-boxes"></i> Управление складом
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Последние заказы -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-history"></i> Последние заказы
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (ViewBag.DashboardData.RecentOrders.Count > 0)
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Клиент</th>
+                                        <th>Проблема</th>
+                                        <th>Статус</th>
+                                        <th>Дата создания</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var order in ViewBag.DashboardData.RecentOrders)
+                                    {
+                                        <tr>
+                                            <td>@order.OrderId</td>
+                                            <td>@order.Customer?.FirstName @order.Customer?.LastName</td>
+                                            <td>@order.ProblemDescription</td>
+                                            <td>
+                                                <span class="badge
+                                                            @(order.StatusId == 1 ? "bg-primary" :
+                                                                                                            order.StatusId == 2 ? "bg-info" :
+                                                                                                            order.StatusId == 3 ? "bg-warning" :
+                                                                                                            order.StatusId == 4 ? "bg-secondary" : "bg-success")">
+                                            @order.OrderStatus?.StatusName
+                                        </span>
+                                    </td>
+                                    <td>@order.CreatedDate.ToString("dd.MM.yyyy HH:mm")</td>
+                                </tr>
+                                                                }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Нет recent заказов для отображения</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

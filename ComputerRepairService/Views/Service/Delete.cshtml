@@ -1,0 +1,99 @@
+﻿@model ComputerRepairService.Models.Entities.Service
+
+@{
+    ViewData["Title"] = "Деактивировать услугу";
+    Layout = "_Layout";
+}
+
+<div class="container mt-4">
+    <h1 class="mb-4">Деактивировать услугу</h1>
+
+    <div class="alert alert-warning">
+        <h4><i class="fas fa-exclamation-triangle"></i> Внимание!</h4>
+        <p>
+            Вы собираетесь деактивировать услугу. Это не удалит её из базы данных,
+            а только скроет из списка доступных услуг.
+        </p>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">Подтверждение деактивации</h4>
+                </div>
+                <div class="card-body">
+                    <h5>Информация об услуге:</h5>
+                    <dl class="row">
+                        <dt class="col-sm-4">ID услуги:</dt>
+                        <dd class="col-sm-8">@Model.ServiceId</dd>
+
+                        <dt class="col-sm-4">Название услуги:</dt>
+                        <dd class="col-sm-8">@Model.ServiceName</dd>
+
+                        <dt class="col-sm-4">Описание:</dt>
+                        <dd class="col-sm-8">@(Model.Description ?? "Нет описания")</dd>
+
+                        <dt class="col-sm-4">Базовая цена:</dt>
+                        <dd class="col-sm-8">@Model.BasePrice.ToString("C")</dd>
+
+                        <dt class="col-sm-4">Текущий статус:</dt>
+                        <dd class="col-sm-8">
+                            @if (Model.IsActive)
+                            {
+                                <span class="badge bg-success">Активна</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger">Неактивна</span>
+                            }
+                        </dd>
+                    </dl>
+
+                    @if (Model.OrderServices != null && Model.OrderServices.Any())
+                    {
+                        <div class="alert alert-danger mt-3">
+                            <h5><i class="fas fa-exclamation-circle"></i> Важное предупреждение!</h5>
+                            <p>
+                                Эта услуга используется в <strong>@Model.OrderServices.Count</strong> заказах.
+                                Деактивация не удалит услугу из существующих заказов, но она перестанет быть доступной
+                                для новых заказов.
+                            </p>
+                        </div>
+                    }
+                </div>
+                <div class="card-footer">
+                    <form asp-action="Delete">
+                        <input type="hidden" asp-for="ServiceId" />
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-ban"></i> Деактивировать услугу
+                        </button>
+                        <a asp-action="Details" asp-route-id="@Model.ServiceId" class="btn btn-secondary ms-2">
+                            <i class="fas fa-times"></i> Отмена
+                        </a>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-lightbulb"></i> Альтернатива</h5>
+                    <p class="card-text">
+                        Вместо деактивации вы можете:
+                        <ul class="mt-2">
+                            <li>Отредактировать услугу</li>
+                            <li>Изменить её цену</li>
+                            <li>Обновить описание</li>
+                            <li>Сделать её сезонной/ограниченной</li>
+                        </ul>
+                        <a asp-action="Edit" asp-route-id="@Model.ServiceId" class="btn btn-outline-primary btn-sm mt-2">
+                            <i class="fas fa-edit"></i> Редактировать вместо деактивации
+                        </a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

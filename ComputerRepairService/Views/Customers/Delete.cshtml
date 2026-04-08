@@ -1,0 +1,51 @@
+﻿@model ComputerRepairService.Models.Entities.Customer
+
+@{
+    ViewData["Title"] = "Удалить клиента";
+}
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h4 class="card-title">Удаление клиента</h4>
+            </div>
+            <div class="card-body">
+                <h5>Вы уверены, что хотите удалить этого клиента?</h5>
+                <p class="text-muted">Это действие скроет клиента из списка, но сохранит историю заказов.</p>
+
+                <div class="alert alert-warning">
+                    <strong>Внимание:</strong> Это действие нельзя отменить.
+                </div>
+
+                <dl class="row">
+                    <dt class="col-sm-4">Имя:</dt>
+                    <dd class="col-sm-8">@Model.FirstName @Model.LastName</dd>
+
+                    <dt class="col-sm-4">Email:</dt>
+                    <dd class="col-sm-8">@Model.Email</dd>
+
+                    <dt class="col-sm-4">Телефон:</dt>
+                    <dd class="col-sm-8">@Model.Phone</dd>
+
+                    <dt class="col-sm-4">Адрес:</dt>
+                    <dd class="col-sm-8">@Model.Address</dd>
+
+                    <dt class="col-sm-4">Дата регистрации:</dt>
+                    <dd class="col-sm-8">@Model.RegistrationDate.ToString("dd.MM.yyyy")</dd>
+                </dl>
+
+                <form asp-action="Delete" method="post">
+                    @Html.AntiForgeryToken() <!-- ДОБАВЛЯЕМ ЭТО -->
+                    <input type="hidden" asp-for="CustomerId" />
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> Удалить
+                    </button>
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Отмена
+                    </a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

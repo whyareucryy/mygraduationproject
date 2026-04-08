@@ -1,0 +1,139 @@
+﻿@model ComputerRepairService.Models.Entities.Payment
+
+@{
+    ViewData["Title"] = "Подробности о платеже";
+    Layout = "_Layout";
+}
+
+<div class="container mt-4">
+    <h1 class="mb-4">Подробности о платеже</h1>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Информация о платеже</h4>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">ID платежа:</dt>
+                        <dd class="col-sm-8">@Model.PaymentId</dd>
+
+                        <dt class="col-sm-4">ID заказа:</dt>
+                        <dd class="col-sm-8">
+                            @if (Model.ServiceOrder != null)
+                            {
+                                <a asp-controller="ServiceOrders" asp-action="Details" asp-route-id="@Model.OrderId">
+                                    Заказ #@Model.OrderId
+                                </a>
+                            }
+                            else
+                            {
+                                <span>Заказ #@Model.OrderId</span>
+                            }
+                        </dd>
+
+                        <dt class="col-sm-4">Клиент:</dt>
+                        <dd class="col-sm-8">
+                            @if (Model.ServiceOrder?.Customer != null)
+                            {
+                                @($"{Model.ServiceOrder.Customer.FirstName} {Model.ServiceOrder.Customer.LastName}")
+                            }
+                            else
+                            {
+                                <span class="text-muted">Неизвестно</span>
+                            }
+                        </dd>
+
+                        <dt class="col-sm-4">Сумма:</dt>
+                        <dd class="col-sm-8">
+                            <span class="h5">@Model.Amount.ToString("C")</span>
+                        </dd>
+
+                        <dt class="col-sm-4">Дата платежа:</dt>
+                        <dd class="col-sm-8">@Model.PaymentDate.ToString("dd.MM.yyyy HH:mm")</dd>
+
+                        <dt class="col-sm-4">Метод оплаты:</dt>
+                        <dd class="col-sm-8">
+                            @switch (Model.PaymentMethod)
+                            {
+                                case "Cash":
+                                    <span class="badge bg-secondary"><i class="fas fa-money-bill"></i> Наличные</span>
+                                    break;
+                                case "Card":
+                                    <span class="badge bg-primary"><i class="fas fa-credit-card"></i> Карта</span>
+                                    break;
+                                case "Bank Transfer":
+                                    <span class="badge bg-info"><i class="fas fa-university"></i> Банковский перевод</span>
+                                    break;
+                                default:
+                                    <span class="badge bg-light text-dark">@Model.PaymentMethod</span>
+                                    break;
+                            }
+                        </dd>
+
+                        <dt class="col-sm-4">Статус:</dt>
+                        <dd class="col-sm-8">
+                            @switch (Model.Status)
+                            {
+                                case "Completed":
+                                    <span class="badge bg-success"><i class="fas fa-check-circle"></i> Завершен</span>
+                                    break;
+                                case "Pending":
+                                    <span class="badge bg-warning"><i class="fas fa-clock"></i> Ожидание</span>
+                                    break;
+                                case "Failed":
+                                    <span class="badge bg-danger"><i class="fas fa-times-circle"></i> Ошибка</span>
+                                    break;
+                                default:
+                                    <span class="badge bg-secondary">@Model.Status</span>
+                                    break;
+                            }
+                        </dd>
+
+                        <dt class="col-sm-4">ID транзакции:</dt>
+                        <dd class="col-sm-8">@(Model.TransactionId ?? "Не указан")</dd>
+
+                        <dt class="col-sm-4">Примечания:</dt>
+                        <dd class="col-sm-8">@(Model.Notes ?? "Нет примечаний")</dd>
+                    </dl>
+                </div>
+                <div class="card-footer">
+                    @if (User.IsInRole("Admin"))
+                    {
+                        <a asp-action="Edit" asp-route-id="@Model.PaymentId" class="btn btn-warning">
+                            <i class="fas fa-edit"></i> Редактировать
+                        </a>
+                    }
+                    <a asp-action="Index" class="btn btn-secondary ms-2">
+                        <i class="fas fa-arrow-left"></i> Назад к списку
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-history"></i> Действия</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <a asp-action="Edit" asp-route-id="@Model.PaymentId" class="btn btn-outline-warning">
+                                <i class="fas fa-edit"></i> Редактировать платеж
+                            </a>
+                            <a asp-action="Delete" asp-route-id="@Model.PaymentId" class="btn btn-outline-danger">
+                                <i class="fas fa-trash"></i> Удалить платеж
+                            </a>
+                        }
+                        <a asp-action="Create" class="btn btn-outline-primary">
+                            <i class="fas fa-plus"></i> Добавить новый платеж
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

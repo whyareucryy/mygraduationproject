@@ -1,0 +1,394 @@
+﻿@model IEnumerable<ComputerRepairService.Models.Entities.ServiceOrder>
+
+@{
+    ViewData["Title"] = "Заказы на обслуживание";
+
+    // Проверка роли и редирект для клиентов
+    if (User.IsInRole("Client"))
+    {
+        <script>
+            window.location.href = '@Url.Action("MyOrders")';
+        </script>
+        return;
+    }
+}
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fas fa-check-circle"></i> @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-circle"></i> @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-clipboard-list"></i> Заказы на обслуживание</h2>
+    <div class="btn-group">
+        <a asp-action="Create" class="btn btn-success">
+            <i class="fas fa-plus"></i> Создать заказ
+        </a>
+
+        @if (User.IsInRole("Employee"))
+        {
+            <a asp-action="MyAssignedOrders" class="btn btn-primary">
+                <i class="fas fa-tasks"></i> Мои задачи
+            </a>
+        }
+
+        @if (User.IsInRole("Admin"))
+        {
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-outline-info dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-download"></i> Экспорт
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-file-excel"></i> Excel</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-file-pdf"></i> PDF</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-print"></i> Печать</a></li>
+                </ul>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Статистика для админов и сотрудников -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center py-3">
+                <h4 class="card-title mb-1">@Model.Count()</h4>
+                <p class="card-text small mb-0">Всего заказов</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark">
+            <div class="card-body text-center py-3">
+                <h4 class="card-title mb-1">@Model.Count(o => o.OrderStatus?.StatusName == "В ремонте" || o.OrderStatus?.StatusName == "Диагностика")</h4>
+                <p class="card-text small mb-0">Активные</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center py-3">
+                <h4 class="card-title mb-1">@Model.Count(o => o.OrderStatus?.StatusName == "Готово")</h4>
+                <p class="card-text small mb-0">Готовы</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body text-center py-3">
+                <h4 class="card-title mb-1">@Model.Count(o => o.OrderStatus?.StatusName == "Отменено")</h4>
+                <p class="card-text small mb-0">Отменены</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Фильтры -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-3">
+                <label class="form-label">Статус:</label>
+                <select class="form-select" id="statusFilter">
+                    <option value="all">Все статусы</option>
+                    <option value="new">Новые</option>
+                    <option value="active">В работе</option>
+                    <option value="ready">Готовы</option>
+                    <option value="cancelled">Отменены</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Приоритет:</label>
+                <select class="form-select" id="priorityFilter">
+                    <option value="all">Все приоритеты</option>
+                    <option value="1">Низкий</option>
+                    <option value="2">Средний</option>
+                    <option value="3">Высокий</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Дата с:</label>
+                <input type="date" class="form-control" id="dateFromFilter">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Дата по:</label>
+                <input type="date" class="form-control" id="dateToFilter">
+                <button class="btn btn-outline-secondary mt-2" onclick="resetFilters()">
+                    <i class="fas fa-redo"></i> Сбросить
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        @if (Model.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-striped table-hover" id="ordersTable">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>ID</th>
+                            <th>Клиент</th>
+                            <th>Устройство</th>
+                            <th>Проблема</th>
+                            <th>Статус</th>
+                            <th>Приоритет</th>
+                            <th>Дата создания</th>
+                            <th>Стоимость</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.OrderByDescending(o => o.CreatedDate))
+                        {
+                            <tr data-status="@item.OrderStatus?.StatusName?.ToLower()"
+                                data-priority="@item.Priority"
+                                data-date="@item.CreatedDate.ToString("yyyy-MM-dd")">
+                                <td><strong>#@item.OrderId</strong></td>
+                                <td>
+                                    @if (item.Customer != null)
+                                    {
+                                        <div>
+                                            @item.Customer.FirstName @item.Customer.LastName
+                                            <br>
+                                            <small class="text-muted">@item.Customer.Phone</small>
+                                        </div>
+                                    }
+                                </td>
+                                <td>
+                                    @if (item.DeviceType != null)
+                                    {
+                                        <span class="badge bg-secondary">@item.DeviceType.TypeName</span>
+                                    }
+                                    <br>
+                                    <small>@item.DeviceBrand @item.DeviceModel</small>
+                                </td>
+                                <td>
+                                    <div class="text-truncate" style="max-width: 200px;" title="@item.ProblemDescription">
+                                        @item.ProblemDescription
+                                    </div>
+                                </td>
+                                <td>
+                                    <partial name="_OrderStatusBadge" model="item.OrderStatus?.StatusName" />
+                                </td>
+                                <td>
+                                    @{
+                                        var priorityClass = item.Priority switch
+                                        {
+                                            1 => "bg-success",
+                                            2 => "bg-info",
+                                            3 => "bg-warning",
+                                            4 => "bg-orange",
+                                            5 => "bg-danger",
+                                            _ => "bg-secondary"
+                                        };
+                                        var priorityText = item.Priority switch
+                                        {
+                                            1 => "Низкий",
+                                            2 => "Средний",
+                                            3 => "Высокий",
+                                            4 => "Срочный",
+                                            5 => "Критичный",
+                                            _ => "Неизвестно"
+                                        };
+                                    }
+                                    <span class="badge @priorityClass">@priorityText</span>
+                                </td>
+                                <td>@item.CreatedDate.ToString("dd.MM.yyyy")</td>
+                                <td>
+                                    @if (item.TotalCost > 0)
+                                    {
+                                        <span class="badge bg-success">@item.TotalCost.ToString("C")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Не рассчитана</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a asp-action="Details" asp-route-id="@item.OrderId" class="btn btn-info" title="Детали">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+
+                                        @if (User.IsInRole("Admin") || User.IsInRole("Employee"))
+                                        {
+                                            <a asp-action="Edit" asp-route-id="@item.OrderId" class="btn btn-warning" title="Редактировать">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a asp-action="ChangeStatus" asp-route-id="@item.OrderId" class="btn btn-secondary" title="Изменить статус">
+                                                <i class="fas fa-sync-alt"></i>
+                                            </a>
+                                        }
+
+                                        @if (User.IsInRole("Admin"))
+                                        {
+                                            <a asp-action="Delete" asp-route-id="@item.OrderId" class="btn btn-danger" title="Удалить">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Сводная информация -->
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6 class="card-title"><i class="fas fa-chart-pie"></i> Распределение по статусам</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                @{
+                                    var statusGroups = Model.GroupBy(o => o.OrderStatus?.StatusName ?? "Неизвестно")
+                                    .Select(g => new { Status = g.Key, Count = g.Count() });
+                                }
+                                @foreach (var group in statusGroups)
+                                {
+                                    <span class="badge bg-secondary">
+                                        @group.Status: @group.Count
+                                    </span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6 class="card-title"><i class="fas fa-money-bill-wave"></i> Финансовая сводка</h6>
+                            <div class="row">
+                                <div class="col-6">
+                                    <small class="text-muted">Общая стоимость:</small>
+                                    <h5>@Model.Where(o => o.TotalCost > 0).Sum(o => o.TotalCost).ToString("C")</h5>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">Средняя стоимость:</small>
+                                    <h5>@(Model.Where(o => o.TotalCost > 0).Average(o => o.TotalCost).ToString("C"))</h5>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-4">
+                <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                <h4>Заказы не найдены</h4>
+                <p class="text-muted">Начните с создания первого заказа.</p>
+                <a asp-action="Create" class="btn btn-success">
+                    <i class="fas fa-plus"></i> Создать заказ
+                </a>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Фильтрация таблицы
+        function applyFilters() {
+            const statusFilter = document.getElementById('statusFilter').value;
+            const priorityFilter = document.getElementById('priorityFilter').value;
+            const dateFrom = document.getElementById('dateFromFilter').value;
+            const dateTo = document.getElementById('dateToFilter').value;
+
+            const rows = document.querySelectorAll('#ordersTable tbody tr');
+
+            rows.forEach(row => {
+                const status = row.getAttribute('data-status');
+                const priority = row.getAttribute('data-priority');
+                const date = row.getAttribute('data-date');
+
+                let show = true;
+
+                // Фильтр по статусу
+                if (statusFilter !== 'all') {
+                    switch(statusFilter) {
+                        case 'new':
+                            show = status === 'новая';
+                            break;
+                        case 'active':
+                            show = status === 'диагностика' || status === 'в ремонте' || status === 'ожидание запчастей';
+                            break;
+                        case 'ready':
+                            show = status === 'готово';
+                            break;
+                        case 'cancelled':
+                            show = status === 'отменено';
+                            break;
+                    }
+                }
+
+                // Фильтр по приоритету
+                if (show && priorityFilter !== 'all') {
+                    show = priority === priorityFilter;
+                }
+
+                // Фильтр по дате
+                if (show && dateFrom) {
+                    show = date >= dateFrom;
+                }
+                if (show && dateTo) {
+                    show = date <= dateTo;
+                }
+
+                row.style.display = show ? '' : 'none';
+            });
+        }
+
+        // Сброс фильтров
+        function resetFilters() {
+            document.getElementById('statusFilter').value = 'all';
+            document.getElementById('priorityFilter').value = 'all';
+            document.getElementById('dateFromFilter').value = '';
+            document.getElementById('dateToFilter').value = '';
+            applyFilters();
+        }
+
+        // Навешиваем обработчики на фильтры
+        document.getElementById('statusFilter').addEventListener('change', applyFilters);
+        document.getElementById('priorityFilter').addEventListener('change', applyFilters);
+        document.getElementById('dateFromFilter').addEventListener('change', applyFilters);
+        document.getElementById('dateToFilter').addEventListener('change', applyFilters);
+
+        // Автоматическое скрытие уведомлений
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 5000);
+
+        // Для клиентов сразу делаем редирект
+        @if (User.IsInRole("Client"))
+        {
+                <text>
+                setTimeout(function() {
+                    window.location.href = '@Url.Action("MyOrders")';
+                }, 100);
+                </text>
+        }
+    </script>
+}

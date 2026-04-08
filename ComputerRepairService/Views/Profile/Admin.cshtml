@@ -1,0 +1,320 @@
+﻿@model ComputerRepairService.Controllers.AdminDashboardViewModel
+@{
+    ViewData["Title"] = "Панель администратора";
+}
+
+<div class="container-fluid mt-4">
+    <!-- Заголовок -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1><i class="fas fa-crown"></i> Панель администратора</h1>
+            <p class="text-muted mb-0">Добро пожаловать, @Model.User.FirstName @Model.User.LastName!</p>
+        </div>
+        <div class="btn-group">
+            <a asp-action="AccountInfo" class="btn btn-outline-info">
+                <i class="fas fa-user-cog"></i> Настройки аккаунта
+            </a>
+            <a asp-controller="Reports" asp-action="Index" class="btn btn-outline-primary">
+                <i class="fas fa-chart-bar"></i> Отчеты
+            </a>
+        </div>
+    </div>
+
+    <!-- Уведомления -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Основная статистика -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs fw-bold text-primary text-uppercase mb-1">
+                                Всего заказов
+                            </div>
+                            <div class="h5 mb-0 fw-bold">@Model.TotalOrders</div>
+                            <div class="mt-2">
+                                <span class="text-success">
+                                    <i class="fas fa-arrow-up"></i> @Model.ActiveOrders активных
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs fw-bold text-success text-uppercase mb-1">
+                                Общая выручка
+                            </div>
+                            <div class="h5 mb-0 fw-bold">@Model.TotalRevenue.ToString("C")</div>
+                            <div class="mt-2">
+                                <span class="text-muted">за все время</span>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs fw-bold text-info text-uppercase mb-1">
+                                Клиенты
+                            </div>
+                            <div class="h5 mb-0 fw-bold">@Model.TotalCustomers</div>
+                            <div class="mt-2">
+                                <a asp-controller="Customers" asp-action="Index" class="text-decoration-none">
+                                    <span class="text-info">Управление</span>
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-users fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs fw-bold text-warning text-uppercase mb-1">
+                                Низкий запас
+                            </div>
+                            <div class="h5 mb-0 fw-bold">@Model.LowStockItems</div>
+                            <div class="mt-2">
+                                <a asp-controller="Inventory" asp-action="Index" class="text-decoration-none">
+                                    <span class="text-warning">Проверить</span>
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Два столбца контента -->
+    <div class="row">
+        <!-- Последние заказы -->
+        <div class="col-xl-8 col-lg-7 mb-4">
+            <div class="card shadow">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 fw-bold text-primary">
+                        <i class="fas fa-history me-1"></i> Последние заказы
+                    </h6>
+                    <a asp-controller="ServiceOrders" asp-action="Index" class="btn btn-sm btn-primary">
+                        Все заказы
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Клиент</th>
+                                    <th>Устройство</th>
+                                    <th>Статус</th>
+                                    <th>Дата</th>
+                                    <th>Стоимость</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var order in Model.RecentOrders)
+                                {
+                                    <tr>
+                                        <td><strong>#@order.OrderId</strong></td>
+                                        <td>@order.Customer?.FirstName @order.Customer?.LastName</td>
+                                        <td>@order.DeviceBrand @order.DeviceModel</td>
+                                        <td>
+                                            <partial name="_OrderStatusBadge" model="order.OrderStatus?.StatusName" />
+                                        </td>
+                                        <td>@order.CreatedDate.ToString("dd.MM.yyyy")</td>
+                                        <td>@order.TotalCost.ToString("C")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Предупреждения и уведомления -->
+        <div class="col-xl-4 col-lg-5 mb-4">
+            <!-- Предупреждения о низком запасе -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 fw-bold text-warning">
+                        <i class="fas fa-exclamation-triangle me-1"></i> Низкий запас
+                    </h6>
+                </div>
+                <div class="card-body">
+                    @if (Model.LowStockAlerts.Any())
+                    {
+                        <div class="list-group">
+                            @foreach (var item in Model.LowStockAlerts)
+                            {
+                                <a href="#" class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">@item.PartName</h6>
+                                        <small class="text-danger">@item.QuantityInStock шт.</small>
+                                    </div>
+                                    <p class="mb-1 small">Минимальный запас: @item.ReorderLevel шт.</p>
+                                    <small class="text-muted">@item.PartCategory?.CategoryName</small>
+                                </a>
+                            }
+                        </div>
+                        <a asp-controller="Inventory" asp-action="Index" class="btn btn-warning btn-sm mt-3 w-100">
+                            <i class="fas fa-boxes"></i> Управление складом
+                        </a>
+                    }
+                    else
+                    {
+                        <div class="text-center py-3">
+                            <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                            <p class="mb-0">Все позиции в норме</p>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Быстрые действия -->
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 fw-bold text-primary">
+                        <i class="fas fa-bolt me-1"></i> Быстрые действия
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a asp-controller="ServiceOrders" asp-action="Create" class="btn btn-success">
+                            <i class="fas fa-plus"></i> Создать заказ
+                        </a>
+                        <a asp-controller="Customers" asp-action="Create" class="btn btn-primary">
+                            <i class="fas fa-user-plus"></i> Добавить клиента
+                        </a>
+                        <a asp-controller="Technicians" asp-action="Create" class="btn btn-info">
+                            <i class="fas fa-user-cog"></i> Добавить мастера
+                        </a>
+                        <a asp-controller="Inventory" asp-action="Create" class="btn btn-warning">
+                            <i class="fas fa-box"></i> Добавить запчасть
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Новые клиенты -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 fw-bold text-success">
+                        <i class="fas fa-user-plus me-1"></i> Новые клиенты
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        @foreach (var customer in Model.RecentCustomers)
+                        {
+                            <div class="col-md-3 mb-3">
+                                <div class="card border-success h-100">
+                                    <div class="card-body text-center">
+                                        <div class="avatar bg-success text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 60px; height: 60px;">
+                                            <i class="fas fa-user fa-2x"></i>
+                                        </div>
+                                        <h5 class="card-title">@customer.FirstName @customer.LastName</h5>
+                                        <p class="card-text small text-muted">
+                                            @customer.Email<br>
+                                            @customer.Phone
+                                        </p>
+                                        <a asp-controller="Customers" asp-action="Details" asp-route-id="@customer.CustomerId" class="btn btn-outline-success btn-sm">
+                                            <i class="fas fa-eye"></i> Подробнее
+                                        </a>
+                                    </div>
+                                    <div class="card-footer bg-transparent">
+                                        <small class="text-muted">
+                                            Зарегистрирован: @customer.RegistrationDate.ToString("dd.MM.yyyy")
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .card {
+            border-radius: 0.35rem;
+        }
+
+        .border-left-primary {
+            border-left: 0.25rem solid #4e73df !important;
+        }
+
+        .border-left-success {
+            border-left: 0.25rem solid #1cc88a !important;
+        }
+
+        .border-left-info {
+            border-left: 0.25rem solid #36b9cc !important;
+        }
+
+        .border-left-warning {
+            border-left: 0.25rem solid #f6c23e !important;
+        }
+
+        .avatar {
+            font-size: 24px;
+        }
+
+        .text-gray-300 {
+            color: #dddfeb !important;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        // Автоматическое скрытие уведомлений
+        setTimeout(function() {
+            $('.alert').alert('close');
+        }, 5000);
+    </script>
+}

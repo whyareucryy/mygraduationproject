@@ -1,0 +1,64 @@
+﻿@model IEnumerable<ComputerRepairService.Models.Entities.DeviceType>
+
+@{
+    ViewData["Title"] = "Типы устройств";
+    Layout = "_Layout";
+}
+
+<div class="container mt-4">
+    <h1 class="mb-4">Типы устройств</h1>
+
+    <p>
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Добавить тип устройства
+        </a>
+    </p>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">
+            Нет типов устройств. Начните с добавления нового типа.
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Название типа</th>
+                        <th>Описание</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.DeviceTypeId</td>
+                            <td>@item.TypeName</td>
+                            <td>@(item.Description ?? "Нет описания")</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a asp-action="Edit" asp-route-id="@item.DeviceTypeId"
+                                       class="btn btn-sm btn-warning" title="Редактировать">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a asp-action="Details" asp-route-id="@item.DeviceTypeId"
+                                       class="btn btn-sm btn-info" title="Подробнее">
+                                        <i class="fas fa-info-circle"></i>
+                                    </a>
+                                    <a asp-action="Delete" asp-route-id="@item.DeviceTypeId"
+                                       class="btn btn-sm btn-danger" title="Удалить">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

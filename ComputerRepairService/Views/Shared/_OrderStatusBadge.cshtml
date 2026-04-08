@@ -1,0 +1,32 @@
+﻿@model string
+
+@{
+    var status = Model ?? "Неизвестно";
+    var badgeClass = status switch
+    {
+        "Новая" => "bg-primary",
+        "Диагностика" => "bg-info",
+        "Ожидание запчастей" => "bg-secondary",
+        "В ремонте" => "bg-warning",
+        "Готово" => "bg-success",
+        "Выдано" => "bg-light text-dark",
+        "Отменено" => "bg-danger",
+        _ => "bg-dark"
+    };
+
+    var icon = status switch
+    {
+        "Новая" => "fas fa-plus-circle",
+        "Диагностика" => "fas fa-stethoscope",
+        "Ожидание запчастей" => "fas fa-clock",
+        "В ремонте" => "fas fa-tools",
+        "Готово" => "fas fa-check-circle",
+        "Выдано" => "fas fa-box",
+        "Отменено" => "fas fa-times-circle",
+        _ => "fas fa-question-circle"
+    };
+}
+
+<span class="badge @badgeClass">
+    <i class="@icon me-1"></i> @status
+</span>

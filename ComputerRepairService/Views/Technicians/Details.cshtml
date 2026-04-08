@@ -1,0 +1,134 @@
+﻿@model ComputerRepairService.Models.Entities.Technician
+
+@{
+    ViewData["Title"] = "Детали мастера";
+}
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="card-title mb-0">
+                    <i class="fas fa-tools"></i> Детали мастера
+                </h4>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-3">Имя:</dt>
+                    <dd class="col-sm-9">@Model.FirstName</dd>
+
+                    <dt class="col-sm-3">Фамилия:</dt>
+                    <dd class="col-sm-9">@Model.LastName</dd>
+
+                    <dt class="col-sm-3">Email:</dt>
+                    <dd class="col-sm-9">@Model.Email</dd>
+
+                    <dt class="col-sm-3">Телефон:</dt>
+                    <dd class="col-sm-9">@Model.Phone</dd>
+
+                    <dt class="col-sm-3">Специализация:</dt>
+                    <dd class="col-sm-9">@Model.Specialization</dd>
+
+                    <dt class="col-sm-3">Часовая ставка:</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.HourlyRate.HasValue)
+                        {
+                            <span class="badge bg-primary">@Model.HourlyRate.Value.ToString("C")</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">—</span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-3">Дата найма:</dt>
+                    <dd class="col-sm-9">@Model.HireDate.ToString("dd.MM.yyyy")</dd>
+
+                    <dt class="col-sm-3">Статус:</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.IsActive)
+                        {
+                            <span class="badge bg-success">Активен</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">Неактивен</span>
+                        }
+                    </dd>
+                </dl>
+
+                <div class="mt-4">
+                    <a asp-action="Edit" asp-route-id="@Model.TechnicianId" class="btn btn-warning">
+                        <i class="fas fa-edit"></i> Редактировать
+                    </a>
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Назад к списку
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Активные заказы -->
+        @if (Model.OrderTechnicians.Any())
+        {
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Активные заказы</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>ID заказа</th>
+                                    <th>Клиент</th>
+                                    <th>Проблема</th>
+                                    <th>Статус</th>
+                                    <th>Часы работы</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var assignment in Model.OrderTechnicians.Where(ot => ot.ServiceOrder.StatusId != 5 && ot.ServiceOrder.StatusId != 6 && ot.ServiceOrder.StatusId != 7))
+                                {
+                                    <tr>
+                                        <td>#@assignment.ServiceOrder.OrderId</td>
+                                        <td>@assignment.ServiceOrder.Customer.FirstName @assignment.ServiceOrder.Customer.LastName</td>
+                                        <td>@assignment.ServiceOrder.ProblemDescription.Substring(0, Math.Min(50, assignment.ServiceOrder.ProblemDescription.Length))...</td>
+                                        <td>
+                                            <span class="badge bg-info">@assignment.ServiceOrder.OrderStatus.StatusName</span>
+                                        </td>
+                                        <td>@assignment.HoursWorked</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Статистика</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <h3 class="text-primary">@Model.OrderTechnicians.Count</h3>
+                    <p class="text-muted">Всего назначений</p>
+                </div>
+
+                <div class="text-center mb-4">
+                    <h3 class="text-success">@Model.OrderTechnicians.Sum(ot => ot.HoursWorked)</h3>
+                    <p class="text-muted">Всего часов работы</p>
+                </div>
+
+                <div class="text-center">
+                    <h3 class="text-warning">@Model.OrderTechnicians.Count(ot => ot.ServiceOrder.StatusId != 5 && ot.ServiceOrder.StatusId != 6 && ot.ServiceOrder.StatusId != 7)</h3>
+                    <p class="text-muted">Активных заказов</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
