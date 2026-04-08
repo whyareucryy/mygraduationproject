@@ -1,0 +1,263 @@
+-- Создание базы данных
+CREATE DATABASE ComputerRepairService;
+GO
+
+USE ComputerRepairService;
+GO
+
+-- Таблица статусов заказов
+CREATE TABLE OrderStatuses (
+    StatusId INT IDENTITY(1,1) PRIMARY KEY,
+    StatusName NVARCHAR(50) NOT NULL,
+    Description NVARCHAR(200)
+);
+GO
+
+-- Таблица типов устройств
+CREATE TABLE DeviceTypes (
+    DeviceTypeId INT IDENTITY(1,1) PRIMARY KEY,
+    TypeName NVARCHAR(50) NOT NULL,
+    Description NVARCHAR(200)
+);
+GO
+
+-- Таблица клиентов
+CREATE TABLE Customers (
+    CustomerId INT IDENTITY(1,1) PRIMARY KEY,
+    FirstName NVARCHAR(50) NOT NULL,
+    LastName NVARCHAR(50) NOT NULL,
+    Email NVARCHAR(100) UNIQUE NOT NULL,
+    Phone NVARCHAR(20) NOT NULL,
+    Address NVARCHAR(200),
+    RegistrationDate DATETIME2 DEFAULT GETDATE(),
+    IsActive BIT DEFAULT 1
+);
+GO
+
+-- Таблица сотрудников (мастера)
+CREATE TABLE Technicians (
+    TechnicianId INT IDENTITY(1,1) PRIMARY KEY,
+    FirstName NVARCHAR(50) NOT NULL,
+    LastName NVARCHAR(50) NOT NULL,
+    Email NVARCHAR(100) UNIQUE NOT NULL,
+    Phone NVARCHAR(20),
+    Specialization NVARCHAR(100),
+    HireDate DATETIME2 DEFAULT GETDATE(),
+    HourlyRate DECIMAL(10,2),
+    IsActive BIT DEFAULT 1
+);
+GO
+
+-- Таблица услуг
+CREATE TABLE Services (
+    ServiceId INT IDENTITY(1,1) PRIMARY KEY,
+    ServiceName NVARCHAR(100) NOT NULL,
+    Description NVARCHAR(500),
+    BasePrice DECIMAL(10,2) NOT NULL,
+    EstimatedDuration INT, -- в минутах
+    IsActive BIT DEFAULT 1
+);
+GO
+
+-- Таблица категорий запчастей
+CREATE TABLE PartCategories (
+    CategoryId INT IDENTITY(1,1) PRIMARY KEY,
+    CategoryName NVARCHAR(50) NOT NULL,
+    Description NVARCHAR(200)
+);
+GO
+
+-- Таблица запчастей на складе
+CREATE TABLE Inventory (
+    PartId INT IDENTITY(1,1) PRIMARY KEY,
+    PartName NVARCHAR(100) NOT NULL,
+    Description NVARCHAR(500),
+    CategoryId INT FOREIGN KEY REFERENCES PartCategories(CategoryId),
+    QuantityInStock INT NOT NULL DEFAULT 0,
+    UnitPrice DECIMAL(10,2) NOT NULL,
+    ReorderLevel INT DEFAULT 5,
+    SupplierInfo NVARCHAR(200),
+    IsActive BIT DEFAULT 1
+);
+GO
+
+-- Таблица заказов на обслуживание
+CREATE TABLE ServiceOrders (
+    OrderId INT IDENTITY(1,1) PRIMARY KEY,
+    CustomerId INT NOT NULL FOREIGN KEY REFERENCES Customers(CustomerId),
+    DeviceTypeId INT NOT NULL FOREIGN KEY REFERENCES DeviceTypes(DeviceTypeId),
+    DeviceBrand NVARCHAR(50),
+    DeviceModel NVARCHAR(50),
+    SerialNumber NVARCHAR(100),
+    ProblemDescription NVARCHAR(1000) NOT NULL,
+    DiagnosticNotes NVARCHAR(1000),
+    StatusId INT NOT NULL FOREIGN KEY REFERENCES OrderStatuses(StatusId) DEFAULT 1,
+    Priority INT DEFAULT 1, -- 1: Низкий, 2: Средний, 3: Высокий
+    CreatedDate DATETIME2 DEFAULT GETDATE(),
+    EstimatedCompletionDate DATETIME2,
+    ActualCompletionDate DATETIME2,
+    TotalCost DECIMAL(10,2) DEFAULT 0,
+    TechnicianNotes NVARCHAR(1000)
+);
+GO
+
+-- Таблица назначений мастеров к заказам
+CREATE TABLE OrderTechnicians (
+    OrderTechnicianId INT IDENTITY(1,1) PRIMARY KEY,
+    OrderId INT NOT NULL FOREIGN KEY REFERENCES ServiceOrders(OrderId),
+    TechnicianId INT NOT NULL FOREIGN KEY REFERENCES Technicians(TechnicianId),
+    AssignedDate DATETIME2 DEFAULT GETDATE(),
+    HoursWorked DECIMAL(5,2) DEFAULT 0,
+    IsPrimary BIT DEFAULT 1
+);
+GO
+
+-- Таблица выполненных услуг в заказе
+CREATE TABLE OrderServices (
+    OrderServiceId INT IDENTITY(1,1) PRIMARY KEY,
+    OrderId INT NOT NULL FOREIGN KEY REFERENCES ServiceOrders(OrderId),
+    ServiceId INT NOT NULL FOREIGN KEY REFERENCES Services(ServiceId),
+    TechnicianId INT NOT NULL FOREIGN KEY REFERENCES Technicians(TechnicianId),
+    Quantity INT DEFAULT 1,
+    UnitPrice DECIMAL(10,2) NOT NULL,
+    TotalPrice AS (Quantity * UnitPrice),
+    ServiceDate DATETIME2 DEFAULT GETDATE(),
+    Notes NVARCHAR(500)
+);
+GO
+
+-- Таблица использованных запчастей в заказе
+CREATE TABLE OrderParts (
+    OrderPartId INT IDENTITY(1,1) PRIMARY KEY,
+    OrderId INT NOT NULL FOREIGN KEY REFERENCES ServiceOrders(OrderId),
+    PartId INT NOT NULL FOREIGN KEY REFERENCES Inventory(PartId),
+    QuantityUsed INT NOT NULL,
+    UnitPriceAtTime DECIMAL(10,2) NOT NULL,
+    TotalPrice AS (QuantityUsed * UnitPriceAtTime),
+    UsageDate DATETIME2 DEFAULT GETDATE()
+);
+GO
+
+-- Таблица истории статусов заказа
+CREATE TABLE OrderStatusHistory (
+    HistoryId INT IDENTITY(1,1) PRIMARY KEY,
+    OrderId INT NOT NULL FOREIGN KEY REFERENCES ServiceOrders(OrderId),
+    StatusId INT NOT NULL FOREIGN KEY REFERENCES OrderStatuses(StatusId),
+    ChangedDate DATETIME2 DEFAULT GETDATE(),
+    ChangedBy NVARCHAR(100),
+    Notes NVARCHAR(500)
+);
+GO
+
+-- Таблица платежей
+CREATE TABLE Payments (
+    PaymentId INT IDENTITY(1,1) PRIMARY KEY,
+    OrderId INT NOT NULL FOREIGN KEY REFERENCES ServiceOrders(OrderId),
+    Amount DECIMAL(10,2) NOT NULL,
+    PaymentDate DATETIME2 DEFAULT GETDATE(),
+    PaymentMethod NVARCHAR(50), -- 'Cash', 'Card', 'Bank Transfer'
+    Status NVARCHAR(50) DEFAULT 'Completed', -- 'Pending', 'Completed', 'Failed'
+    TransactionId NVARCHAR(100),
+    Notes NVARCHAR(500)
+);
+GO
+
+-- Вставляем начальные данные
+INSERT INTO OrderStatuses (StatusName, Description) VALUES
+('Новая', 'Заявка только создана'),
+('Диагностика', 'Устройство на диагностике'),
+('Ожидание запчастей', 'Ожидаем поставки запчастей'),
+('В ремонте', 'Устройство в процессе ремонта'),
+('Готово', 'Ремонт завершен'),
+('Выдано', 'Устройство возвращено клиенту'),
+('Отменено', 'Заявка отменена');
+GO
+
+INSERT INTO DeviceTypes (TypeName, Description) VALUES
+('Ноутбук', 'Портативные компьютеры'),
+('Стационарный ПК', 'Настольные компьютеры'),
+('Моноблок', 'Компьютеры-моноблоки'),
+('Сервер', 'Серверное оборудование'),
+('Планшет', 'Планшетные компьютеры'),
+('Принтер/МФУ', 'Печатающее оборудование');
+GO
+
+INSERT INTO PartCategories (CategoryName, Description) VALUES
+('Жесткие диски', 'HDD, SSD накопители'),
+('Оперативная память', 'Модули RAM'),
+('Процессоры', 'Центральные процессоры'),
+('Материнские платы', 'Основные платы'),
+('Блоки питания', 'Источники питания'),
+('Системы охлаждения', 'Кулеры, радиаторы'),
+('Батареи', 'Аккумуляторы для ноутбуков'),
+('Экранные модули', 'Дисплеи и матрицы'),
+('Клавиатуры', 'Клавиатуры для ноутбуков');
+GO
+
+INSERT INTO Services (ServiceName, Description, BasePrice, EstimatedDuration) VALUES
+('Диагностика', 'Полная диагностика оборудования', 500.00, 60),
+('Чистка от пыли', 'Чистка системы охлаждения и корпуса', 800.00, 45),
+('Замена термопасты', 'Замена термоинтерфейса процессора/видеокарты', 400.00, 30),
+('Установка ОС', 'Установка операционной системы', 1000.00, 90),
+('Восстановление данных', 'Восстановление данных с носителей', 1500.00, 120),
+('Замена матрицы', 'Замена экрана ноутбука', 1200.00, 60),
+('Ремонт материнской платы', 'Диагностика и ремонт материнской платы', 2000.00, 180);
+GO
+
+-- Создаем индексы для улучшения производительности
+CREATE INDEX IX_ServiceOrders_CustomerId ON ServiceOrders(CustomerId);
+CREATE INDEX IX_ServiceOrders_StatusId ON ServiceOrders(StatusId);
+CREATE INDEX IX_ServiceOrders_CreatedDate ON ServiceOrders(CreatedDate);
+CREATE INDEX IX_OrderParts_OrderId ON OrderParts(OrderId);
+CREATE INDEX IX_OrderParts_PartId ON OrderParts(PartId);
+CREATE INDEX IX_OrderServices_OrderId ON OrderServices(OrderId);
+CREATE INDEX IX_OrderStatusHistory_OrderId ON OrderStatusHistory(OrderId);
+CREATE INDEX IX_Inventory_CategoryId ON Inventory(CategoryId);
+GO
+
+-- Создаем представления (каждое в отдельном пакете)
+CREATE VIEW ActiveOrders AS
+SELECT 
+    so.OrderId,
+    c.FirstName + ' ' + c.LastName AS CustomerName,
+    dt.TypeName AS DeviceType,
+    os.StatusName,
+    so.CreatedDate,
+    so.TotalCost
+FROM ServiceOrders so
+    INNER JOIN Customers c ON so.CustomerId = c.CustomerId
+    INNER JOIN DeviceTypes dt ON so.DeviceTypeId = dt.DeviceTypeId
+    INNER JOIN OrderStatuses os ON so.StatusId = os.StatusId
+WHERE so.StatusId NOT IN (5, 6, 7); -- Не готовые, выданные или отмененные
+GO
+
+CREATE VIEW TechnicianWorkload AS
+SELECT 
+    t.TechnicianId,
+    t.FirstName + ' ' + t.LastName AS TechnicianName,
+    COUNT(ot.OrderId) AS ActiveOrdersCount,
+    SUM(ot.HoursWorked) AS TotalHoursWorked
+FROM Technicians t
+    LEFT JOIN OrderTechnicians ot ON t.TechnicianId = ot.TechnicianId
+    LEFT JOIN ServiceOrders so ON ot.OrderId = so.OrderId
+WHERE so.StatusId NOT IN (5, 6, 7) AND t.IsActive = 1
+GROUP BY t.TechnicianId, t.FirstName, t.LastName;
+GO
+
+CREATE VIEW LowStockAlert AS
+SELECT 
+    PartId,
+    PartName,
+    QuantityInStock,
+    ReorderLevel
+FROM Inventory
+WHERE QuantityInStock <= ReorderLevel AND IsActive = 1;
+GO
+
+-- Проверочный запрос для тестирования базы
+SELECT 
+    'Database created successfully' AS Result,
+    (SELECT COUNT(*) FROM OrderStatuses) AS StatusCount,
+    (SELECT COUNT(*) FROM DeviceTypes) AS DeviceTypesCount,
+    (SELECT COUNT(*) FROM Services) AS ServicesCount;
+GO
