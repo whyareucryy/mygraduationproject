@@ -261,3 +261,267 @@ SELECT
     (SELECT COUNT(*) FROM DeviceTypes) AS DeviceTypesCount,
     (SELECT COUNT(*) FROM Services) AS ServicesCount;
 GO
+
+-- ИЗМЕНЕНИЕ И ДОБАВЛЕНИЕ РОЛЕЙ
+
+USE ComputerRepairService;
+GO
+
+-- 1. Создаем таблицы Identity (если еще не существуют)
+
+-- Таблица AspNetUsers (уже есть в вашем скрипте, но проверим структуру)
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AspNetUsers')
+BEGIN
+    CREATE TABLE [AspNetUsers] (
+        [Id] NVARCHAR(450) PRIMARY KEY,
+        [FirstName] NVARCHAR(100) NULL,
+        [LastName] NVARCHAR(100) NULL,
+        [Address] NVARCHAR(500) NULL,
+        [RegistrationDate] DATETIME2 NOT NULL DEFAULT GETDATE(),
+        [CustomerId] INT NULL,
+        [TechnicianId] INT NULL,
+        [UserName] NVARCHAR(256) NULL,
+        [NormalizedUserName] NVARCHAR(256) NULL,
+        [Email] NVARCHAR(256) NULL,
+        [NormalizedEmail] NVARCHAR(256) NULL,
+        [EmailConfirmed] BIT NOT NULL DEFAULT 0,
+        [PasswordHash] NVARCHAR(MAX) NULL,
+        [SecurityStamp] NVARCHAR(MAX) NULL,
+        [ConcurrencyStamp] NVARCHAR(MAX) NULL,
+        [PhoneNumber] NVARCHAR(MAX) NULL,
+        [PhoneNumberConfirmed] BIT NOT NULL DEFAULT 0,
+        [TwoFactorEnabled] BIT NOT NULL DEFAULT 0,
+        [LockoutEnd] DATETIMEOFFSET NULL,
+        [LockoutEnabled] BIT NOT NULL DEFAULT 1,
+        [AccessFailedCount] INT NOT NULL DEFAULT 0
+    );
+    PRINT 'Таблица AspNetUsers создана';
+END
+ELSE PRINT 'Таблица AspNetUsers уже существует';
+
+-- Таблица AspNetRoles
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AspNetRoles')
+BEGIN
+    CREATE TABLE [AspNetRoles] (
+        [Id] NVARCHAR(450) PRIMARY KEY,
+        [Name] NVARCHAR(256) NULL,
+        [NormalizedName] NVARCHAR(256) NULL,
+        [ConcurrencyStamp] NVARCHAR(MAX) NULL
+    );
+    PRINT 'Таблица AspNetRoles создана';
+END
+ELSE PRINT 'Таблица AspNetRoles уже существует';
+
+-- Таблица AspNetRoleClaims
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AspNetRoleClaims')
+BEGIN
+    CREATE TABLE [AspNetRoleClaims] (
+        [Id] INT IDENTITY(1,1) PRIMARY KEY,
+        [RoleId] NVARCHAR(450) NOT NULL,
+        [ClaimType] NVARCHAR(MAX) NULL,
+        [ClaimValue] NVARCHAR(MAX) NULL,
+        CONSTRAINT [FK_AspNetRoleClaims_AspNetRoles_RoleId] FOREIGN KEY ([RoleId]) 
+        REFERENCES [AspNetRoles] ([Id]) ON DELETE CASCADE
+    );
+    PRINT 'Таблица AspNetRoleClaims создана';
+END
+ELSE PRINT 'Таблица AspNetRoleClaims уже существует';
+
+-- Таблица AspNetUserClaims
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AspNetUserClaims')
+BEGIN
+    CREATE TABLE [AspNetUserClaims] (
+        [Id] INT IDENTITY(1,1) PRIMARY KEY,
+        [UserId] NVARCHAR(450) NOT NULL,
+        [ClaimType] NVARCHAR(MAX) NULL,
+        [ClaimValue] NVARCHAR(MAX) NULL,
+        CONSTRAINT [FK_AspNetUserClaims_AspNetUsers_UserId] FOREIGN KEY ([UserId]) 
+        REFERENCES [AspNetUsers] ([Id]) ON DELETE CASCADE
+    );
+    PRINT 'Таблица AspNetUserClaims создана';
+END
+ELSE PRINT 'Таблица AspNetUserClaims уже существует';
+
+-- Таблица AspNetUserLogins
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AspNetUserLogins')
+BEGIN
+    CREATE TABLE [AspNetUserLogins] (
+        [LoginProvider] NVARCHAR(450) NOT NULL,
+        [ProviderKey] NVARCHAR(450) NOT NULL,
+        [ProviderDisplayName] NVARCHAR(MAX) NULL,
+        [UserId] NVARCHAR(450) NOT NULL,
+        CONSTRAINT [PK_AspNetUserLogins] PRIMARY KEY ([LoginProvider], [ProviderKey]),
+        CONSTRAINT [FK_AspNetUserLogins_AspNetUsers_UserId] FOREIGN KEY ([UserId]) 
+        REFERENCES [AspNetUsers] ([Id]) ON DELETE CASCADE
+    );
+    PRINT 'Таблица AspNetUserLogins создана';
+END
+ELSE PRINT 'Таблица AspNetUserLogins уже существует';
+
+-- Таблица AspNetUserRoles
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AspNetUserRoles')
+BEGIN
+    CREATE TABLE [AspNetUserRoles] (
+        [UserId] NVARCHAR(450) NOT NULL,
+        [RoleId] NVARCHAR(450) NOT NULL,
+        CONSTRAINT [PK_AspNetUserRoles] PRIMARY KEY ([UserId], [RoleId]),
+        CONSTRAINT [FK_AspNetUserRoles_AspNetUsers_UserId] FOREIGN KEY ([UserId]) 
+        REFERENCES [AspNetUsers] ([Id]) ON DELETE CASCADE,
+        CONSTRAINT [FK_AspNetUserRoles_AspNetRoles_RoleId] FOREIGN KEY ([RoleId]) 
+        REFERENCES [AspNetRoles] ([Id]) ON DELETE CASCADE
+    );
+    PRINT 'Таблица AspNetUserRoles создана';
+END
+ELSE PRINT 'Таблица AspNetUserRoles уже существует';
+
+-- Таблица AspNetUserTokens
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AspNetUserTokens')
+BEGIN
+    CREATE TABLE [AspNetUserTokens] (
+        [UserId] NVARCHAR(450) NOT NULL,
+        [LoginProvider] NVARCHAR(450) NOT NULL,
+        [Name] NVARCHAR(450) NOT NULL,
+        [Value] NVARCHAR(MAX) NULL,
+        CONSTRAINT [PK_AspNetUserTokens] PRIMARY KEY ([UserId], [LoginProvider], [Name]),
+        CONSTRAINT [FK_AspNetUserTokens_AspNetUsers_UserId] FOREIGN KEY ([UserId]) 
+        REFERENCES [AspNetUsers] ([Id]) ON DELETE CASCADE
+    );
+    PRINT 'Таблица AspNetUserTokens создана';
+END
+ELSE PRINT 'Таблица AspNetUserTokens уже существует';
+
+-- 2. Создаем индексы для таблиц Identity
+
+-- Индекс для Email в AspNetUsers
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'EmailIndex' AND object_id = OBJECT_ID('AspNetUsers'))
+BEGIN
+    CREATE INDEX [EmailIndex] ON [AspNetUsers]([NormalizedEmail]);
+    PRINT 'Индекс EmailIndex создан';
+END
+
+-- Уникальный индекс для UserName в AspNetUsers
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'UserNameIndex' AND object_id = OBJECT_ID('AspNetUsers'))
+BEGIN
+    CREATE UNIQUE INDEX [UserNameIndex] ON [AspNetUsers]([NormalizedUserName]) WHERE [NormalizedUserName] IS NOT NULL;
+    PRINT 'Индекс UserNameIndex создан';
+END
+
+-- Уникальный индекс для RoleName в AspNetRoles
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'RoleNameIndex' AND object_id = OBJECT_ID('AspNetRoles'))
+BEGIN
+    CREATE UNIQUE INDEX [RoleNameIndex] ON [AspNetRoles]([NormalizedName]) WHERE [NormalizedName] IS NOT NULL;
+    PRINT 'Индекс RoleNameIndex создан';
+END
+
+-- Индекс для RoleId в AspNetRoleClaims
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_AspNetRoleClaims_RoleId' AND object_id = OBJECT_ID('AspNetRoleClaims'))
+BEGIN
+    CREATE INDEX [IX_AspNetRoleClaims_RoleId] ON [AspNetRoleClaims]([RoleId]);
+    PRINT 'Индекс IX_AspNetRoleClaims_RoleId создан';
+END
+
+-- Индекс для UserId в AspNetUserClaims
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_AspNetUserClaims_UserId' AND object_id = OBJECT_ID('AspNetUserClaims'))
+BEGIN
+    CREATE INDEX [IX_AspNetUserClaims_UserId] ON [AspNetUserClaims]([UserId]);
+    PRINT 'Индекс IX_AspNetUserClaims_UserId создан';
+END
+
+-- Индекс для UserId в AspNetUserLogins
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_AspNetUserLogins_UserId' AND object_id = OBJECT_ID('AspNetUserLogins'))
+BEGIN
+    CREATE INDEX [IX_AspNetUserLogins_UserId] ON [AspNetUserLogins]([UserId]);
+    PRINT 'Индекс IX_AspNetUserLogins_UserId создан';
+END
+
+-- Индекс для RoleId в AspNetUserRoles
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_AspNetUserRoles_RoleId' AND object_id = OBJECT_ID('AspNetUserRoles'))
+BEGIN
+    CREATE INDEX [IX_AspNetUserRoles_RoleId] ON [AspNetUserRoles]([RoleId]);
+    PRINT 'Индекс IX_AspNetUserRoles_RoleId создан';
+END
+
+-- 3. Проверяем и добавляем столбцы UserId в Customers и Technicians (если еще нет)
+
+IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS 
+               WHERE TABLE_NAME = 'Customers' AND COLUMN_NAME = 'UserId')
+BEGIN
+    ALTER TABLE Customers 
+    ADD UserId NVARCHAR(450) NULL;
+    PRINT 'Столбец UserId добавлен в таблицу Customers';
+END
+ELSE PRINT 'Столбец UserId уже существует в таблице Customers';
+
+IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS 
+               WHERE TABLE_NAME = 'Technicians' AND COLUMN_NAME = 'UserId')
+BEGIN
+    ALTER TABLE Technicians 
+    ADD UserId NVARCHAR(450) NULL;
+    PRINT 'Столбец UserId добавлен в таблицу Technicians';
+END
+ELSE PRINT 'Столбец UserId уже существует в таблице Technicians';
+
+-- 4. Создаем индексы для связи 1:1 (уже есть в вашем скрипте)
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Customers_UserId' AND object_id = OBJECT_ID('Customers'))
+BEGIN
+    CREATE UNIQUE INDEX [IX_Customers_UserId] 
+    ON [Customers]([UserId]) 
+    WHERE [UserId] IS NOT NULL;
+    PRINT 'Индекс IX_Customers_UserId создан';
+END
+ELSE PRINT 'Индекс IX_Customers_UserId уже существует';
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Technicians_UserId' AND object_id = OBJECT_ID('Technicians'))
+BEGIN
+    CREATE UNIQUE INDEX [IX_Technicians_UserId] 
+    ON [Technicians]([UserId]) 
+    WHERE [UserId] IS NOT NULL;
+    PRINT 'Индекс IX_Technicians_UserId создан';
+END
+ELSE PRINT 'Индекс IX_Technicians_UserId уже существует';
+
+-- 5. Создаем внешние ключи
+
+-- Внешний ключ от Customers к AspNetUsers
+IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS 
+               WHERE CONSTRAINT_NAME = 'FK_Customers_AspNetUsers_UserId' AND TABLE_NAME = 'Customers')
+BEGIN
+    ALTER TABLE [Customers] 
+    ADD CONSTRAINT [FK_Customers_AspNetUsers_UserId] 
+    FOREIGN KEY ([UserId]) REFERENCES [AspNetUsers] ([Id]) 
+    ON DELETE NO ACTION;
+    PRINT 'Внешний ключ FK_Customers_AspNetUsers_UserId создан';
+END
+ELSE PRINT 'Внешний ключ FK_Customers_AspNetUsers_UserId уже существует';
+
+-- Внешний ключ от Technicians к AspNetUsers
+IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS 
+               WHERE CONSTRAINT_NAME = 'FK_Technicians_AspNetUsers_UserId' AND TABLE_NAME = 'Technicians')
+BEGIN
+    ALTER TABLE [Technicians] 
+    ADD CONSTRAINT [FK_Technicians_AspNetUsers_UserId] 
+    FOREIGN KEY ([UserId]) REFERENCES [AspNetUsers] ([Id]) 
+    ON DELETE NO ACTION;
+    PRINT 'Внешний ключ FK_Technicians_AspNetUsers_UserId создан';
+END
+ELSE PRINT 'Внешний ключ FK_Technicians_AspNetUsers_UserId уже существует';
+
+PRINT '========================================';
+PRINT 'ВСЕ ТАБЛИЦЫ IDENTITY УСПЕШНО СОЗДАНЫ!';
+PRINT '========================================';
+
+-- 6. Проверка создания
+PRINT 'Проверка созданных таблиц:';
+SELECT 
+    TABLE_NAME,
+    CASE 
+        WHEN TABLE_NAME IN ('AspNetUsers', 'AspNetRoles', 'AspNetRoleClaims', 
+                           'AspNetUserClaims', 'AspNetUserLogins', 
+                           'AspNetUserRoles', 'AspNetUserTokens') 
+        THEN 'Identity таблица'
+        ELSE 'Бизнес-таблица'
+    END AS Тип_таблицы
+FROM INFORMATION_SCHEMA.TABLES 
+WHERE TABLE_TYPE = 'BASE TABLE' 
+ORDER BY Тип_таблицы, TABLE_NAME;
+GO

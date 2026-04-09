@@ -290,6 +290,10 @@ namespace ComputerRepairService.Data
                     await context.SaveChangesAsync();
                 }
 
+                // 5. Синхронизация legacy-профилей из БД (если UserId еще не заполнен)
+                await SyncUnlinkedCustomersAsync(context, userManager, logger);
+                await SyncUnlinkedTechniciansAsync(context, userManager, logger);
+
                 Console.WriteLine("=== SEED DATA COMPLETED SUCCESSFULLY ===");
                 logger.LogInformation("=== ИНИЦИАЛИЗАЦИЯ IDENTITY ЗАВЕРШЕНА УСПЕШНО ===");
             }
@@ -300,6 +304,111 @@ namespace ComputerRepairService.Data
 
                 var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
                 logger.LogError(ex, "Ошибка в SeedData.Initialize");
+            }
+        }
+
+        private static async Task SyncUnlinkedCustomersAsync(
+            RepairDbContext context,
+            UserManager<ApplicationUser> userManager,
+            ILogger logger)
+        {
+            var unlinkedCustomers = await context.Customers
+                .Where(c => string.IsNullOrWhiteSpace(c.UserId) && !string.IsNullOrWhiteSpace(c.Email))
+                .ToListAsync();
+
+            foreach (var customer in unlinkedCustomers)
+            {
+                var email = customer.Email.Trim();
+                var user = await userManager.FindByEmailAsync(email);
+
+                if (user == null)
+                {
+                    user = new ApplicationUser
+                    {
+                        UserName = email,
+                        Email = email,
+                        FirstName = customer.FirstName,
+                        LastName = customer.LastName,
+                        PhoneNumber = customer.Phone,
+                        Address = customer.Address,
+                        EmailConfirmed = true
+                    };
+
+                    var createResult = await userManager.CreateAsync(user, "TempClient123!");
+                    if (!createResult.Succeeded)
+                    {
+                        logger.LogError("Не удалось создать Identity-пользователя для Customer {CustomerId} ({Email}): {Errors}",
+                            customer.CustomerId,
+                            email,
+                            string.Join(", ", createResult.Errors.Select(e => e.Description)));
+                        continue;
+                    }
+                }
+
+                if (!await userManager.IsInRoleAsync(user, "Client"))
+                {
+                    await userManager.AddToRoleAsync(user, "Client");
+                }
+
+                customer.UserId = user.Id;
+            }
+
+            if (unlinkedCustomers.Any())
+            {
+                await context.SaveChangesAsync();
+                logger.LogInformation("Синхронизированы unlinked Customers: {Count}", unlinkedCustomers.Count);
+            }
+        }
+
+        private static async Task SyncUnlinkedTechniciansAsync(
+            RepairDbContext context,
+            UserManager<ApplicationUser> userManager,
+            ILogger logger)
+        {
+            var unlinkedTechnicians = await context.Technicians
+                .Where(t => string.IsNullOrWhiteSpace(t.UserId) && !string.IsNullOrWhiteSpace(t.Email))
+                .ToListAsync();
+
+            foreach (var technician in unlinkedTechnicians)
+            {
+                var email = technician.Email.Trim();
+                var user = await userManager.FindByEmailAsync(email);
+
+                if (user == null)
+                {
+                    user = new ApplicationUser
+                    {
+                        UserName = email,
+                        Email = email,
+                        FirstName = technician.FirstName,
+                        LastName = technician.LastName,
+                        PhoneNumber = technician.Phone,
+                        EmailConfirmed = true
+                    };
+
+                    var createResult = await userManager.CreateAsync(user, "TempEmployee123!");
+                    if (!createResult.Succeeded)
+                    {
+                        logger.LogError("Не удалось создать Identity-пользователя для Technician {TechnicianId} ({Email}): {Errors}",
+                            technician.TechnicianId,
+                            email,
+                            string.Join(", ", createResult.Errors.Select(e => e.Description)));
+                        continue;
+                    }
+                }
+
+                if (!await userManager.IsInRoleAsync(user, "Employee"))
+                {
+                    await userManager.AddToRoleAsync(user, "Employee");
+                }
+
+                technician.UserId = user.Id;
+            }
+
+            if (unlinkedTechnicians.Any())
+            {
+                await context.SaveChangesAsync();
+                logger.LogInformation("Синхронизированы unlinked Technicians: {Count}", unlinkedTechnicians.Count);
             }
         }
     }
