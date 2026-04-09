@@ -89,27 +89,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseSession();
 
-// Инициализация базы данных с начальными данными
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-
-    try
-    {
-        // Применение миграций
-        var context = services.GetRequiredService<RepairDbContext>();
-        //context.Database.Migrate(); // Применяет все pending миграции
-
-        // Инициализация ролей и администратора
-        await SeedData.Initialize(services);
-    }
-    catch (Exception ex)
-    {
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "Ошибка при инициализации базы данных");
-    }
-}
-
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -139,6 +118,6 @@ app.MapRazorPages(); // Это для страниц Identity (логин, регистрация и т.д.)
 // Маршрутизация контроллеров - ВАЖНО: используем Dashboard как главную страницу
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Dashboard}/{action=Index}/{id?}");
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
