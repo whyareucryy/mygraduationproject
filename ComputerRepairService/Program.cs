@@ -1,7 +1,10 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Identity;
 using ComputerRepairService.Data;
 using ComputerRepairService.Models.Entities;
+using ComputerRepairService.Services;
+using ComputerRepairService.Services.Identity;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,7 +35,10 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 })
 .AddEntityFrameworkStores<RepairDbContext>()
 .AddDefaultTokenProviders()
-.AddDefaultUI(); // Добавляет стандартные UI страницы Identity (логин, регистрация и т.д.)
+.AddDefaultUI();
+
+// Development email sink for Identity pages (Forgot Password, Confirm Email, etc.)
+builder.Services.AddTransient<IEmailSender, DevelopmentEmailSender>();
 
 // Настройка Application Cookie
 builder.Services.ConfigureApplicationCookie(options =>
