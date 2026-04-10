@@ -35,6 +35,9 @@
         <a asp-action="Create" class="btn btn-success">
             <i class="fas fa-plus"></i> Создать заказ
         </a>
+        <a asp-action="ClientRequests" class="btn btn-outline-primary">
+            <i class="fas fa-inbox"></i> Заявки клиентов
+        </a>
 
         @if (User.IsInRole("Employee"))
         {

@@ -336,11 +336,14 @@
 
                     @if (SignInManager.IsSignedIn(User))
                     {
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Dashboard" asp-action="Index">
-                                <i class="fas fa-tachometer-alt"></i> Панель управления
-                            </a>
-                        </li>
+                        @if (User.IsInRole("Admin") || User.IsInRole("Employee"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Dashboard" asp-action="Index">
+                                    <i class="fas fa-tachometer-alt"></i> Панель управления
+                                </a>
+                            </li>
+                        }
 
                         @if (User.IsInRole("Admin") || User.IsInRole("Employee"))
                         {
@@ -537,11 +540,14 @@
 
             @if (SignInManager.IsSignedIn(User))
             {
-                <li>
-                    <a asp-controller="Dashboard" asp-action="Index" class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Dashboard" ? "active" : "")">
-                        <i class="fas fa-tachometer-alt"></i> Панель управления
-                    </a>
-                </li>
+                @if (User.IsInRole("Admin") || User.IsInRole("Employee"))
+                {
+                    <li>
+                        <a asp-controller="Dashboard" asp-action="Index" class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Dashboard" ? "active" : "")">
+                            <i class="fas fa-tachometer-alt"></i> Панель управления
+                        </a>
+                    </li>
+                }
 
                 <li>
                     <a asp-controller="Profile" asp-action="Index" class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Profile" ? "active" : "")">
@@ -559,6 +565,7 @@
                         @if (User.IsInRole("Admin") || User.IsInRole("Employee"))
                         {
                             <li><a asp-controller="ServiceOrders" asp-action="Index"><i class="fas fa-list"></i> Все заказы</a></li>
+                            <li><a asp-controller="ServiceOrders" asp-action="ClientRequests"><i class="fas fa-inbox"></i> Заявки клиентов</a></li>
                             <li><a asp-controller="ServiceOrders" asp-action="Create"><i class="fas fa-plus-circle"></i> Создать заказ</a></li>
                         }
 

@@ -91,7 +91,7 @@ namespace ComputerRepairService.Controllers
                 .OrderByDescending(so => so.CreatedDate)
                 .ToListAsync();
 
-            return View(serviceOrders);
+            return View("ClientOrders", serviceOrders);
         }
 
         // GET: ServiceOrders/MyAssignedOrders - ТОЛЬКО для сотрудников
@@ -152,6 +152,93 @@ namespace ComputerRepairService.Controllers
                 .ToListAsync();
 
             return View(serviceOrders);
+        }
+
+        // GET: ServiceOrders/ClientRequests - входящие клиентские заявки для админов и сотрудников
+        [Authorize(Roles = "Admin,Employee")]
+        public async Task<IActionResult> ClientRequests()
+        {
+            // Новые заявки клиента: статус "Новая" и без назначенных мастеров
+            var requests = await _context.ServiceOrders
+                .Where(so => so.StatusId == 1 && !so.OrderTechnicians.Any())
+                .Include(so => so.Customer)
+                .Include(so => so.DeviceType)
+                .Include(so => so.OrderStatus)
+                .OrderByDescending(so => so.CreatedDate)
+                .ToListAsync();
+
+            return View(requests);
+        }
+
+        // POST: ServiceOrders/TakeInWork/5 - заявка взята в обработку сотрудником/админом
+        [Authorize(Roles = "Admin,Employee")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> TakeInWork(int id)
+        {
+            var order = await _context.ServiceOrders
+                .Include(so => so.OrderTechnicians)
+                .FirstOrDefaultAsync(so => so.OrderId == id);
+
+            if (order == null)
+            {
+                TempData["ErrorMessage"] = "Заявка не найдена.";
+                return RedirectToAction(nameof(ClientRequests));
+            }
+
+            if (order.StatusId is 5 or 6 or 7)
+            {
+                TempData["ErrorMessage"] = "Заявка уже завершена или отменена.";
+                return RedirectToAction(nameof(ClientRequests));
+            }
+
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                TempData["ErrorMessage"] = "Пользователь не найден.";
+                return RedirectToAction(nameof(ClientRequests));
+            }
+
+            var diagnosisStatusId = await GetStatusIdByNameAsync("Диагностика");
+            if (diagnosisStatusId.HasValue)
+            {
+                order.StatusId = diagnosisStatusId.Value;
+            }
+
+            var note = "Заявка взята в работу";
+
+            // Для сотрудника автоматически назначаем его исполнителем.
+            if (User.IsInRole("Employee"))
+            {
+                var technician = await _context.Technicians
+                    .FirstOrDefaultAsync(t => t.UserId == user.Id ||
+                                              (!string.IsNullOrWhiteSpace(user.Email) && t.Email == user.Email));
+
+                if (technician != null && !order.OrderTechnicians.Any(ot => ot.TechnicianId == technician.TechnicianId))
+                {
+                    _context.OrderTechnicians.Add(new OrderTechnician
+                    {
+                        OrderId = order.OrderId,
+                        TechnicianId = technician.TechnicianId,
+                        AssignedDate = DateTime.Now,
+                        IsPrimary = true
+                    });
+                    note += $"; назначен мастер {technician.FirstName} {technician.LastName}";
+                }
+            }
+
+            _context.OrderStatusHistory.Add(new OrderStatusHistory
+            {
+                OrderId = order.OrderId,
+                StatusId = order.StatusId,
+                ChangedDate = DateTime.Now,
+                ChangedBy = User.Identity?.Name ?? "System",
+                Notes = note
+            });
+
+            await _context.SaveChangesAsync();
+            TempData["SuccessMessage"] = $"Заявка #{order.OrderId} взята в работу.";
+            return RedirectToAction(nameof(ClientRequests));
         }
 
         // GET: ServiceOrders/Details/5
@@ -257,6 +344,28 @@ namespace ComputerRepairService.Controllers
                 {
                     serviceOrder.CustomerId = customer.CustomerId;
                 }
+                else
+                {
+                    ModelState.AddModelError("CustomerId", "Профиль клиента не найден");
+                }
+
+                // Клиент не может назначать мастеров и заполнять служебные поля вручную.
+                selectedTechnicians = Array.Empty<int>();
+                serviceOrder.StatusId = 1; // "Новая"
+                serviceOrder.EstimatedCompletionDate = null;
+                serviceOrder.DiagnosticNotes = null;
+                serviceOrder.TechnicianNotes = null;
+                serviceOrder.Priority = serviceOrder.Priority is < 1 or > 5 ? 2 : serviceOrder.Priority;
+
+                // Удаляем ошибки по служебным полям, которых нет в форме клиента.
+                if (customer != null)
+                {
+                    ModelState.Remove("CustomerId");
+                }
+                ModelState.Remove("StatusId");
+                ModelState.Remove("EstimatedCompletionDate");
+                ModelState.Remove("DiagnosticNotes");
+                ModelState.Remove("TechnicianNotes");
             }
 
             Console.WriteLine($"CustomerId: {serviceOrder.CustomerId}, DeviceTypeId: {serviceOrder.DeviceTypeId}, StatusId: {serviceOrder.StatusId}");
@@ -363,6 +472,13 @@ namespace ComputerRepairService.Controllers
             else
             {
                 Console.WriteLine("Validation failed - showing errors to user");
+                foreach (var kvp in ModelState)
+                {
+                    foreach (var error in kvp.Value.Errors)
+                    {
+                        Console.WriteLine($"ModelState error [{kvp.Key}]: {error.ErrorMessage}");
+                    }
+                }
             }
 
             await LoadCreateViewData();
@@ -794,6 +910,15 @@ namespace ComputerRepairService.Controllers
         private bool ServiceOrderExists(int id)
         {
             return _context.ServiceOrders.Any(e => e.OrderId == id);
+        }
+
+        private async Task<int?> GetStatusIdByNameAsync(string statusName)
+        {
+            var normalized = statusName.Trim().ToLower();
+            return await _context.OrderStatuses
+                .Where(s => s.StatusName.ToLower() == normalized)
+                .Select(s => (int?)s.StatusId)
+                .FirstOrDefaultAsync();
         }
     }
 }

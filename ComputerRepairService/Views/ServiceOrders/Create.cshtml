@@ -2,6 +2,7 @@
 
 @{
     ViewData["Title"] = "Создать заказ";
+    var isClient = User.IsInRole("Client");
 }
 
 <div class="row">
@@ -30,17 +31,28 @@
 
                     <div class="row">
                         <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label class="form-label">Клиент *</label>
-                                <select asp-for="CustomerId" class="form-select" required>
-                                    <option value="">-- Выберите клиента --</option>
-                                    @foreach (var customer in ViewBag.Customers)
-                                    {
-                                        <option value="@customer.CustomerId">@customer.FirstName @customer.LastName - @customer.Phone</option>
-                                    }
-                                </select>
-                                <span asp-validation-for="CustomerId" class="text-danger"></span>
-                            </div>
+                            @if (isClient)
+                            {
+                                <div class="alert alert-info mb-3">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Заявка оформляется от вашего профиля автоматически. После отправки с вами свяжется менеджер для уточнения деталей.
+                                </div>
+                                <input asp-for="CustomerId" type="hidden" />
+                            }
+                            else
+                            {
+                                <div class="form-group mb-3">
+                                    <label class="form-label">Клиент *</label>
+                                    <select asp-for="CustomerId" class="form-select" required>
+                                        <option value="">-- Выберите клиента --</option>
+                                        @foreach (var customer in ViewBag.Customers)
+                                        {
+                                            <option value="@customer.CustomerId">@customer.FirstName @customer.LastName - @customer.Phone</option>
+                                        }
+                                    </select>
+                                    <span asp-validation-for="CustomerId" class="text-danger"></span>
+                                </div>
+                            }
 
                             <div class="form-group mb-3">
                                 <label class="form-label">Тип устройства *</label>
@@ -74,16 +86,23 @@
                                 <span asp-validation-for="SerialNumber" class="text-danger"></span>
                             </div>
 
-                            <div class="form-group mb-3">
-                                <label class="form-label">Статус *</label>
-                                <select asp-for="StatusId" class="form-select" required>
-                                    @foreach (var status in ViewBag.Statuses)
-                                    {
-                                        <option value="@status.StatusId">@status.StatusName</option>
-                                    }
-                                </select>
-                                <span asp-validation-for="StatusId" class="text-danger"></span>
-                            </div>
+                            @if (!isClient)
+                            {
+                                <div class="form-group mb-3">
+                                    <label class="form-label">Статус *</label>
+                                    <select asp-for="StatusId" class="form-select" required>
+                                        @foreach (var status in ViewBag.Statuses)
+                                        {
+                                            <option value="@status.StatusId">@status.StatusName</option>
+                                        }
+                                    </select>
+                                    <span asp-validation-for="StatusId" class="text-danger"></span>
+                                </div>
+                            }
+                            else
+                            {
+                                <input asp-for="StatusId" type="hidden" value="1" />
+                            }
 
                             <div class="form-group mb-3">
                                 <label class="form-label">Приоритет *</label>
@@ -97,11 +116,14 @@
                                 <span asp-validation-for="Priority" class="text-danger"></span>
                             </div>
 
-                            <div class="form-group mb-3">
-                                <label asp-for="EstimatedCompletionDate" class="form-label">Предполагаемая дата завершения</label>
-                                <input asp-for="EstimatedCompletionDate" type="date" class="form-control" />
-                                <span asp-validation-for="EstimatedCompletionDate" class="text-danger"></span>
-                            </div>
+                            @if (!isClient)
+                            {
+                                <div class="form-group mb-3">
+                                    <label asp-for="EstimatedCompletionDate" class="form-label">Предполагаемая дата завершения</label>
+                                    <input asp-for="EstimatedCompletionDate" type="date" class="form-control" />
+                                    <span asp-validation-for="EstimatedCompletionDate" class="text-danger"></span>
+                                </div>
+                            }
                         </div>
                     </div>
 
@@ -111,34 +133,43 @@
                         <span asp-validation-for="ProblemDescription" class="text-danger"></span>
                     </div>
 
-                    <div class="form-group mb-3">
-                        <label asp-for="DiagnosticNotes" class="form-label">Диагностические заметки</label>
-                        <textarea asp-for="DiagnosticNotes" class="form-control" rows="3"></textarea>
-                        <span asp-validation-for="DiagnosticNotes" class="text-danger"></span>
-                    </div>
+                    @if (!isClient)
+                    {
+                        <div class="form-group mb-3">
+                            <label asp-for="DiagnosticNotes" class="form-label">Диагностические заметки</label>
+                            <textarea asp-for="DiagnosticNotes" class="form-control" rows="3"></textarea>
+                            <span asp-validation-for="DiagnosticNotes" class="text-danger"></span>
+                        </div>
+                    }
 
-                    <div class="form-group mb-3">
-                        <label asp-for="TechnicianNotes" class="form-label">Заметки мастера</label>
-                        <textarea asp-for="TechnicianNotes" class="form-control" rows="3"></textarea>
-                        <span asp-validation-for="TechnicianNotes" class="text-danger"></span>
-                    </div>
+                    @if (!isClient)
+                    {
+                        <div class="form-group mb-3">
+                            <label asp-for="TechnicianNotes" class="form-label">Заметки мастера</label>
+                            <textarea asp-for="TechnicianNotes" class="form-control" rows="3"></textarea>
+                            <span asp-validation-for="TechnicianNotes" class="text-danger"></span>
+                        </div>
+                    }
 
-                    <div class="form-group mb-3">
-                        <label class="form-label">Назначить мастеров</label>
-                        <select name="selectedTechnicians" class="form-select" multiple>
-                            @foreach (var technician in ViewBag.Technicians)
-                            {
-                                <option value="@technician.TechnicianId">@technician.FirstName @technician.LastName - @technician.Specialization</option>
-                            }
-                        </select>
-                        <small class="form-text text-muted">Для выбора нескольких мастеров удерживайте Ctrl</small>
-                    </div>
+                    @if (!isClient)
+                    {
+                        <div class="form-group mb-3">
+                            <label class="form-label">Назначить мастеров</label>
+                            <select name="selectedTechnicians" class="form-select" multiple>
+                                @foreach (var technician in ViewBag.Technicians)
+                                {
+                                    <option value="@technician.TechnicianId">@technician.FirstName @technician.LastName - @technician.Specialization</option>
+                                }
+                            </select>
+                            <small class="form-text text-muted">Для выбора нескольких мастеров удерживайте Ctrl</small>
+                        </div>
+                    }
 
                     <div class="form-group">
                         <button type="submit" class="btn btn-success">
                             <i class="fas fa-save"></i> Создать заказ
                         </button>
-                        <a asp-action="Index" class="btn btn-secondary">
+                        <a asp-action="@(isClient ? "MyOrders" : "Index")" class="btn btn-secondary">
                             <i class="fas fa-arrow-left"></i> Назад к списку
                         </a>
                     </div>
@@ -153,11 +184,4 @@
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
 
-    <script>
-        // Отладочная информация в консоль
-        console.log('Customers count: @ViewBag.Customers?.Count');
-        console.log('DeviceTypes count: @ViewBag.DeviceTypes?.Count');
-        console.log('Statuses count: @ViewBag.Statuses?.Count');
-        console.log('Technicians count: @ViewBag.Technicians?.Count');
-    </script>
 }

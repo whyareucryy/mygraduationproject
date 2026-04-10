@@ -1,132 +1,232 @@
-﻿@{
+﻿@model ComputerRepairService.Models.ViewModels.DashboardViewModel
+
+@{
     ViewData["Title"] = "Панель управления";
 }
 
 <div class="container">
-    <h1 class="display-4 mb-4">📊 Панель управления сервисным центром</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="display-6 mb-0"><i class="fas fa-chart-line me-2"></i>Операционный Dashboard</h1>
+        <div class="btn-group">
+            <a asp-controller="ServiceOrders" asp-action="ClientRequests" class="btn btn-outline-primary">
+                <i class="fas fa-inbox me-1"></i> Заявки клиентов
+            </a>
+            <a asp-controller="ServiceOrders" asp-action="Index" class="btn btn-primary">
+                <i class="fas fa-clipboard-list me-1"></i> Все заказы
+            </a>
+        </div>
+    </div>
 
-    <!-- Статистика в карточках -->
-    <div class="row mb-5">
-        <div class="col-md-2 mb-3">
-            <div class="card text-white bg-primary">
-                <div class="card-body text-center">
-                    <i class="fas fa-users fa-2x mb-2"></i>
-                    <h5 class="card-title">Клиенты</h5>
-                    <p class="card-text display-6">@ViewBag.DashboardData.TotalCustomers</p>
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="small">Входящие заявки</div>
+                    <div class="h2 mb-0">@Model.IncomingClientRequests</div>
                 </div>
             </div>
         </div>
-        <div class="col-md-2 mb-3">
-            <div class="card text-white bg-success">
-                <div class="card-body text-center">
-                    <i class="fas fa-clipboard-list fa-2x mb-2"></i>
-                    <h5 class="card-title">Всего заказов</h5>
-                    <p class="card-text display-6">@ViewBag.DashboardData.TotalOrders</p>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <div class="small">Активные заказы</div>
+                    <div class="h2 mb-0">@Model.ActiveOrders</div>
                 </div>
             </div>
         </div>
-        <div class="col-md-2 mb-3">
-            <div class="card text-white bg-warning">
-                <div class="card-body text-center">
-                    <i class="fas fa-tools fa-2x mb-2"></i>
-                    <h5 class="card-title">Активные заказы</h5>
-                    <p class="card-text display-6">@ViewBag.DashboardData.ActiveOrders</p>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <div class="small">Просроченные</div>
+                    <div class="h2 mb-0">@Model.OverdueOrders</div>
                 </div>
             </div>
         </div>
-        <div class="col-md-2 mb-3">
-            <div class="card text-white bg-info">
-                <div class="card-body text-center">
-                    <i class="fas fa-user-cog fa-2x mb-2"></i>
-                    <h5 class="card-title">Мастера</h5>
-                    <p class="card-text display-6">@ViewBag.DashboardData.TotalTechnicians</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2 mb-3">
-            <div class="card text-white bg-danger">
-                <div class="card-body text-center">
-                    <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
-                    <h5 class="card-title">Низкий запас</h5>
-                    <p class="card-text display-6">@ViewBag.DashboardData.LowStockItems</p>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="small">Срочные в работе</div>
+                    <div class="h2 mb-0">@Model.UrgentOrders</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Быстрая навигация -->
-    <div class="row mb-5">
-        <div class="col-12">
-            <h3>Быстрый доступ</h3>
-            <div class="d-flex flex-wrap gap-2">
-                <a asp-controller="Customers" asp-action="Index" class="btn btn-primary btn-lg">
-                    <i class="fas fa-users"></i> Управление клиентами
-                </a>
-                <a asp-controller="ServiceOrders" asp-action="Index" class="btn btn-success btn-lg">
-                    <i class="fas fa-clipboard-list"></i> Управление заказами
-                </a>
-                <a asp-controller="Technicians" asp-action="Index" class="btn btn-info btn-lg">
-                    <i class="fas fa-user-cog"></i> Управление мастерами
-                </a>
-                <a asp-controller="Inventory" asp-action="Index" class="btn btn-warning btn-lg">
-                    <i class="fas fa-boxes"></i> Управление складом
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Последние заказы -->
-    <div class="row">
-        <div class="col-12">
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
             <div class="card">
+                <div class="card-body">
+                    <div class="small text-muted">Выручка за месяц</div>
+                    <div class="h4 mb-0">@Model.RevenueThisMonth.ToString("C")</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="small text-muted">Средний чек</div>
+                    <div class="h4 mb-0">@Model.AverageCheckThisMonth.ToString("C")</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="small text-muted">Средний срок выполнения</div>
+                    <div class="h4 mb-0">@Model.AverageCompletionDays.ToString("0.0") дн.</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="small text-muted">Создано сегодня</div>
+                    <div class="h4 mb-0">@Model.OrdersCreatedToday</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-lg-6">
+            <div class="card h-100">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-history"></i> Последние заказы
-                    </h5>
+                    <strong><i class="fas fa-chart-pie me-1"></i> Распределение по статусам</strong>
                 </div>
                 <div class="card-body">
-                    @if (ViewBag.DashboardData.RecentOrders.Count > 0)
+                    @if (Model.OrdersByStatus.Any())
                     {
-                        <div class="table-responsive">
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Клиент</th>
-                                        <th>Проблема</th>
-                                        <th>Статус</th>
-                                        <th>Дата создания</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var order in ViewBag.DashboardData.RecentOrders)
-                                    {
-                                        <tr>
-                                            <td>@order.OrderId</td>
-                                            <td>@order.Customer?.FirstName @order.Customer?.LastName</td>
-                                            <td>@order.ProblemDescription</td>
-                                            <td>
-                                                <span class="badge
-                                                            @(order.StatusId == 1 ? "bg-primary" :
-                                                                                                            order.StatusId == 2 ? "bg-info" :
-                                                                                                            order.StatusId == 3 ? "bg-warning" :
-                                                                                                            order.StatusId == 4 ? "bg-secondary" : "bg-success")">
-                                            @order.OrderStatus?.StatusName
-                                        </span>
-                                    </td>
-                                    <td>@order.CreatedDate.ToString("dd.MM.yyyy HH:mm")</td>
-                                </tr>
-                                                                }
-                                </tbody>
-                            </table>
-                        </div>
+                        @foreach (var item in Model.OrdersByStatus)
+                        {
+                            var pct = Model.TotalOrders == 0 ? 0 : (item.Count * 100 / Model.TotalOrders);
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between">
+                                    <span>@item.Status</span>
+                                    <span>@item.Count</span>
+                                </div>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar" role="progressbar" style="width:@pct%"></div>
+                                </div>
+                            </div>
+                        }
                     }
                     else
                     {
-                        <p class="text-muted">Нет recent заказов для отображения</p>
+                        <p class="text-muted mb-0">Нет данных по статусам.</p>
                     }
                 </div>
             </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <strong><i class="fas fa-user-cog me-1"></i> Нагрузка мастеров</strong>
+                </div>
+                <div class="card-body">
+                    @if (Model.TopTechnicians.Any())
+                    {
+                        <ul class="list-group list-group-flush">
+                            @foreach (var tech in Model.TopTechnicians)
+                            {
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    @tech.TechnicianName
+                                    <span class="badge bg-primary rounded-pill">@tech.ActiveOrders</span>
+                                </li>
+                            }
+                        </ul>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-0">Пока нет активных назначений.</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <div class="text-muted small">Всего заказов</div>
+                    <div class="h5 mb-0">@Model.TotalOrders</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <div class="text-muted small">Активные клиенты</div>
+                    <div class="h5 mb-0">@Model.TotalCustomers</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <div class="text-muted small">Активные мастера</div>
+                    <div class="h5 mb-0">@Model.TotalTechnicians</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <div class="text-muted small">Низкий запас склада</div>
+                    <div class="h5 mb-0">@Model.LowStockItems</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <strong><i class="fas fa-history me-1"></i> Последние заказы</strong>
+            <a asp-controller="ServiceOrders" asp-action="Index" class="btn btn-sm btn-outline-secondary">Открыть все</a>
+        </div>
+        <div class="card-body">
+            @if (Model.RecentOrders.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Клиент</th>
+                                <th>Проблема</th>
+                                <th>Статус</th>
+                                <th>Дата</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var order in Model.RecentOrders)
+                            {
+                                <tr>
+                                    <td><strong>#@order.OrderId</strong></td>
+                                    <td>@order.Customer?.FirstName @order.Customer?.LastName</td>
+                                    <td>
+                                        <div class="text-truncate" style="max-width: 360px;" title="@order.ProblemDescription">
+                                            @order.ProblemDescription
+                                        </div>
+                                    </td>
+                                    <td><partial name="_OrderStatusBadge" model="order.OrderStatus?.StatusName" /></td>
+                                    <td>@order.CreatedDate.ToString("dd.MM.yyyy HH:mm")</td>
+                                    <td>
+                                        <a asp-controller="ServiceOrders" asp-action="Details" asp-route-id="@order.OrderId" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <p class="text-muted mb-0">Заказы пока отсутствуют.</p>
+            }
         </div>
     </div>
 </div>
