@@ -66,6 +66,9 @@
                                 case "Bank Transfer":
                                     <span class="badge bg-info"><i class="fas fa-university"></i> Банковский перевод</span>
                                     break;
+                                case "Online":
+                                    <span class="badge bg-dark"><i class="fas fa-globe"></i> Онлайн</span>
+                                    break;
                                 default:
                                     <span class="badge bg-light text-dark">@Model.PaymentMethod</span>
                                     break;
@@ -85,6 +88,9 @@
                                 case "Failed":
                                     <span class="badge bg-danger"><i class="fas fa-times-circle"></i> Ошибка</span>
                                     break;
+                                case "Refunded":
+                                    <span class="badge bg-info"><i class="fas fa-undo"></i> Возврат</span>
+                                    break;
                                 default:
                                     <span class="badge bg-secondary">@Model.Status</span>
                                     break;
@@ -99,7 +105,7 @@
                     </dl>
                 </div>
                 <div class="card-footer">
-                    @if (User.IsInRole("Admin"))
+                    @if (User.IsInRole("Admin") || User.IsInRole("Employee"))
                     {
                         <a asp-action="Edit" asp-route-id="@Model.PaymentId" class="btn btn-warning">
                             <i class="fas fa-edit"></i> Редактировать
@@ -119,11 +125,14 @@
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
-                        @if (User.IsInRole("Admin"))
+                        @if (User.IsInRole("Admin") || User.IsInRole("Employee"))
                         {
                             <a asp-action="Edit" asp-route-id="@Model.PaymentId" class="btn btn-outline-warning">
                                 <i class="fas fa-edit"></i> Редактировать платеж
                             </a>
+                        }
+                        @if (User.IsInRole("Admin"))
+                        {
                             <a asp-action="Delete" asp-route-id="@Model.PaymentId" class="btn btn-outline-danger">
                                 <i class="fas fa-trash"></i> Удалить платеж
                             </a>

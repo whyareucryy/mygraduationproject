@@ -15,6 +15,7 @@
             <form asp-action="Edit">
                 <div asp-validation-summary="ModelOnly" class="text-danger"></div>
                 <input type="hidden" asp-for="PaymentId" />
+                <input type="hidden" asp-for="PaymentDate" />
 
                 <div class="card mb-4">
                     <div class="card-header bg-primary text-white">
@@ -29,10 +30,20 @@
                                 {
                                     foreach (var order in serviceOrders)
                                     {
-                                        <option value="@order.OrderId" selected="@(Model.OrderId == order.OrderId)">
-                                            Заказ #@order.OrderId - @order.Customer?.FirstName @order.Customer?.LastName
-                                            (@order.TotalCost.ToString("C"))
-                                        </option>
+                                        if (Model.OrderId == order.OrderId)
+                                        {
+                                            <option value="@order.OrderId" selected>
+                                                Заказ #@order.OrderId - @order.Customer?.FirstName @order.Customer?.LastName
+                                                (@order.TotalCost.ToString("C"))
+                                            </option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@order.OrderId">
+                                                Заказ #@order.OrderId - @order.Customer?.FirstName @order.Customer?.LastName
+                                                (@order.TotalCost.ToString("C"))
+                                            </option>
+                                        }
                                     }
                                 }
                             </select>
@@ -153,6 +164,9 @@
                                     break;
                                 case "Failed":
                                     <span class="badge bg-danger">Ошибка</span>
+                                    break;
+                                case "Refunded":
+                                    <span class="badge bg-info">Возврат</span>
                                     break;
                                 default:
                                     <span class="badge bg-secondary">@Model.Status</span>

@@ -29,10 +29,20 @@
                                 {
                                     foreach (var order in serviceOrders)
                                     {
-                                        <option value="@order.OrderId" selected="@(orderId == order.OrderId)">
-                                            Заказ #@order.OrderId - @order.Customer?.FirstName @order.Customer?.LastName
-                                            (@order.TotalCost.ToString("C"))
-                                        </option>
+                                        if (orderId == order.OrderId)
+                                        {
+                                            <option value="@order.OrderId" selected>
+                                                Заказ #@order.OrderId - @order.Customer?.FirstName @order.Customer?.LastName
+                                                (@order.TotalCost.ToString("C"))
+                                            </option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@order.OrderId">
+                                                Заказ #@order.OrderId - @order.Customer?.FirstName @order.Customer?.LastName
+                                                (@order.TotalCost.ToString("C"))
+                                            </option>
+                                        }
                                     }
                                 }
                             </select>

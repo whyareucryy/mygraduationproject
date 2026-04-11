@@ -3,6 +3,7 @@
 @{
     ViewData["Title"] = "Платежи";
     Layout = "_Layout";
+    var statusFilter = ViewBag.StatusFilter as string ?? string.Empty;
 }
 
 <div class="container mt-4">
@@ -20,11 +21,12 @@
                     <i class="fas fa-filter"></i> Фильтр по статусу
                 </button>
                 <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="?status=">Все платежи</a></li>
+                    <li><a class="dropdown-item @(string.IsNullOrEmpty(statusFilter) ? "active" : null)" href="?status=">Все платежи</a></li>
                     <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item" href="?status=Completed">Завершенные</a></li>
-                    <li><a class="dropdown-item" href="?status=Pending">Ожидающие</a></li>
-                    <li><a class="dropdown-item" href="?status=Failed">Ошибки</a></li>
+                    <li><a class="dropdown-item @(statusFilter == "Completed" ? "active" : null)" href="?status=Completed">Завершенные</a></li>
+                    <li><a class="dropdown-item @(statusFilter == "Pending" ? "active" : null)" href="?status=Pending">Ожидающие</a></li>
+                    <li><a class="dropdown-item @(statusFilter == "Failed" ? "active" : null)" href="?status=Failed">Ошибки</a></li>
+                    <li><a class="dropdown-item @(statusFilter == "Refunded" ? "active" : null)" href="?status=Refunded">Возвраты</a></li>
                 </ul>
             </div>
         </div>
@@ -129,6 +131,9 @@
                                     case "Bank Transfer":
                                         <span class="badge bg-info"><i class="fas fa-university"></i> Перевод</span>
                                         break;
+                                    case "Online":
+                                        <span class="badge bg-dark"><i class="fas fa-globe"></i> Онлайн</span>
+                                        break;
                                     default:
                                         <span class="badge bg-light text-dark">@item.PaymentMethod</span>
                                         break;
@@ -146,6 +151,9 @@
                                     case "Failed":
                                         <span class="badge bg-danger">Ошибка</span>
                                         break;
+                                    case "Refunded":
+                                        <span class="badge bg-info">Возврат</span>
+                                        break;
                                     default:
                                         <span class="badge bg-secondary">@item.Status</span>
                                         break;
@@ -157,12 +165,15 @@
                                        class="btn btn-sm btn-info" title="Подробнее">
                                         <i class="fas fa-info-circle"></i>
                                     </a>
-                                    @if (User.IsInRole("Admin"))
+                                    @if (User.IsInRole("Admin") || User.IsInRole("Employee"))
                                     {
                                         <a asp-action="Edit" asp-route-id="@item.PaymentId"
                                            class="btn btn-sm btn-warning" title="Редактировать">
                                             <i class="fas fa-edit"></i>
                                         </a>
+                                    }
+                                    @if (User.IsInRole("Admin"))
+                                    {
                                         <a asp-action="Delete" asp-route-id="@item.PaymentId"
                                            class="btn btn-sm btn-danger" title="Удалить">
                                             <i class="fas fa-trash"></i>

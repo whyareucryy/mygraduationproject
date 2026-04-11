@@ -8,14 +8,14 @@ namespace ComputerRepairService.Models.Entities
         [Key]
         public int DeviceTypeId { get; set; }
 
-        [Required]
+        [Required(ErrorMessage = "Укажите название типа")]
         [StringLength(50)]
-        public string TypeName { get; set; }
+        public string TypeName { get; set; } = null!;
 
         [StringLength(200)]
-        public string Description { get; set; }
+        public string? Description { get; set; }
 
         // Navigation properties
-        public virtual ICollection<ServiceOrder> ServiceOrders { get; set; }
+        public virtual ICollection<ServiceOrder> ServiceOrders { get; set; } = new List<ServiceOrder>();
     }
 }

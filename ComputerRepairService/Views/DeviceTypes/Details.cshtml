@@ -22,6 +22,9 @@
 
                 <dt class="col-sm-3">Описание:</dt>
                 <dd class="col-sm-9">@(Model.Description ?? "Нет описания")</dd>
+
+                <dt class="col-sm-3">Связанных заказов:</dt>
+                <dd class="col-sm-9">@(ViewBag.RelatedOrdersCount ?? 0)</dd>
             </dl>
         </div>
         <div class="card-footer">

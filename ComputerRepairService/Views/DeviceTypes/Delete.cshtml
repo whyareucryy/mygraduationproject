@@ -28,17 +28,28 @@
 
                 <dt class="col-sm-3">Описание:</dt>
                 <dd class="col-sm-9">@(Model.Description ?? "Нет описания")</dd>
+
+                <dt class="col-sm-3">Связанных заказов:</dt>
+                <dd class="col-sm-9">@(ViewBag.RelatedOrdersCount ?? 0)</dd>
             </dl>
 
-            <div class="alert alert-warning">
-                <strong>Внимание:</strong> Удаление этого типа устройства может повлиять на существующие заказы.
-                Рассмотрите возможность редактирования вместо удаления.
-            </div>
+            @if ((int)(ViewBag.RelatedOrdersCount ?? 0) > 0)
+            {
+                <div class="alert alert-danger">
+                    <strong>Удаление заблокировано:</strong> пока есть заказы с этим типом устройства, удалить запись нельзя.
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-warning">
+                    <strong>Внимание:</strong> это действие нельзя отменить.
+                </div>
+            }
         </div>
         <div class="card-footer">
             <form asp-action="Delete">
                 <input type="hidden" asp-for="DeviceTypeId" />
-                <button type="submit" class="btn btn-danger">
+                <button type="submit" class="btn btn-danger" @(((int)(ViewBag.RelatedOrdersCount ?? 0) > 0) ? "disabled" : null)>
                     <i class="fas fa-trash"></i> Удалить
                 </button>
                 <a asp-action="Index" class="btn btn-secondary ms-2">

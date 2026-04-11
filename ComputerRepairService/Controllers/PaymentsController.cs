@@ -1,14 +1,19 @@
 ﻿using ComputerRepairService.Data;
 using ComputerRepairService.Models.Entities;
+using ComputerRepairService.Models.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace ComputerRepairService.Controllers
 {
     [Authorize(Roles = "Admin,Employee")]
     public class PaymentsController : Controller
     {
+        private const decimal MinAmount = 0.01m;
+        private const decimal MaxAmount = 999999.99m;
+
         private readonly RepairDbContext _context;
 
         public PaymentsController(RepairDbContext context)
@@ -17,12 +22,23 @@ namespace ComputerRepairService.Controllers
         }
 
         // GET: Payments
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string? status)
         {
-            var payments = await _context.Payments
+            var query = _context.Payments
                 .Include(p => p.ServiceOrder)
-                    .ThenInclude(so => so.Customer)
+                    .ThenInclude(so => so!.Customer)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                query = query.Where(p => p.Status == status);
+            }
+
+            var payments = await query
+                .OrderByDescending(p => p.PaymentDate)
                 .ToListAsync();
+
+            ViewBag.StatusFilter = status ?? string.Empty;
             return View(payments);
         }
 
@@ -36,7 +52,7 @@ namespace ComputerRepairService.Controllers
 
             var payment = await _context.Payments
                 .Include(p => p.ServiceOrder)
-                    .ThenInclude(so => so.Customer)
+                    .ThenInclude(so => so!.Customer)
                 .FirstOrDefaultAsync(m => m.PaymentId == id);
             if (payment == null)
             {
@@ -47,40 +63,57 @@ namespace ComputerRepairService.Controllers
         }
 
         // GET: Payments/Create
-        public IActionResult Create(int? orderId)
+        public async Task<IActionResult> Create(int? orderId)
         {
-            if (orderId.HasValue)
-            {
-                ViewBag.OrderId = orderId.Value;
-                ViewBag.ServiceOrders = _context.ServiceOrders
-                    .Where(so => so.OrderId == orderId)
-                    .ToList();
-            }
-            else
-            {
-                ViewBag.ServiceOrders = _context.ServiceOrders.ToList();
-            }
+            await PopulateServiceOrdersAsync(orderId);
             return View();
         }
 
         // POST: Payments/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(Payment payment)
+        public async Task<IActionResult> Create(
+            [Bind("OrderId,Amount,PaymentMethod,Status,TransactionId,Notes")] Payment payment)
         {
+            ModelState.Remove(nameof(Payment.ServiceOrder));
+
+            if (payment.OrderId <= 0)
+            {
+                ModelState.AddModelError(nameof(Payment.OrderId), "Выберите заказ");
+            }
+            else if (!await _context.ServiceOrders.AnyAsync(so => so.OrderId == payment.OrderId))
+            {
+                ModelState.AddModelError(nameof(Payment.OrderId), "Указанный заказ не найден");
+            }
+
+            if (!string.IsNullOrEmpty(payment.PaymentMethod) &&
+                !PaymentMethodCodes.All.Contains(payment.PaymentMethod))
+            {
+                ModelState.AddModelError(nameof(Payment.PaymentMethod), "Недопустимый метод оплаты");
+            }
+
+            if (string.IsNullOrWhiteSpace(payment.Status))
+            {
+                payment.Status = "Completed";
+            }
+
+            ValidateAmount(payment.Amount, ModelState);
+
             if (ModelState.IsValid)
             {
                 payment.PaymentDate = DateTime.Now;
                 _context.Add(payment);
                 await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = "Платёж сохранён.";
                 return RedirectToAction(nameof(Index));
             }
-            ViewBag.ServiceOrders = _context.ServiceOrders.ToList();
+
+            await PopulateServiceOrdersAsync(payment.OrderId);
             return View(payment);
         }
 
         // GET: Payments/Edit/5
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Employee")]
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
@@ -93,20 +126,33 @@ namespace ComputerRepairService.Controllers
             {
                 return NotFound();
             }
-            ViewBag.ServiceOrders = _context.ServiceOrders.ToList();
+
+            await PopulateServiceOrdersAsync(payment.OrderId);
             return View(payment);
         }
 
         // POST: Payments/Edit/5
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Employee")]
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, Payment payment)
+        public async Task<IActionResult> Edit(
+            int id,
+            [Bind("PaymentId,OrderId,Amount,PaymentMethod,Status,TransactionId,Notes,PaymentDate")] Payment payment)
         {
             if (id != payment.PaymentId)
             {
                 return NotFound();
             }
+
+            ModelState.Remove(nameof(Payment.ServiceOrder));
+
+            if (!string.IsNullOrEmpty(payment.PaymentMethod) &&
+                !PaymentMethodCodes.All.Contains(payment.PaymentMethod))
+            {
+                ModelState.AddModelError(nameof(Payment.PaymentMethod), "Недопустимый метод оплаты");
+            }
+
+            ValidateAmount(payment.Amount, ModelState);
 
             if (ModelState.IsValid)
             {
@@ -121,14 +167,15 @@ namespace ComputerRepairService.Controllers
                     {
                         return NotFound();
                     }
-                    else
-                    {
-                        throw;
-                    }
+
+                    throw;
                 }
+
+                TempData["SuccessMessage"] = "Платёж обновлён.";
                 return RedirectToAction(nameof(Index));
             }
-            ViewBag.ServiceOrders = _context.ServiceOrders.ToList();
+
+            await PopulateServiceOrdersAsync(payment.OrderId);
             return View(payment);
         }
 
@@ -162,15 +209,44 @@ namespace ComputerRepairService.Controllers
             if (payment != null)
             {
                 _context.Payments.Remove(payment);
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = "Платёж удалён.";
             }
 
-            await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 
         private bool PaymentExists(int id)
         {
             return _context.Payments.Any(e => e.PaymentId == id);
+        }
+
+        private static void ValidateAmount(decimal amount, ModelStateDictionary modelState)
+        {
+            if (amount < MinAmount)
+            {
+                modelState.AddModelError(nameof(Payment.Amount), "Сумма должна быть больше нуля.");
+            }
+
+            if (amount > MaxAmount)
+            {
+                modelState.AddModelError(nameof(Payment.Amount), "Сумма слишком велика (максимум 999 999,99).");
+            }
+        }
+
+        private async Task PopulateServiceOrdersAsync(int? preferredOrderId)
+        {
+            var query = _context.ServiceOrders.AsQueryable();
+            if (preferredOrderId.HasValue)
+            {
+                query = query.Where(so => so.OrderId == preferredOrderId.Value);
+            }
+
+            ViewBag.OrderId = preferredOrderId;
+            ViewBag.ServiceOrders = await query
+                .Include(so => so.Customer)
+                .OrderByDescending(so => so.OrderId)
+                .ToListAsync();
         }
     }
 }

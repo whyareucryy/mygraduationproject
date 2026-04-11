@@ -49,10 +49,13 @@
                                        class="btn btn-sm btn-info" title="Подробнее">
                                         <i class="fas fa-info-circle"></i>
                                     </a>
-                                    <a asp-action="Delete" asp-route-id="@item.DeviceTypeId"
-                                       class="btn btn-sm btn-danger" title="Удалить">
-                                        <i class="fas fa-trash"></i>
-                                    </a>
+                                    @if (User.IsInRole("Admin"))
+                                    {
+                                        <a asp-action="Delete" asp-route-id="@item.DeviceTypeId"
+                                           class="btn btn-sm btn-danger" title="Удалить">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    }
                                 </div>
                             </td>
                         </tr>
