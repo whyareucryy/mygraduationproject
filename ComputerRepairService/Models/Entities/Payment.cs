@@ -27,7 +27,7 @@ namespace ComputerRepairService.Models.Entities
 
         [StringLength(50)]
         [Display(Name = "Статус")]
-        public string Status { get; set; } = "Completed";
+        public string Status { get; set; } = PaymentStatusCodes.Completed;
 
         [StringLength(100)]
         [Display(Name = "ID транзакции")]

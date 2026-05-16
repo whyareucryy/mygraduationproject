@@ -1,5 +1,8 @@
 ﻿using ComputerRepairService.Data;
 using ComputerRepairService.Models.Entities;
+using ComputerRepairService.Models.Enums;
+using ComputerRepairService.Models.ViewModels;
+using ComputerRepairService.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -58,6 +61,7 @@ namespace ComputerRepairService.Controllers
                     .Include(so => so.OrderStatus)
                     .Include(so => so.OrderTechnicians)
                         .ThenInclude(ot => ot.Technician)
+                    .Include(so => so.Payments)
                     .OrderByDescending(so => so.CreatedDate)
                     .ToListAsync();
 
@@ -88,6 +92,7 @@ namespace ComputerRepairService.Controllers
                 .Include(so => so.OrderStatus)
                 .Include(so => so.OrderTechnicians)
                     .ThenInclude(ot => ot.Technician)
+                .Include(so => so.Payments)
                 .OrderByDescending(so => so.CreatedDate)
                 .ToListAsync();
 
@@ -260,6 +265,8 @@ namespace ComputerRepairService.Controllers
                 .Include(so => so.OrderParts)
                     .ThenInclude(op => op.Inventory)
                 .Include(so => so.Payments)
+                .Include(so => so.OrderStatusHistories)
+                    .ThenInclude(h => h.OrderStatus)
                 .FirstOrDefaultAsync(m => m.OrderId == id);
 
             if (serviceOrder == null)
@@ -284,6 +291,9 @@ namespace ComputerRepairService.Controllers
 
                 if (customer != null && serviceOrder.CustomerId == customer.CustomerId)
                 {
+                    ViewBag.AmountDue = OrderPaymentHelper.GetAmountDue(serviceOrder);
+                    ViewBag.CanPay = OrderPaymentHelper.CanClientPay(serviceOrder);
+                    ViewBag.IsFullyPaid = OrderPaymentHelper.IsFullyPaid(serviceOrder);
                     return View("ClientOrderDetails", serviceOrder);
                 }
                 else
@@ -566,6 +576,8 @@ namespace ComputerRepairService.Controllers
                         return NotFound();
                     }
 
+                    var previousStatusId = existingOrder.StatusId;
+
                     // Обновляем поля
                     existingOrder.CustomerId = serviceOrder.CustomerId;
                     existingOrder.DeviceTypeId = serviceOrder.DeviceTypeId;
@@ -579,8 +591,7 @@ namespace ComputerRepairService.Controllers
                     existingOrder.EstimatedCompletionDate = serviceOrder.EstimatedCompletionDate;
                     existingOrder.TechnicianNotes = serviceOrder.TechnicianNotes;
 
-                    // Обновляем ActualCompletionDate только если статус "Готово" и его еще нет
-                    if (serviceOrder.StatusId == 5 && existingOrder.ActualCompletionDate == null)
+                    if (serviceOrder.StatusId == OrderStatusIds.AwaitingPayment && existingOrder.ActualCompletionDate == null)
                     {
                         existingOrder.ActualCompletionDate = DateTime.Now;
                     }
@@ -606,20 +617,21 @@ namespace ComputerRepairService.Controllers
                     }
 
                     // Добавляем запись в историю статусов если статус изменился
-                    var currentStatus = await _context.ServiceOrders
-                        .Where(so => so.OrderId == id)
-                        .Select(so => so.StatusId)
-                        .FirstOrDefaultAsync();
-
-                    if (currentStatus != serviceOrder.StatusId)
+                    if (previousStatusId != serviceOrder.StatusId)
                     {
+                        var historyNotes = "Статус изменен при редактировании заказа";
+                        if (serviceOrder.StatusId == OrderStatusIds.AwaitingPayment)
+                        {
+                            historyNotes = "Заказ переведён в ожидание оплаты.";
+                        }
+
                         var statusHistory = new OrderStatusHistory
                         {
                             OrderId = id,
                             StatusId = serviceOrder.StatusId,
                             ChangedDate = DateTime.Now,
                             ChangedBy = User.Identity?.Name ?? "System",
-                            Notes = "Статус изменен при редактировании заказа"
+                            Notes = historyNotes
                         };
                         _context.OrderStatusHistory.Add(statusHistory);
                     }
@@ -776,6 +788,19 @@ namespace ComputerRepairService.Controllers
                 }
 
                 var oldStatusId = serviceOrder.StatusId;
+
+                if (statusId == OrderStatusIds.ReadyForPickup && oldStatusId != OrderStatusIds.AwaitingPayment)
+                {
+                    TempData["ErrorMessage"] = "Статус «Готово к получению» устанавливается только после подтверждения оплаты.";
+                    return RedirectToAction(nameof(Details), new { id });
+                }
+
+                if (statusId == OrderStatusIds.AwaitingPayment && serviceOrder.TotalCost <= 0)
+                {
+                    TempData["ErrorMessage"] = "Сначала укажите стоимость через «Заказ выполнен» или редактирование заказа.";
+                    return RedirectToAction(nameof(Details), new { id });
+                }
+
                 serviceOrder.StatusId = statusId;
 
                 // Добавляем запись в историю статусов
@@ -790,15 +815,22 @@ namespace ComputerRepairService.Controllers
 
                 _context.OrderStatusHistory.Add(statusHistory);
 
-                // Если статус "Готово", устанавливаем дату завершения
-                if (statusId == 5) // Готово
+                if (statusId == OrderStatusIds.AwaitingPayment)
                 {
-                    serviceOrder.ActualCompletionDate = DateTime.Now;
-                    Console.WriteLine("Setting completion date for finished order");
+                    if (serviceOrder.ActualCompletionDate == null)
+                    {
+                        serviceOrder.ActualCompletionDate = DateTime.Now;
+                    }
+
+                    statusHistory.Notes = string.IsNullOrWhiteSpace(notes)
+                        ? "Ожидается оплата клиентом."
+                        : notes;
                 }
 
                 await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = "Статус заказа успешно обновлен!";
+                TempData["SuccessMessage"] = statusId == OrderStatusIds.AwaitingPayment
+                    ? "Заказ ожидает оплаты клиентом."
+                    : "Статус заказа успешно обновлен!";
                 Console.WriteLine("=== CHANGE STATUS COMPLETED SUCCESSFULLY ===");
             }
             catch (Exception ex)
@@ -876,6 +908,209 @@ namespace ComputerRepairService.Controllers
             }
 
             return RedirectToAction(nameof(MyOrders));
+        }
+
+        // GET: ServiceOrders/UnpaidOrders — неоплаченные заказы клиента
+        [Authorize(Roles = "Client")]
+        public async Task<IActionResult> UnpaidOrders()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            var customer = await _context.Customers.FirstOrDefaultAsync(c => c.UserId == user!.Id);
+
+            if (customer == null)
+            {
+                TempData["ErrorMessage"] = "Профиль клиента не найден.";
+                return RedirectToAction("Index", "Home");
+            }
+
+            var orders = await _context.ServiceOrders
+                .Where(o => o.CustomerId == customer.CustomerId && o.StatusId == OrderStatusIds.AwaitingPayment)
+                .Include(o => o.DeviceType)
+                .Include(o => o.OrderStatus)
+                .Include(o => o.Payments)
+                .Include(o => o.OrderTechnicians)
+                    .ThenInclude(ot => ot.Technician)
+                .OrderByDescending(o => o.ActualCompletionDate ?? o.CreatedDate)
+                .ToListAsync();
+
+            return View(orders);
+        }
+
+        // POST: ServiceOrders/PayOrder/5 — симуляция онлайн-оплаты клиентом
+        [Authorize(Roles = "Client")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> PayOrder(int id)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            var customer = await _context.Customers
+                .FirstOrDefaultAsync(c => c.UserId == user!.Id);
+
+            if (customer == null)
+            {
+                TempData["ErrorMessage"] = "Профиль клиента не найден.";
+                return RedirectToAction(nameof(UnpaidOrders));
+            }
+
+            var order = await OrderPaymentService.GetOrderForPaymentAsync(_context, id);
+
+            if (order == null)
+            {
+                return NotFound();
+            }
+
+            if (order.CustomerId != customer.CustomerId)
+            {
+                TempData["ErrorMessage"] = "Вы можете оплачивать только свои заказы.";
+                return RedirectToAction("AccessDenied", "Home");
+            }
+
+            if (!OrderPaymentHelper.CanClientPay(order))
+            {
+                TempData["ErrorMessage"] = "Оплата для этого заказа сейчас недоступна.";
+                return RedirectToAction(nameof(UnpaidOrders));
+            }
+
+            var amountDue = OrderPaymentHelper.GetAmountDue(order);
+            var (success, error) = await OrderPaymentService.RegisterPaymentAsync(
+                _context,
+                order,
+                amountDue,
+                PaymentMethodCodes.Online,
+                $"SIM-{Guid.NewGuid():N}"[..20],
+                "Онлайн-оплата клиентом (симуляция)",
+                User.Identity?.Name ?? customer.Email ?? "Client");
+
+            if (!success)
+            {
+                TempData["ErrorMessage"] = error;
+                return RedirectToAction(nameof(UnpaidOrders));
+            }
+
+            TempData["SuccessMessage"] = $"Оплата {amountDue:C} по заказу #{order.OrderId} прошла успешно. Устройство готово к получению!";
+            return RedirectToAction(nameof(UnpaidOrders));
+        }
+
+        // GET: ServiceOrders/CompleteOrder/5 — мастер завершает заказ
+        [Authorize(Roles = "Admin,Employee")]
+        public async Task<IActionResult> CompleteOrder(int? id)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            var order = await LoadOrderForEmployeeCompletionAsync(id.Value);
+            if (order == null)
+            {
+                return NotFound();
+            }
+
+            if (!OrderPaymentHelper.CanEmployeeComplete(order))
+            {
+                TempData["ErrorMessage"] = "Этот заказ нельзя завершить на текущем этапе.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+
+            var model = new CompleteOrderViewModel
+            {
+                OrderId = order.OrderId,
+                CustomerName = order.Customer != null
+                    ? $"{order.Customer.FirstName} {order.Customer.LastName}"
+                    : "—",
+                DeviceDescription = $"{order.DeviceType?.TypeName} {order.DeviceBrand} {order.DeviceModel}".Trim(),
+                ProblemDescription = order.ProblemDescription,
+                CurrentStatusName = order.OrderStatus?.StatusName ?? "—",
+                TotalCost = order.TotalCost > 0 ? order.TotalCost : 0,
+                TechnicianNotes = order.TechnicianNotes
+            };
+
+            return View(model);
+        }
+
+        // POST: ServiceOrders/CompleteOrder/5
+        [Authorize(Roles = "Admin,Employee")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CompleteOrder(int id, CompleteOrderViewModel model)
+        {
+            if (id != model.OrderId)
+            {
+                return NotFound();
+            }
+
+            var order = await LoadOrderForEmployeeCompletionAsync(id);
+            if (order == null)
+            {
+                return NotFound();
+            }
+
+            if (!OrderPaymentHelper.CanEmployeeComplete(order))
+            {
+                TempData["ErrorMessage"] = "Этот заказ нельзя завершить на текущем этапе.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+
+            if (!ModelState.IsValid)
+            {
+                model.CustomerName = order.Customer != null
+                    ? $"{order.Customer.FirstName} {order.Customer.LastName}"
+                    : "—";
+                model.DeviceDescription = $"{order.DeviceType?.TypeName} {order.DeviceBrand} {order.DeviceModel}".Trim();
+                model.ProblemDescription = order.ProblemDescription;
+                model.CurrentStatusName = order.OrderStatus?.StatusName ?? "—";
+                return View(model);
+            }
+
+            order.TotalCost = model.TotalCost;
+            order.TechnicianNotes = model.TechnicianNotes;
+            order.StatusId = OrderStatusIds.AwaitingPayment;
+            order.ActualCompletionDate = DateTime.Now;
+
+            _context.OrderStatusHistory.Add(new OrderStatusHistory
+            {
+                OrderId = order.OrderId,
+                StatusId = OrderStatusIds.AwaitingPayment,
+                ChangedDate = DateTime.Now,
+                ChangedBy = User.Identity?.Name ?? "Employee",
+                Notes = $"Работы завершены. Стоимость: {model.TotalCost:C}. Ожидается оплата клиентом."
+            });
+
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = $"Заказ #{order.OrderId} завершён. Стоимость {model.TotalCost:C}. Клиенту отправлено на оплату.";
+            return RedirectToAction(nameof(MyAssignedOrders));
+        }
+
+        private async Task<ServiceOrder?> LoadOrderForEmployeeCompletionAsync(int orderId)
+        {
+            var order = await _context.ServiceOrders
+                .Include(o => o.Customer)
+                .Include(o => o.DeviceType)
+                .Include(o => o.OrderStatus)
+                .Include(o => o.OrderTechnicians)
+                .FirstOrDefaultAsync(o => o.OrderId == orderId);
+
+            if (order == null)
+            {
+                return null;
+            }
+
+            if (User.IsInRole("Employee"))
+            {
+                var user = await _userManager.GetUserAsync(User);
+                var technicianIds = await _context.Technicians
+                    .Where(t => t.UserId == user!.Id || (!string.IsNullOrWhiteSpace(user.Email) && t.Email == user.Email))
+                    .Select(t => t.TechnicianId)
+                    .ToListAsync();
+
+                if (!order.OrderTechnicians.Any(ot => technicianIds.Contains(ot.TechnicianId)))
+                {
+                    return null;
+                }
+            }
+
+            return order;
         }
 
         // Вспомогательный метод для загрузки данных в формы

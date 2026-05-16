@@ -84,7 +84,7 @@
     <div class="col-md-3">
         <div class="card bg-success text-white">
             <div class="card-body text-center py-3">
-                <h4 class="card-title mb-1">@Model.Count(o => o.OrderStatus?.StatusName == "Готово")</h4>
+                <h4 class="card-title mb-1">@Model.Count(o => o.OrderStatus?.StatusName == "Готово к получению" || o.OrderStatus?.StatusName == "Готово" || o.OrderStatus?.StatusName == "Ожидание оплаты")</h4>
                 <p class="card-text small mb-0">Готовы</p>
             </div>
         </div>

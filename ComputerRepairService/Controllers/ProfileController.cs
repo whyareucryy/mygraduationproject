@@ -1,5 +1,6 @@
 ﻿using ComputerRepairService.Data;
 using ComputerRepairService.Models.Entities;
+using ComputerRepairService.Models.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -60,7 +61,10 @@ namespace ComputerRepairService.Controllers
                 User = user,
                 TotalOrders = await _context.ServiceOrders.CountAsync(),
                 ActiveOrders = await _context.ServiceOrders
-                    .Where(o => o.StatusId != 5 && o.StatusId != 6 && o.StatusId != 7) // Не готовые, выданные или отмененные
+                    .Where(o => o.StatusId != OrderStatusIds.ReadyForPickup
+                        && o.StatusId != OrderStatusIds.Issued
+                        && o.StatusId != OrderStatusIds.Cancelled
+                        && o.StatusId != OrderStatusIds.AwaitingPayment)
                     .CountAsync(),
                 TotalCustomers = await _context.Customers.CountAsync(),
                 ActiveTechnicians = await _context.Technicians.CountAsync(t => t.IsActive),
@@ -121,7 +125,7 @@ namespace ComputerRepairService.Controllers
                     .CountAsync(),
                 CompletedOrdersThisMonth = await _context.ServiceOrders
                     .Where(o => o.OrderTechnicians.Any(ot => ot.TechnicianId == technician.TechnicianId) &&
-                               o.StatusId == 5 && // Готово
+                               (o.StatusId == OrderStatusIds.AwaitingPayment || o.StatusId == OrderStatusIds.ReadyForPickup || o.StatusId == OrderStatusIds.Issued) &&
                                o.ActualCompletionDate.HasValue &&
                                o.ActualCompletionDate.Value.Month == DateTime.Now.Month &&
                                o.ActualCompletionDate.Value.Year == DateTime.Now.Year)
@@ -131,7 +135,7 @@ namespace ComputerRepairService.Controllers
                     .SumAsync(ot => ot.HoursWorked),
                 MyActiveOrders = await _context.ServiceOrders
                     .Where(o => o.OrderTechnicians.Any(ot => ot.TechnicianId == technician.TechnicianId) &&
-                               o.StatusId != 5 && o.StatusId != 6 && o.StatusId != 7) // Не завершенные
+                               OrderStatusIds.ActiveWorkStatuses.Contains(o.StatusId))
                     .Include(o => o.Customer)
                     .Include(o => o.OrderStatus)
                     .OrderByDescending(o => o.Priority)
@@ -176,10 +180,11 @@ namespace ComputerRepairService.Controllers
                     .CountAsync(o => o.CustomerId == customer.CustomerId),
                 ActiveOrders = await _context.ServiceOrders
                     .Where(o => o.CustomerId == customer.CustomerId &&
-                               o.StatusId != 5 && o.StatusId != 6 && o.StatusId != 7) // Не завершенные
+                               OrderStatusIds.ActiveWorkStatuses.Contains(o.StatusId))
                     .CountAsync(),
                 CompletedOrders = await _context.ServiceOrders
-                    .Where(o => o.CustomerId == customer.CustomerId && o.StatusId == 5)
+                    .Where(o => o.CustomerId == customer.CustomerId &&
+                               (o.StatusId == OrderStatusIds.ReadyForPickup || o.StatusId == OrderStatusIds.Issued))
                     .CountAsync(),
                 TotalSpent = await _context.ServiceOrders
                     .Where(o => o.CustomerId == customer.CustomerId)
@@ -188,9 +193,12 @@ namespace ComputerRepairService.Controllers
                     .Where(o => o.CustomerId == customer.CustomerId)
                     .Include(o => o.OrderStatus)
                     .Include(o => o.DeviceType)
+                    .Include(o => o.Payments)
                     .OrderByDescending(o => o.CreatedDate)
                     .Take(5)
                     .ToListAsync(),
+                OrdersAwaitingPayment = await _context.ServiceOrders
+                    .CountAsync(o => o.CustomerId == customer.CustomerId && o.StatusId == OrderStatusIds.AwaitingPayment),
                 RecentPayments = await _context.Payments
                     .Where(p => p.ServiceOrder.CustomerId == customer.CustomerId)
                     .OrderByDescending(p => p.PaymentDate)
@@ -401,6 +409,7 @@ namespace ComputerRepairService.Controllers
         public decimal TotalSpent { get; set; }
         public List<ServiceOrder> RecentOrders { get; set; }
         public List<Payment> RecentPayments { get; set; }
+        public int OrdersAwaitingPayment { get; set; }
     }
 
     public class EditProfileViewModel

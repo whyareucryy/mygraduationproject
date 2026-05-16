@@ -1,4 +1,5 @@
 ﻿@model IEnumerable<ComputerRepairService.Models.Entities.ServiceOrder>
+@using ComputerRepairService.Services
 
 @{
     ViewData["Title"] = "Мои задачи";
@@ -182,11 +183,20 @@
                                             <a asp-action="Details" asp-route-id="@order.OrderId" class="btn btn-info" title="Детали">
                                                 <i class="fas fa-eye"></i>
                                             </a>
+                                            @if (OrderPaymentHelper.CanEmployeeComplete(order))
+                                            {
+                                                <a asp-action="CompleteOrder" asp-route-id="@order.OrderId" class="btn btn-success" title="Заказ выполнен">
+                                                    <i class="fas fa-check-double"></i>
+                                                </a>
+                                            }
+                                            else if (order.StatusId == ComputerRepairService.Models.Enums.OrderStatusIds.AwaitingPayment)
+                                            {
+                                                <span class="btn btn-outline-warning disabled" title="Ожидает оплаты">
+                                                    <i class="fas fa-hourglass-half"></i>
+                                                </span>
+                                            }
                                             <a asp-action="Edit" asp-route-id="@order.OrderId" class="btn btn-warning" title="Редактировать">
                                                 <i class="fas fa-edit"></i>
-                                            </a>
-                                            <a asp-action="ChangeStatus" asp-route-id="@order.OrderId" class="btn btn-primary" title="Изменить статус">
-                                                <i class="fas fa-sync-alt"></i>
                                             </a>
                                         </div>
                                     </td>

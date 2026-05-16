@@ -1,4 +1,5 @@
 ﻿using ComputerRepairService.Models.Entities;
+using ComputerRepairService.Models.Enums;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -17,6 +18,8 @@ namespace ComputerRepairService.Data
                 var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
                 var logger = serviceProvider.GetRequiredService<ILogger<Program>>(); // Изменили на ILogger<Program>
                 var context = serviceProvider.GetRequiredService<RepairDbContext>();
+
+                await EnsureOrderStatusesAsync(context, logger);
 
                 logger.LogInformation("=== ИНИЦИАЛИЗАЦИЯ IDENTITY ===");
 
@@ -410,6 +413,33 @@ namespace ComputerRepairService.Data
                 await context.SaveChangesAsync();
                 logger.LogInformation("Синхронизированы unlinked Technicians: {Count}", unlinkedTechnicians.Count);
             }
+        }
+
+        private static async Task EnsureOrderStatusesAsync(RepairDbContext context, ILogger logger)
+        {
+            var ready = await context.OrderStatuses.FindAsync(OrderStatusIds.ReadyForPickup);
+            if (ready != null && ready.StatusName == "Готово")
+            {
+                ready.StatusName = OrderStatusNames.ReadyForPickup;
+                ready.Description = "Оплачен, устройство можно забрать в сервисном центре";
+                logger.LogInformation("Статус #5 переименован в «Готово к получению»");
+            }
+
+            if (!await context.OrderStatuses.AnyAsync(s => s.StatusName == OrderStatusNames.AwaitingPayment))
+            {
+                await context.Database.ExecuteSqlRawAsync(
+                    @"SET IDENTITY_INSERT OrderStatuses ON;
+                      INSERT INTO OrderStatuses (StatusId, StatusName, Description)
+                      SELECT {0}, {1}, {2}
+                      WHERE NOT EXISTS (SELECT 1 FROM OrderStatuses WHERE StatusId = {0});
+                      SET IDENTITY_INSERT OrderStatuses OFF;",
+                    OrderStatusIds.AwaitingPayment,
+                    OrderStatusNames.AwaitingPayment,
+                    "Ремонт завершён мастером, ожидается оплата клиентом");
+                logger.LogInformation("Добавлен статус «Ожидание оплаты» (Id={StatusId})", OrderStatusIds.AwaitingPayment);
+            }
+
+            await context.SaveChangesAsync();
         }
     }
 }

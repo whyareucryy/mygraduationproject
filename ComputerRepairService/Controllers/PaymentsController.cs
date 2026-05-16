@@ -1,6 +1,7 @@
 ﻿using ComputerRepairService.Data;
 using ComputerRepairService.Models.Entities;
 using ComputerRepairService.Models.Enums;
+using ComputerRepairService.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -39,7 +40,54 @@ namespace ComputerRepairService.Controllers
                 .ToListAsync();
 
             ViewBag.StatusFilter = status ?? string.Empty;
+            ViewBag.OrdersAwaitingPayment = await GetOrdersAwaitingPaymentAsync();
             return View(payments);
+        }
+
+        // POST: Payments/ConfirmPayment/5 — подтверждение оплаты по заказу
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmPayment(int orderId, string paymentMethod, string? notes)
+        {
+            var order = await OrderPaymentService.GetOrderForPaymentAsync(_context, orderId);
+            if (order == null)
+            {
+                return NotFound();
+            }
+
+            if (order.StatusId != OrderStatusIds.AwaitingPayment)
+            {
+                TempData["ErrorMessage"] = "Подтвердить оплату можно только для заказов в статусе «Ожидание оплаты».";
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (string.IsNullOrEmpty(paymentMethod) || !PaymentMethodCodes.All.Contains(paymentMethod))
+            {
+                TempData["ErrorMessage"] = "Выберите корректный метод оплаты.";
+                return RedirectToAction(nameof(Create), new { orderId });
+            }
+
+            var amountDue = OrderPaymentHelper.GetAmountDue(order);
+            if (amountDue <= 0)
+            {
+                TempData["ErrorMessage"] = "По этому заказу нечего оплачивать.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var (success, error) = await OrderPaymentService.RegisterPaymentAsync(
+                _context,
+                order,
+                amountDue,
+                paymentMethod,
+                null,
+                notes ?? "Оплата подтверждена сотрудником",
+                User.Identity?.Name ?? "Staff");
+
+            TempData[success ? "SuccessMessage" : "ErrorMessage"] = success
+                ? $"Оплата по заказу #{orderId} подтверждена. Статус: «Готово к получению»."
+                : error;
+
+            return RedirectToAction(nameof(Index));
         }
 
         // GET: Payments/Details/5
@@ -65,6 +113,21 @@ namespace ComputerRepairService.Controllers
         // GET: Payments/Create
         public async Task<IActionResult> Create(int? orderId)
         {
+            if (orderId.HasValue)
+            {
+                var order = await _context.ServiceOrders.FindAsync(orderId.Value);
+                if (order == null)
+                {
+                    return NotFound();
+                }
+
+                if (order.StatusId != OrderStatusIds.AwaitingPayment)
+                {
+                    TempData["ErrorMessage"] = "Платёж можно оформить только для заказа в статусе «Ожидание оплаты».";
+                    return RedirectToAction(nameof(Index));
+                }
+            }
+
             await PopulateServiceOrdersAsync(orderId);
             return View();
         }
@@ -77,13 +140,18 @@ namespace ComputerRepairService.Controllers
         {
             ModelState.Remove(nameof(Payment.ServiceOrder));
 
-            if (payment.OrderId <= 0)
-            {
-                ModelState.AddModelError(nameof(Payment.OrderId), "Выберите заказ");
-            }
-            else if (!await _context.ServiceOrders.AnyAsync(so => so.OrderId == payment.OrderId))
+            var order = payment.OrderId > 0
+                ? await OrderPaymentService.GetOrderForPaymentAsync(_context, payment.OrderId)
+                : null;
+
+            if (order == null)
             {
                 ModelState.AddModelError(nameof(Payment.OrderId), "Указанный заказ не найден");
+            }
+            else if (order.StatusId != OrderStatusIds.AwaitingPayment)
+            {
+                ModelState.AddModelError(nameof(Payment.OrderId),
+                    "Платёж можно оформить только для заказа в статусе «Ожидание оплаты».");
             }
 
             if (!string.IsNullOrEmpty(payment.PaymentMethod) &&
@@ -94,18 +162,29 @@ namespace ComputerRepairService.Controllers
 
             if (string.IsNullOrWhiteSpace(payment.Status))
             {
-                payment.Status = "Completed";
+                payment.Status = PaymentStatusCodes.Completed;
             }
 
             ValidateAmount(payment.Amount, ModelState);
 
-            if (ModelState.IsValid)
+            if (ModelState.IsValid && order != null)
             {
-                payment.PaymentDate = DateTime.Now;
-                _context.Add(payment);
-                await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = "Платёж сохранён.";
-                return RedirectToAction(nameof(Index));
+                var (success, error) = await OrderPaymentService.RegisterPaymentAsync(
+                    _context,
+                    order,
+                    payment.Amount,
+                    payment.PaymentMethod,
+                    payment.TransactionId,
+                    payment.Notes ?? "Платёж зарегистрирован сотрудником",
+                    User.Identity?.Name ?? "Staff");
+
+                if (success)
+                {
+                    TempData["SuccessMessage"] = "Платёж сохранён. Заказ готов к выдаче клиенту.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                ModelState.AddModelError(string.Empty, error ?? "Не удалось сохранить платёж.");
             }
 
             await PopulateServiceOrdersAsync(payment.OrderId);
@@ -113,7 +192,7 @@ namespace ComputerRepairService.Controllers
         }
 
         // GET: Payments/Edit/5
-        [Authorize(Roles = "Admin,Employee")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
@@ -131,8 +210,8 @@ namespace ComputerRepairService.Controllers
             return View(payment);
         }
 
-        // POST: Payments/Edit/5
-        [Authorize(Roles = "Admin,Employee")]
+        // POST: Payments/Edit/5 — только существующие платежи (без смены заказа на неподходящий)
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(
@@ -145,6 +224,17 @@ namespace ComputerRepairService.Controllers
             }
 
             ModelState.Remove(nameof(Payment.ServiceOrder));
+
+            var existing = await _context.Payments.AsNoTracking().FirstOrDefaultAsync(p => p.PaymentId == id);
+            if (existing != null && existing.OrderId != payment.OrderId)
+            {
+                var newOrder = await _context.ServiceOrders.FindAsync(payment.OrderId);
+                if (newOrder?.StatusId != OrderStatusIds.AwaitingPayment)
+                {
+                    ModelState.AddModelError(nameof(Payment.OrderId),
+                        "Нельзя привязать платёж к заказу не в статусе «Ожидание оплаты».");
+                }
+            }
 
             if (!string.IsNullOrEmpty(payment.PaymentMethod) &&
                 !PaymentMethodCodes.All.Contains(payment.PaymentMethod))
@@ -234,9 +324,22 @@ namespace ComputerRepairService.Controllers
             }
         }
 
+        private async Task<List<ServiceOrder>> GetOrdersAwaitingPaymentAsync()
+        {
+            return await _context.ServiceOrders
+                .Where(so => so.StatusId == OrderStatusIds.AwaitingPayment)
+                .Include(so => so.Customer)
+                .Include(so => so.OrderStatus)
+                .Include(so => so.Payments)
+                .OrderByDescending(so => so.ActualCompletionDate ?? so.CreatedDate)
+                .ToListAsync();
+        }
+
         private async Task PopulateServiceOrdersAsync(int? preferredOrderId)
         {
-            var query = _context.ServiceOrders.AsQueryable();
+            var query = _context.ServiceOrders
+                .Where(so => so.StatusId == OrderStatusIds.AwaitingPayment);
+
             if (preferredOrderId.HasValue)
             {
                 query = query.Where(so => so.OrderId == preferredOrderId.Value);

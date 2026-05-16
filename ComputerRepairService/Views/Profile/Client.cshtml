@@ -20,6 +20,16 @@
         </div>
     </div>
 
+    @if (Model.OrdersAwaitingPayment > 0)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-credit-card"></i>
+            У вас <strong>@Model.OrdersAwaitingPayment</strong> завершённых заказ(ов), ожидающих оплаты.
+            <a asp-controller="ServiceOrders" asp-action="UnpaidOrders" class="alert-link ms-1">Перейти к оплате</a>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
     <!-- Статистика клиента -->
     <div class="row mb-4">
         <div class="col-md-3 mb-4">
@@ -197,6 +207,10 @@
                                             </td>
                                             <td>
                                                 <partial name="_OrderStatusBadge" model="order.OrderStatus?.StatusName" />
+                                                @if (ComputerRepairService.Services.OrderPaymentHelper.CanClientPay(order))
+                                                {
+                                                    <br><span class="badge bg-success mt-1">К оплате</span>
+                                                }
                                             </td>
                                             <td>@order.CreatedDate.ToString("dd.MM.yyyy")</td>
                                             <td>

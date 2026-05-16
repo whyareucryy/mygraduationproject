@@ -1,0 +1,38 @@
+@model ComputerRepairService.ViewComponents.PaymentNotificationsViewModel
+
+@if (Model.Items.Any())
+{
+    @foreach (var item in Model.Items)
+    {
+        <a class="dropdown-item" href="@item.Url">
+            <div class="d-flex">
+                <div class="flex-shrink-0">
+                    <i class="@item.IconClass"></i>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <small class="text-muted">@item.TimeLabel</small>
+                    <p class="mb-0 small">@item.Message</p>
+                </div>
+            </div>
+        </a>
+    }
+}
+else
+{
+    <div class="dropdown-item text-muted small">Нет новых уведомлений</div>
+}
+
+@if (User.IsInRole("Client"))
+{
+    <div class="dropdown-divider"></div>
+    <a class="dropdown-item text-center" asp-controller="ServiceOrders" asp-action="UnpaidOrders">
+        К оплате
+    </a>
+}
+else if (User.IsInRole("Admin") || User.IsInRole("Employee"))
+{
+    <div class="dropdown-divider"></div>
+    <a class="dropdown-item text-center" asp-controller="Payments" asp-action="Index">
+        Все платежи
+    </a>
+}

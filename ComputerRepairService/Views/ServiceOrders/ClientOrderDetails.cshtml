@@ -1,7 +1,12 @@
 ﻿@model ComputerRepairService.Models.Entities.ServiceOrder
+@using ComputerRepairService.Services
 
 @{
     ViewData["Title"] = $"Заказ #{Model.OrderId}";
+    var canPay = ViewBag.CanPay as bool? ?? false;
+    var isFullyPaid = ViewBag.IsFullyPaid as bool? ?? false;
+    var amountDue = ViewBag.AmountDue as decimal? ?? OrderPaymentHelper.GetAmountDue(Model);
+    var paidAmount = OrderPaymentHelper.GetPaidAmount(Model);
 }
 
 <div class="container mt-4">
@@ -23,6 +28,38 @@
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             <i class="fas fa-check-circle"></i> @TempData["SuccessMessage"]
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle"></i> @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (canPay)
+    {
+        <div class="alert alert-success border-success shadow-sm" role="alert">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div>
+                    <h5 class="alert-heading mb-1"><i class="fas fa-credit-card"></i> Ожидается оплата</h5>
+                    <p class="mb-0">Мастер завершил работы. К оплате: <strong>@amountDue.ToString("C")</strong></p>
+                </div>
+                <form asp-action="PayOrder" asp-route-id="@Model.OrderId" method="post" class="mb-0">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-success btn-lg">
+                        <i class="fas fa-credit-card"></i> Оплатить @amountDue.ToString("C")
+                    </button>
+                </form>
+            </div>
+        </div>
+    }
+    else if (Model.OrderStatus?.StatusName == "Готово к получению" || Model.OrderStatus?.StatusName == "Готово")
+    {
+        <div class="alert alert-info" role="alert">
+            <i class="fas fa-box"></i> Заказ оплачен и готов к получению в сервисном центре.
         </div>
     }
 
@@ -257,6 +294,14 @@
                 <div class="card-body text-center">
                     <h5 class="card-title">Итоговая стоимость</h5>
                     <h2 class="display-6">@Model.TotalCost.ToString("C")</h2>
+                    @if (paidAmount > 0)
+                    {
+                        <p class="mb-0 small opacity-75">Оплачено: @paidAmount.ToString("C")</p>
+                    }
+                    @if (canPay)
+                    {
+                        <p class="mb-0 small">К оплате: @amountDue.ToString("C")</p>
+                    }
                     <p class="card-text mb-0">
                         @if (Model.ActualCompletionDate.HasValue)
                         {

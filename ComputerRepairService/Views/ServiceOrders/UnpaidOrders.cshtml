@@ -1,0 +1,91 @@
+@model IEnumerable<ComputerRepairService.Models.Entities.ServiceOrder>
+@using ComputerRepairService.Services
+
+@{
+    ViewData["Title"] = "К оплате";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0"><i class="fas fa-credit-card"></i> Заказы к оплате</h2>
+        <a asp-action="MyOrders" class="btn btn-outline-secondary">
+            <i class="fas fa-list"></i> Все заказы
+        </a>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="fas fa-check-circle"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="fas fa-exclamation-circle"></i> @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (!Model.Any())
+    {
+        <div class="card border-success">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-smile fa-3x text-success mb-3"></i>
+                <h4>Нет заказов, ожидающих оплаты</h4>
+                <p class="text-muted">После завершения ремонта мастером здесь появятся счета к оплате.</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var order in Model)
+            {
+                var amountDue = OrderPaymentHelper.GetAmountDue(order);
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100 shadow-sm border-warning">
+                        <div class="card-header bg-warning text-dark d-flex justify-content-between">
+                            <strong>Заказ #@order.OrderId</strong>
+                            <span class="badge bg-dark">@order.OrderStatus?.StatusName</span>
+                        </div>
+                        <div class="card-body">
+                            <p class="mb-2">
+                                <span class="badge bg-secondary">@order.DeviceType?.TypeName</span>
+                                @order.DeviceBrand @order.DeviceModel
+                            </p>
+                            @if (order.OrderTechnicians?.Any() == true)
+                            {
+                                <p class="small text-muted mb-2">
+                                    Мастер:
+                                    @string.Join(", ", order.OrderTechnicians.Select(t => $"{t.Technician?.FirstName} {t.Technician?.LastName}"))
+                                </p>
+                            }
+                            @if (!string.IsNullOrEmpty(order.TechnicianNotes))
+                            {
+                                <p class="small">@order.TechnicianNotes</p>
+                            }
+                            <hr />
+                            <p class="mb-0">К оплате:</p>
+                            <h3 class="text-success">@amountDue.ToString("C")</h3>
+                            @if (order.ActualCompletionDate.HasValue)
+                            {
+                                <small class="text-muted">Работы завершены: @order.ActualCompletionDate.Value.ToString("dd.MM.yyyy")</small>
+                            }
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <form asp-action="PayOrder" asp-route-id="@order.OrderId" method="post" class="d-grid">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-success btn-lg">
+                                    <i class="fas fa-credit-card"></i> Оплатить @amountDue.ToString("C")
+                                </button>
+                            </form>
+                            <a asp-action="Details" asp-route-id="@order.OrderId" class="btn btn-link btn-sm mt-2 w-100">Подробнее о заказе</a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

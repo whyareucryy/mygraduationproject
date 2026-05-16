@@ -1,19 +1,82 @@
 ﻿@model IEnumerable<ComputerRepairService.Models.Entities.Payment>
+@using ComputerRepairService.Services
 
 @{
     ViewData["Title"] = "Платежи";
     Layout = "_Layout";
     var statusFilter = ViewBag.StatusFilter as string ?? string.Empty;
+    var ordersAwaiting = ViewBag.OrdersAwaitingPayment as List<ComputerRepairService.Models.Entities.ServiceOrder> ?? new();
 }
 
 <div class="container mt-4">
     <h1 class="mb-4">Платежи</h1>
 
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+    }
+
+    <div class="card mb-4 border-warning shadow-sm">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0"><i class="fas fa-hourglass-half"></i> Заказы в ожидании оплаты</h5>
+        </div>
+        <div class="card-body">
+            @if (!ordersAwaiting.Any())
+            {
+                <p class="text-muted mb-0">Нет заказов в статусе «Ожидание оплаты».</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Заказ</th>
+                                <th>Клиент</th>
+                                <th>Сумма</th>
+                                <th class="text-end">Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var order in ordersAwaiting)
+                            {
+                                var due = OrderPaymentHelper.GetAmountDue(order);
+                                <tr>
+                                    <td><strong>#@order.OrderId</strong></td>
+                                    <td>@order.Customer?.FirstName @order.Customer?.LastName</td>
+                                    <td class="fw-bold text-success">@due.ToString("C")</td>
+                                    <td class="text-end">
+                                        <a asp-action="Create" asp-route-orderId="@order.OrderId" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-cash-register"></i> Принять оплату
+                                        </a>
+                                        <form asp-action="ConfirmPayment" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="orderId" value="@order.OrderId" />
+                                            <input type="hidden" name="paymentMethod" value="Cash" />
+                                            <button type="submit" class="btn btn-sm btn-success" title="Наличные">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+
     <div class="row mb-4">
         <div class="col-md-6">
-            <a asp-action="Create" class="btn btn-primary">
-                <i class="fas fa-plus"></i> Добавить платеж
+            <a asp-action="Create" class="btn btn-primary @(ordersAwaiting.Any() ? "" : "disabled")">
+                <i class="fas fa-plus"></i> Добавить платёж
             </a>
+            <small class="text-muted d-block mt-1">Только для заказов «Ожидание оплаты»</small>
         </div>
         <div class="col-md-6 text-end">
             <div class="btn-group" role="group">

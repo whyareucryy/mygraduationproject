@@ -366,7 +366,6 @@
                                     <li><a class="dropdown-item" asp-controller="Inventory" asp-action="Index"><i class="fas fa-boxes"></i> Склад</a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li><a class="dropdown-item" asp-controller="Services" asp-action="Index"><i class="fas fa-concierge-bell"></i> Услуги</a></li>
-                                    <li><a class="dropdown-item" asp-controller="Reports" asp-action="Index"><i class="fas fa-chart-bar"></i> Отчеты</a></li>
                                 </ul>
                             </li>
                         }
@@ -381,36 +380,10 @@
                         <li class="nav-item dropdown me-3">
                             <a class="nav-link position-relative" href="#" role="button" data-bs-toggle="dropdown">
                                 <i class="fas fa-bell"></i>
-                                <span class="badge bg-danger notification-badge">3</span>
                             </a>
-                            <div class="dropdown-menu dropdown-menu-end" style="width: 300px;">
+                            <div class="dropdown-menu dropdown-menu-end" style="width: 320px; max-height: 400px; overflow-y: auto;">
                                 <h6 class="dropdown-header">Уведомления</h6>
-                                <div class="dropdown-item">
-                                    <div class="d-flex">
-                                        <div class="flex-shrink-0">
-                                            <i class="fas fa-exclamation-circle text-warning"></i>
-                                        </div>
-                                        <div class="flex-grow-1 ms-3">
-                                            <small class="text-muted">5 мин назад</small>
-                                            <p class="mb-0 small">Низкий запас: SSD Samsung 500GB</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="dropdown-item">
-                                    <div class="d-flex">
-                                        <div class="flex-shrink-0">
-                                            <i class="fas fa-check-circle text-success"></i>
-                                        </div>
-                                        <div class="flex-grow-1 ms-3">
-                                            <small class="text-muted">1 час назад</small>
-                                            <p class="mb-0 small">Заказ #104 готов к выдаче</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="dropdown-divider"></div>
-                                <a class="dropdown-item text-center" href="#">
-                                    Показать все уведомления
-                                </a>
+                                @await Component.InvokeAsync("PaymentNotifications")
                             </div>
                         </li>
 
@@ -577,6 +550,7 @@
                         @if (User.IsInRole("Client"))
                         {
                             <li><a asp-controller="ServiceOrders" asp-action="MyOrders"><i class="fas fa-box"></i> Мои заказы</a></li>
+                            <li><a asp-controller="ServiceOrders" asp-action="UnpaidOrders"><i class="fas fa-credit-card"></i> К оплате</a></li>
                             <li><a asp-controller="ServiceOrders" asp-action="Create"><i class="fas fa-plus-circle"></i> Новый заказ</a></li>
                         }
                     </ul>
@@ -603,16 +577,10 @@
                     </li>
 
                     <li>
-                        <a href="#" class="has-submenu @(ViewContext.RouteData.Values["controller"]?.ToString() == "Reports" ||
-                                                                                             ViewContext.RouteData.Values["controller"]?.ToString() == "Payments" ? "active" : "")">
-                            <i class="fas fa-chart-bar"></i> Аналитика
-                            <i class="fas fa-chevron-right ms-auto"></i>
+                        <a asp-controller="Payments" asp-action="Index"
+                           class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Payments" ? "active" : "")">
+                            <i class="fas fa-credit-card"></i> Платежи
                         </a>
-                        <ul class="sidebar-submenu @(ViewContext.RouteData.Values["controller"]?.ToString() == "Reports" ||
-                                                                                 ViewContext.RouteData.Values["controller"]?.ToString() == "Payments" ? "show" : "")">
-                            <li><a asp-controller="Reports" asp-action="Index"><i class="fas fa-file-alt"></i> Отчеты</a></li>
-                            <li><a asp-controller="Payments" asp-action="Index"><i class="fas fa-credit-card"></i> Платежи</a></li>
-                        </ul>
                     </li>
 
                     <li class="menu-header mb-3 px-3 mt-4">
