@@ -1,5 +1,6 @@
 ﻿using ComputerRepairService.Data;
 using ComputerRepairService.Models.Entities;
+using ComputerRepairService.Services;
 using ComputerRepairService.Models.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -26,7 +27,7 @@ namespace ComputerRepairService.Controllers
             _context = context;
         }
 
-        // Главная страница - редирект на соответствующий кабинет
+        // Главная страница - редирект на AccountInfo
         public async Task<IActionResult> Index()
         {
             var user = await _userManager.GetUserAsync(User);
@@ -36,204 +37,44 @@ namespace ComputerRepairService.Controllers
                 return RedirectToAction("Login", "Identity");
             }
 
-            var roles = await _userManager.GetRolesAsync(user);
-
-            if (roles.Contains("Admin"))
-                return RedirectToAction("Admin");
-            else if (roles.Contains("Employee"))
-                return RedirectToAction("Employee");
-            else if (roles.Contains("Client"))
-                return RedirectToAction("Client");
-
-            return RedirectToAction("AccessDenied", "Home");
+            return RedirectToAction("AccountInfo");
         }
 
-        // Личный кабинет АДМИНИСТРАТОРА
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Admin()
-        {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null) return NotFound();
-
-            // Статистика для админа
-            var model = new AdminDashboardViewModel
-            {
-                User = user,
-                TotalOrders = await _context.ServiceOrders.CountAsync(),
-                ActiveOrders = await _context.ServiceOrders
-                    .Where(o => o.StatusId != OrderStatusIds.ReadyForPickup
-                        && o.StatusId != OrderStatusIds.Issued
-                        && o.StatusId != OrderStatusIds.Cancelled
-                        && o.StatusId != OrderStatusIds.AwaitingPayment)
-                    .CountAsync(),
-                TotalCustomers = await _context.Customers.CountAsync(),
-                ActiveTechnicians = await _context.Technicians.CountAsync(t => t.IsActive),
-                LowStockItems = await _context.Inventory
-                    .Where(i => i.QuantityInStock <= i.ReorderLevel && i.IsActive)
-                    .CountAsync(),
-                TotalRevenue = await _context.Payments
-                    .Where(p => p.Status == "Completed")
-                    .SumAsync(p => p.Amount),
-                RecentOrders = await _context.ServiceOrders
-                    .Include(o => o.Customer)
-                    .Include(o => o.OrderStatus)
-                    .OrderByDescending(o => o.CreatedDate)
-                    .Take(5)
-                    .ToListAsync(),
-                LowStockAlerts = await _context.Inventory
-                    .Where(i => i.QuantityInStock <= i.ReorderLevel && i.IsActive)
-                    .Include(i => i.PartCategory)
-                    .Take(5)
-                    .ToListAsync(),
-                RecentCustomers = await _context.Customers
-                    .OrderByDescending(c => c.RegistrationDate)
-                    .Take(5)
-                    .ToListAsync()
-            };
-
-            return View(model);
-        }
-
-        // Личный кабинет СОТРУДНИКА
-        [Authorize(Roles = "Employee")]
-        public async Task<IActionResult> Employee()
-        {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null) return NotFound();
-
-            // Находим связанного техника
-            var technician = await _context.Technicians
-                .FirstOrDefaultAsync(t => t.UserId == user.Id);
-
-            if (technician == null)
-            {
-                TempData["ErrorMessage"] = "Профиль мастера не найден. Обратитесь к администратору.";
-                return RedirectToAction("Index", "Home");
-            }
-
-            // Статистика для сотрудника
-            var model = new EmployeeDashboardViewModel
-            {
-                User = user,
-                Technician = technician,
-                AssignedOrders = await _context.ServiceOrders
-                    .Where(o => o.OrderTechnicians.Any(ot => ot.TechnicianId == technician.TechnicianId))
-                    .CountAsync(),
-                ActiveAssignedOrders = await _context.ServiceOrders
-                    .Where(o => o.OrderTechnicians.Any(ot => ot.TechnicianId == technician.TechnicianId) &&
-                               (o.StatusId == 2 || o.StatusId == 3 || o.StatusId == 4)) // Диагностика, Ожидание запчастей, В ремонте
-                    .CountAsync(),
-                CompletedOrdersThisMonth = await _context.ServiceOrders
-                    .Where(o => o.OrderTechnicians.Any(ot => ot.TechnicianId == technician.TechnicianId) &&
-                               (o.StatusId == OrderStatusIds.AwaitingPayment || o.StatusId == OrderStatusIds.ReadyForPickup || o.StatusId == OrderStatusIds.Issued) &&
-                               o.ActualCompletionDate.HasValue &&
-                               o.ActualCompletionDate.Value.Month == DateTime.Now.Month &&
-                               o.ActualCompletionDate.Value.Year == DateTime.Now.Year)
-                    .CountAsync(),
-                TotalHoursWorked = await _context.OrderTechnicians
-                    .Where(ot => ot.TechnicianId == technician.TechnicianId)
-                    .SumAsync(ot => ot.HoursWorked),
-                MyActiveOrders = await _context.ServiceOrders
-                    .Where(o => o.OrderTechnicians.Any(ot => ot.TechnicianId == technician.TechnicianId) &&
-                               OrderStatusIds.ActiveWorkStatuses.Contains(o.StatusId))
-                    .Include(o => o.Customer)
-                    .Include(o => o.OrderStatus)
-                    .OrderByDescending(o => o.Priority)
-                    .ThenByDescending(o => o.CreatedDate)
-                    .Take(10)
-                    .ToListAsync(),
-                RecentServices = await _context.OrderServices
-                    .Where(os => os.TechnicianId == technician.TechnicianId)
-                    .Include(os => os.ServiceOrder)
-                    .Include(os => os.Service)
-                    .OrderByDescending(os => os.ServiceDate)
-                    .Take(5)
-                    .ToListAsync()
-            };
-
-            return View(model);
-        }
-
-        // Личный кабинет КЛИЕНТА
-        [Authorize(Roles = "Client")]
-        public async Task<IActionResult> Client()
-        {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null) return NotFound();
-
-            // Находим связанного клиента
-            var customer = await _context.Customers
-                .FirstOrDefaultAsync(c => c.UserId == user.Id);
-
-            if (customer == null)
-            {
-                TempData["ErrorMessage"] = "Профиль клиента не найден. Заполните информацию о себе.";
-                return RedirectToAction("Edit", "Customers");
-            }
-
-            // Статистика для клиента
-            var model = new ClientDashboardViewModel
-            {
-                User = user,
-                Customer = customer,
-                TotalOrders = await _context.ServiceOrders
-                    .CountAsync(o => o.CustomerId == customer.CustomerId),
-                ActiveOrders = await _context.ServiceOrders
-                    .Where(o => o.CustomerId == customer.CustomerId &&
-                               OrderStatusIds.ActiveWorkStatuses.Contains(o.StatusId))
-                    .CountAsync(),
-                CompletedOrders = await _context.ServiceOrders
-                    .Where(o => o.CustomerId == customer.CustomerId &&
-                               (o.StatusId == OrderStatusIds.ReadyForPickup || o.StatusId == OrderStatusIds.Issued))
-                    .CountAsync(),
-                TotalSpent = await _context.ServiceOrders
-                    .Where(o => o.CustomerId == customer.CustomerId)
-                    .SumAsync(o => o.TotalCost),
-                RecentOrders = await _context.ServiceOrders
-                    .Where(o => o.CustomerId == customer.CustomerId)
-                    .Include(o => o.OrderStatus)
-                    .Include(o => o.DeviceType)
-                    .Include(o => o.Payments)
-                    .OrderByDescending(o => o.CreatedDate)
-                    .Take(5)
-                    .ToListAsync(),
-                OrdersAwaitingPayment = await _context.ServiceOrders
-                    .CountAsync(o => o.CustomerId == customer.CustomerId && o.StatusId == OrderStatusIds.AwaitingPayment),
-                RecentPayments = await _context.Payments
-                    .Where(p => p.ServiceOrder.CustomerId == customer.CustomerId)
-                    .OrderByDescending(p => p.PaymentDate)
-                    .Take(5)
-                    .ToListAsync()
-            };
-
-            return View(model);
-        }
-
-        // Редактирование профиля
-        public async Task<IActionResult> EditProfile()
-        {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null) return NotFound();
-
-            var model = new EditProfileViewModel
-            {
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email,
-                PhoneNumber = user.PhoneNumber,
-                Address = user.Address
-            };
-
-            return View(model);
-        }
-
+        // Редактирование профиля (POST)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditProfile(EditProfileViewModel model)
         {
             if (!ModelState.IsValid)
             {
-                return View(model);
+                var userObj = await _userManager.GetUserAsync(User);
+                if (userObj == null) return NotFound();
+                
+                var roles = await _userManager.GetRolesAsync(userObj);
+                var logins = await _userManager.GetLoginsAsync(userObj);
+                var claims = await _userManager.GetClaimsAsync(userObj);
+                var customer = await _context.Customers.FirstOrDefaultAsync(c => c.UserId == userObj.Id);
+                var technician = await _context.Technicians.FirstOrDefaultAsync(t => t.UserId == userObj.Id);
+
+                var fullModel = new AccountInfoViewModel
+                {
+                    User = userObj,
+                    Roles = roles.ToList(),
+                    Customer = customer,
+                    Technician = technician,
+                    EditProfileModel = model,
+                    ChangePasswordModel = new ChangePasswordViewModel(),
+                    Logins = logins.ToList(),
+                    Claims = claims.ToList(),
+                    EmailConfirmed = userObj.EmailConfirmed,
+                    PhoneNumberConfirmed = userObj.PhoneNumberConfirmed,
+                    TwoFactorEnabled = userObj.TwoFactorEnabled,
+                    LockoutEnd = userObj.LockoutEnd,
+                    AccessFailedCount = userObj.AccessFailedCount,
+                    RegistrationDate = userObj.RegistrationDate
+                };
+
+                return View("AccountInfo", fullModel);
             }
 
             var user = await _userManager.GetUserAsync(User);
@@ -255,7 +96,32 @@ namespace ComputerRepairService.Controllers
                     {
                         ModelState.AddModelError(string.Empty, error.Description);
                     }
-                    return View(model);
+                    
+                    var roles = await _userManager.GetRolesAsync(user);
+                    var logins = await _userManager.GetLoginsAsync(user);
+                    var claims = await _userManager.GetClaimsAsync(user);
+                    var customer = await _context.Customers.FirstOrDefaultAsync(c => c.UserId == user.Id);
+                    var technician = await _context.Technicians.FirstOrDefaultAsync(t => t.UserId == user.Id);
+
+                    var fullModel = new AccountInfoViewModel
+                    {
+                        User = user,
+                        Roles = roles.ToList(),
+                        Customer = customer,
+                        Technician = technician,
+                        EditProfileModel = model,
+                        ChangePasswordModel = new ChangePasswordViewModel(),
+                        Logins = logins.ToList(),
+                        Claims = claims.ToList(),
+                        EmailConfirmed = user.EmailConfirmed,
+                        PhoneNumberConfirmed = user.PhoneNumberConfirmed,
+                        TwoFactorEnabled = user.TwoFactorEnabled,
+                        LockoutEnd = user.LockoutEnd,
+                        AccessFailedCount = user.AccessFailedCount,
+                        RegistrationDate = user.RegistrationDate
+                    };
+
+                    return View("AccountInfo", fullModel);
                 }
             }
 
@@ -297,7 +163,7 @@ namespace ComputerRepairService.Controllers
                 }
 
                 TempData["SuccessMessage"] = "Профиль успешно обновлен!";
-                return RedirectToAction("Index");
+                return RedirectToAction("AccountInfo");
             }
 
             foreach (var error in updateResult.Errors)
@@ -305,22 +171,77 @@ namespace ComputerRepairService.Controllers
                 ModelState.AddModelError(string.Empty, error.Description);
             }
 
-            return View(model);
+            var rolesErr = await _userManager.GetRolesAsync(user);
+            var loginsErr = await _userManager.GetLoginsAsync(user);
+            var claimsErr = await _userManager.GetClaimsAsync(user);
+            var customerErr = await _context.Customers.FirstOrDefaultAsync(c => c.UserId == user.Id);
+            var technicianErr = await _context.Technicians.FirstOrDefaultAsync(t => t.UserId == user.Id);
+
+            var errModel = new AccountInfoViewModel
+            {
+                User = user,
+                Roles = rolesErr.ToList(),
+                Customer = customerErr,
+                Technician = technicianErr,
+                EditProfileModel = model,
+                ChangePasswordModel = new ChangePasswordViewModel(),
+                Logins = loginsErr.ToList(),
+                Claims = claimsErr.ToList(),
+                EmailConfirmed = user.EmailConfirmed,
+                PhoneNumberConfirmed = user.PhoneNumberConfirmed,
+                TwoFactorEnabled = user.TwoFactorEnabled,
+                LockoutEnd = user.LockoutEnd,
+                AccessFailedCount = user.AccessFailedCount,
+                RegistrationDate = user.RegistrationDate
+            };
+
+            return View("AccountInfo", errModel);
         }
 
-        // Смена пароля
-        public IActionResult ChangePassword()
-        {
-            return View();
-        }
-
+        // Смена пароля (POST)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
         {
             if (!ModelState.IsValid)
             {
-                return View(model);
+                var userObj = await _userManager.GetUserAsync(User);
+                if (userObj == null) return NotFound();
+                
+                var roles = await _userManager.GetRolesAsync(userObj);
+                var logins = await _userManager.GetLoginsAsync(userObj);
+                var claims = await _userManager.GetClaimsAsync(userObj);
+                var customer = await _context.Customers.FirstOrDefaultAsync(c => c.UserId == userObj.Id);
+                var technician = await _context.Technicians.FirstOrDefaultAsync(t => t.UserId == userObj.Id);
+                
+                var editModel = new EditProfileViewModel
+                {
+                    FirstName = userObj.FirstName,
+                    LastName = userObj.LastName,
+                    Email = userObj.Email,
+                    PhoneNumber = userObj.PhoneNumber,
+                    Address = userObj.Address
+                };
+
+                var fullModel = new AccountInfoViewModel
+                {
+                    User = userObj,
+                    Roles = roles.ToList(),
+                    Customer = customer,
+                    Technician = technician,
+                    EditProfileModel = editModel,
+                    ChangePasswordModel = model,
+                    Logins = logins.ToList(),
+                    Claims = claims.ToList(),
+                    EmailConfirmed = userObj.EmailConfirmed,
+                    PhoneNumberConfirmed = userObj.PhoneNumberConfirmed,
+                    TwoFactorEnabled = userObj.TwoFactorEnabled,
+                    LockoutEnd = userObj.LockoutEnd,
+                    AccessFailedCount = userObj.AccessFailedCount,
+                    RegistrationDate = userObj.RegistrationDate
+                };
+
+                return View("AccountInfo", fullModel);
             }
 
             var user = await _userManager.GetUserAsync(User);
@@ -333,7 +254,7 @@ namespace ComputerRepairService.Controllers
             {
                 await _signInManager.RefreshSignInAsync(user);
                 TempData["SuccessMessage"] = "Пароль успешно изменен!";
-                return RedirectToAction("Index");
+                return RedirectToAction("AccountInfo");
             }
 
             foreach (var error in changePasswordResult.Errors)
@@ -341,7 +262,40 @@ namespace ComputerRepairService.Controllers
                 ModelState.AddModelError(string.Empty, error.Description);
             }
 
-            return View(model);
+            var rolesErr = await _userManager.GetRolesAsync(user);
+            var loginsErr = await _userManager.GetLoginsAsync(user);
+            var claimsErr = await _userManager.GetClaimsAsync(user);
+            var customerErr = await _context.Customers.FirstOrDefaultAsync(c => c.UserId == user.Id);
+            var technicianErr = await _context.Technicians.FirstOrDefaultAsync(t => t.UserId == user.Id);
+            
+            var editModelErr = new EditProfileViewModel
+            {
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                PhoneNumber = user.PhoneNumber,
+                Address = user.Address
+            };
+
+            var errModel = new AccountInfoViewModel
+            {
+                User = user,
+                Roles = rolesErr.ToList(),
+                Customer = customerErr,
+                Technician = technicianErr,
+                EditProfileModel = editModelErr,
+                ChangePasswordModel = model,
+                Logins = loginsErr.ToList(),
+                Claims = claimsErr.ToList(),
+                EmailConfirmed = user.EmailConfirmed,
+                PhoneNumberConfirmed = user.PhoneNumberConfirmed,
+                TwoFactorEnabled = user.TwoFactorEnabled,
+                LockoutEnd = user.LockoutEnd,
+                AccessFailedCount = user.AccessFailedCount,
+                RegistrationDate = user.RegistrationDate
+            };
+
+            return View("AccountInfo", errModel);
         }
 
         // Техническая информация о пользователе
@@ -354,10 +308,26 @@ namespace ComputerRepairService.Controllers
             var logins = await _userManager.GetLoginsAsync(user);
             var claims = await _userManager.GetClaimsAsync(user);
 
+            var customer = await _context.Customers.FirstOrDefaultAsync(c => c.UserId == user.Id);
+            var technician = await _context.Technicians.FirstOrDefaultAsync(t => t.UserId == user.Id);
+
+            var editModel = new EditProfileViewModel
+            {
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                PhoneNumber = user.PhoneNumber,
+                Address = user.Address
+            };
+
             var model = new AccountInfoViewModel
             {
                 User = user,
                 Roles = roles.ToList(),
+                Customer = customer,
+                Technician = technician,
+                EditProfileModel = editModel,
+                ChangePasswordModel = new ChangePasswordViewModel(),
                 Logins = logins.ToList(),
                 Claims = claims.ToList(),
                 EmailConfirmed = user.EmailConfirmed,
@@ -396,7 +366,7 @@ namespace ComputerRepairService.Controllers
         public int CompletedOrdersThisMonth { get; set; }
         public decimal TotalHoursWorked { get; set; }
         public List<ServiceOrder> MyActiveOrders { get; set; }
-        public List<OrderService> RecentServices { get; set; }
+        public List<ComputerRepairService.Models.Entities.OrderService> RecentServices { get; set; }
     }
 
     public class ClientDashboardViewModel
@@ -461,6 +431,10 @@ namespace ComputerRepairService.Controllers
     {
         public ApplicationUser User { get; set; }
         public List<string> Roles { get; set; }
+        public Customer Customer { get; set; }
+        public Technician Technician { get; set; }
+        public EditProfileViewModel EditProfileModel { get; set; }
+        public ChangePasswordViewModel ChangePasswordModel { get; set; }
         public List<UserLoginInfo> Logins { get; set; }
         public List<System.Security.Claims.Claim> Claims { get; set; }
         public bool EmailConfirmed { get; set; }

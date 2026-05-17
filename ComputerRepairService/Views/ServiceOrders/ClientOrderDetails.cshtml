@@ -3,9 +3,10 @@
 
 @{
     ViewData["Title"] = $"Заказ #{Model.OrderId}";
-    var canPay = ViewBag.CanPay as bool? ?? false;
-    var isFullyPaid = ViewBag.IsFullyPaid as bool? ?? false;
-    var amountDue = ViewBag.AmountDue as decimal? ?? OrderPaymentHelper.GetAmountDue(Model);
+    var canPay = OrderPaymentHelper.CanClientPay(Model);
+    var canApprove = OrderPaymentHelper.CanClientApprove(Model);
+    var isFullyPaid = OrderPaymentHelper.IsFullyPaid(Model);
+    var amountDue = OrderPaymentHelper.GetAmountDue(Model);
     var paidAmount = OrderPaymentHelper.GetPaidAmount(Model);
 }
 
@@ -39,13 +40,30 @@
         </div>
     }
 
-    @if (canPay)
+    @if (canApprove)
+    {
+        <div class="alert alert-warning border-warning shadow-sm" role="alert">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div>
+                    <h5 class="alert-heading mb-1"><i class="fas fa-exclamation-triangle"></i> Требует согласования</h5>
+                    <p class="mb-0">Мастер провел диагностику. Оценочная стоимость ремонта: <strong>@Model.TotalCost.ToString("C")</strong></p>
+                </div>
+                <form asp-action="ApproveOrder" asp-route-id="@Model.OrderId" method="post" class="mb-0">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-warning btn-lg fw-bold">
+                        <i class="fas fa-check-circle"></i> Согласовать ремонт
+                    </button>
+                </form>
+            </div>
+        </div>
+    }
+    else if (canPay)
     {
         <div class="alert alert-success border-success shadow-sm" role="alert">
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
                 <div>
                     <h5 class="alert-heading mb-1"><i class="fas fa-credit-card"></i> Ожидается оплата</h5>
-                    <p class="mb-0">Мастер завершил работы. К оплате: <strong>@amountDue.ToString("C")</strong></p>
+                    <p class="mb-0">Ремонт завершен или устройство готово к выдаче. К оплате: <strong>@amountDue.ToString("C")</strong></p>
                 </div>
                 <form asp-action="PayOrder" asp-route-id="@Model.OrderId" method="post" class="mb-0">
                     @Html.AntiForgeryToken()
@@ -56,10 +74,10 @@
             </div>
         </div>
     }
-    else if (Model.OrderStatus?.StatusName == "Готово к получению" || Model.OrderStatus?.StatusName == "Готово")
+    else if (Model.OrderStatus?.StatusName == "Готово к выдаче")
     {
         <div class="alert alert-info" role="alert">
-            <i class="fas fa-box"></i> Заказ оплачен и готов к получению в сервисном центре.
+            <i class="fas fa-box"></i> Заказ готов к выдаче в сервисном центре.
         </div>
     }
 

@@ -25,7 +25,7 @@ namespace ComputerRepairService.Controllers
             var tomorrow = today.AddDays(1);
             var monthStart = new DateTime(now.Year, now.Month, 1);
 
-            var statuses = await _context.OrderStatuses
+            var statuses = await _context.OrderStatuses.AsNoTracking()
                 .ToDictionaryAsync(s => s.StatusName.Trim().ToLower(), s => s.StatusId);
 
             var newStatusId = statuses.TryGetValue("новая", out var newId) ? newId : 1;
@@ -38,21 +38,21 @@ namespace ComputerRepairService.Controllers
             var activeStatusIds = new[] { newStatusId, diagnosticStatusId, repairStatusId };
             var closedStatusIds = new[] { readyStatusId, issuedStatusId, cancelledStatusId };
 
-            var totalOrders = await _context.ServiceOrders.CountAsync();
-            var activeOrders = await _context.ServiceOrders.CountAsync(so => activeStatusIds.Contains(so.StatusId));
-            var totalCustomers = await _context.Customers.CountAsync(c => c.IsActive);
-            var totalTechnicians = await _context.Technicians.CountAsync(t => t.IsActive);
-            var lowStockItems = await _context.Inventory.CountAsync(i => i.QuantityInStock <= i.ReorderLevel && i.IsActive);
-            var incomingClientRequests = await _context.ServiceOrders.CountAsync(so => so.StatusId == newStatusId && !so.OrderTechnicians.Any());
-            var ordersCreatedToday = await _context.ServiceOrders.CountAsync(so => so.CreatedDate >= today && so.CreatedDate < tomorrow);
-            var overdueOrders = await _context.ServiceOrders.CountAsync(so =>
+            var totalOrders = await _context.ServiceOrders.AsNoTracking().CountAsync();
+            var activeOrders = await _context.ServiceOrders.AsNoTracking().CountAsync(so => activeStatusIds.Contains(so.StatusId));
+            var totalCustomers = await _context.Customers.AsNoTracking().CountAsync(c => c.IsActive);
+            var totalTechnicians = await _context.Technicians.AsNoTracking().CountAsync(t => t.IsActive);
+            var lowStockItems = await _context.Inventory.AsNoTracking().CountAsync(i => i.QuantityInStock <= i.ReorderLevel && i.IsActive);
+            var incomingClientRequests = await _context.ServiceOrders.AsNoTracking().CountAsync(so => so.StatusId == newStatusId && !so.OrderTechnicians.Any());
+            var ordersCreatedToday = await _context.ServiceOrders.AsNoTracking().CountAsync(so => so.CreatedDate >= today && so.CreatedDate < tomorrow);
+            var overdueOrders = await _context.ServiceOrders.AsNoTracking().CountAsync(so =>
                 so.EstimatedCompletionDate.HasValue &&
                 so.EstimatedCompletionDate.Value < now &&
                 !so.ActualCompletionDate.HasValue &&
                 !closedStatusIds.Contains(so.StatusId));
-            var urgentOrders = await _context.ServiceOrders.CountAsync(so => so.Priority >= 4 && activeStatusIds.Contains(so.StatusId));
+            var urgentOrders = await _context.ServiceOrders.AsNoTracking().CountAsync(so => so.Priority >= 4 && activeStatusIds.Contains(so.StatusId));
 
-            var monthlyCompletedOrders = _context.ServiceOrders
+            var monthlyCompletedOrders = _context.ServiceOrders.AsNoTracking()
                 .Where(so => so.ActualCompletionDate.HasValue && so.ActualCompletionDate.Value >= monthStart);
 
             var revenueThisMonth = await monthlyCompletedOrders.SumAsync(so => (decimal?)so.TotalCost) ?? 0m;
@@ -60,18 +60,18 @@ namespace ComputerRepairService.Controllers
                 .Where(so => so.TotalCost > 0)
                 .AverageAsync(so => (decimal?)so.TotalCost) ?? 0m;
 
-            var averageCompletionDays = await _context.ServiceOrders
+            var averageCompletionDays = await _context.ServiceOrders.AsNoTracking()
                 .Where(so => so.ActualCompletionDate.HasValue && so.CreatedDate >= monthStart)
                 .AverageAsync(so => (double?)EF.Functions.DateDiffDay(so.CreatedDate, so.ActualCompletionDate!.Value)) ?? 0;
 
-            var recentOrders = await _context.ServiceOrders
+            var recentOrders = await _context.ServiceOrders.AsNoTracking()
                 .Include(so => so.Customer)
                 .Include(so => so.OrderStatus)
                 .OrderByDescending(so => so.CreatedDate)
                 .Take(8)
                 .ToListAsync();
 
-            var ordersByStatus = await _context.ServiceOrders
+            var ordersByStatus = await _context.ServiceOrders.AsNoTracking()
                 .Include(so => so.OrderStatus)
                 .GroupBy(so => so.OrderStatus.StatusName)
                 .Select(g => new StatusCountItem
@@ -82,7 +82,7 @@ namespace ComputerRepairService.Controllers
                 .OrderByDescending(x => x.Count)
                 .ToListAsync();
 
-            var topTechnicians = await _context.OrderTechnicians
+            var topTechnicians = await _context.OrderTechnicians.AsNoTracking()
                 .Where(ot =>
                     ot.Technician.IsActive &&
                     !closedStatusIds.Contains(ot.ServiceOrder.StatusId))

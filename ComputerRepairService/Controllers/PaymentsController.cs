@@ -55,16 +55,16 @@ namespace ComputerRepairService.Controllers
                 return NotFound();
             }
 
-            if (order.StatusId != OrderStatusIds.AwaitingPayment)
+            if (!OrderPaymentHelper.CanClientPay(order))
             {
-                TempData["ErrorMessage"] = "Подтвердить оплату можно только для заказов в статусе «Ожидание оплаты».";
+                TempData["ErrorMessage"] = "Для этого заказа оплата недоступна.";
                 return RedirectToAction(nameof(Index));
             }
 
             if (string.IsNullOrEmpty(paymentMethod) || !PaymentMethodCodes.All.Contains(paymentMethod))
             {
                 TempData["ErrorMessage"] = "Выберите корректный метод оплаты.";
-                return RedirectToAction(nameof(Create), new { orderId });
+                return RedirectToAction("IssueOrder", "ServiceOrders", new { id = orderId });
             }
 
             var amountDue = OrderPaymentHelper.GetAmountDue(order);
@@ -84,7 +84,7 @@ namespace ComputerRepairService.Controllers
                 User.Identity?.Name ?? "Staff");
 
             TempData[success ? "SuccessMessage" : "ErrorMessage"] = success
-                ? $"Оплата по заказу #{orderId} подтверждена. Статус: «Готово к получению»."
+                ? $"Оплата по заказу #{orderId} подтверждена."
                 : error;
 
             return RedirectToAction(nameof(Index));
@@ -107,87 +107,6 @@ namespace ComputerRepairService.Controllers
                 return NotFound();
             }
 
-            return View(payment);
-        }
-
-        // GET: Payments/Create
-        public async Task<IActionResult> Create(int? orderId)
-        {
-            if (orderId.HasValue)
-            {
-                var order = await _context.ServiceOrders.FindAsync(orderId.Value);
-                if (order == null)
-                {
-                    return NotFound();
-                }
-
-                if (order.StatusId != OrderStatusIds.AwaitingPayment)
-                {
-                    TempData["ErrorMessage"] = "Платёж можно оформить только для заказа в статусе «Ожидание оплаты».";
-                    return RedirectToAction(nameof(Index));
-                }
-            }
-
-            await PopulateServiceOrdersAsync(orderId);
-            return View();
-        }
-
-        // POST: Payments/Create
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(
-            [Bind("OrderId,Amount,PaymentMethod,Status,TransactionId,Notes")] Payment payment)
-        {
-            ModelState.Remove(nameof(Payment.ServiceOrder));
-
-            var order = payment.OrderId > 0
-                ? await OrderPaymentService.GetOrderForPaymentAsync(_context, payment.OrderId)
-                : null;
-
-            if (order == null)
-            {
-                ModelState.AddModelError(nameof(Payment.OrderId), "Указанный заказ не найден");
-            }
-            else if (order.StatusId != OrderStatusIds.AwaitingPayment)
-            {
-                ModelState.AddModelError(nameof(Payment.OrderId),
-                    "Платёж можно оформить только для заказа в статусе «Ожидание оплаты».");
-            }
-
-            if (!string.IsNullOrEmpty(payment.PaymentMethod) &&
-                !PaymentMethodCodes.All.Contains(payment.PaymentMethod))
-            {
-                ModelState.AddModelError(nameof(Payment.PaymentMethod), "Недопустимый метод оплаты");
-            }
-
-            if (string.IsNullOrWhiteSpace(payment.Status))
-            {
-                payment.Status = PaymentStatusCodes.Completed;
-            }
-
-            ValidateAmount(payment.Amount, ModelState);
-
-            if (ModelState.IsValid && order != null)
-            {
-                var (success, error) = await OrderPaymentService.RegisterPaymentAsync(
-                    _context,
-                    order,
-                    payment.Amount,
-                    payment.PaymentMethod,
-                    payment.TransactionId,
-                    payment.Notes ?? "Платёж зарегистрирован сотрудником",
-                    User.Identity?.Name ?? "Staff");
-
-                if (success)
-                {
-                    TempData["SuccessMessage"] = "Платёж сохранён. Заказ готов к выдаче клиенту.";
-                    return RedirectToAction(nameof(Index));
-                }
-
-                ModelState.AddModelError(string.Empty, error ?? "Не удалось сохранить платёж.");
-            }
-
-            await PopulateServiceOrdersAsync(payment.OrderId);
             return View(payment);
         }
 
@@ -229,7 +148,7 @@ namespace ComputerRepairService.Controllers
             if (existing != null && existing.OrderId != payment.OrderId)
             {
                 var newOrder = await _context.ServiceOrders.FindAsync(payment.OrderId);
-                if (newOrder?.StatusId != OrderStatusIds.AwaitingPayment)
+                if (newOrder?.StatusId != OrderStatusIds.ReadyForPickup)
                 {
                     ModelState.AddModelError(nameof(Payment.OrderId),
                         "Нельзя привязать платёж к заказу не в статусе «Ожидание оплаты».");
@@ -326,30 +245,36 @@ namespace ComputerRepairService.Controllers
 
         private async Task<List<ServiceOrder>> GetOrdersAwaitingPaymentAsync()
         {
-            return await _context.ServiceOrders
-                .Where(so => so.StatusId == OrderStatusIds.AwaitingPayment)
+            var orders = await _context.ServiceOrders
+                .Where(so => so.StatusId != OrderStatusIds.New && so.StatusId != OrderStatusIds.Cancelled)
                 .Include(so => so.Customer)
                 .Include(so => so.OrderStatus)
                 .Include(so => so.Payments)
                 .OrderByDescending(so => so.ActualCompletionDate ?? so.CreatedDate)
                 .ToListAsync();
+
+            // Оставляем только те, по которым реально есть остаток к оплате (TotalCost > PaidAmount)
+            return orders.Where(so => OrderPaymentHelper.GetAmountDue(so) > 0).ToList();
         }
 
         private async Task PopulateServiceOrdersAsync(int? preferredOrderId)
         {
             var query = _context.ServiceOrders
-                .Where(so => so.StatusId == OrderStatusIds.AwaitingPayment);
+                .Where(so => so.StatusId != OrderStatusIds.New && so.StatusId != OrderStatusIds.Cancelled);
 
             if (preferredOrderId.HasValue)
             {
                 query = query.Where(so => so.OrderId == preferredOrderId.Value);
             }
 
-            ViewBag.OrderId = preferredOrderId;
-            ViewBag.ServiceOrders = await query
+            var orders = await query
                 .Include(so => so.Customer)
+                .Include(so => so.Payments)
                 .OrderByDescending(so => so.OrderId)
                 .ToListAsync();
+
+            ViewBag.OrderId = preferredOrderId;
+            ViewBag.ServiceOrders = orders.Where(so => OrderPaymentHelper.GetAmountDue(so) > 0).ToList();
         }
     }
 }

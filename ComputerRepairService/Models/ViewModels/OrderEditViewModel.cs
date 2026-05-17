@@ -1,9 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ComputerRepairService.Models.ViewModels
 {
-    public class OrderCreateViewModel
+    public class OrderEditViewModel
     {
+        public int OrderId { get; set; }
+
         [Required(ErrorMessage = "Выберите клиента")]
         [Display(Name = "Клиент")]
         public int CustomerId { get; set; }
@@ -29,21 +32,23 @@ namespace ComputerRepairService.Models.ViewModels
         [StringLength(1000)]
         public string ProblemDescription { get; set; }
 
+        [Display(Name = "Диагностические заметки")]
+        [StringLength(1000)]
+        public string? DiagnosticNotes { get; set; }
+
         [Required(ErrorMessage = "Выберите статус")]
         [Display(Name = "Статус")]
         public int StatusId { get; set; }
 
         [Display(Name = "Приоритет")]
         [Range(1, 5)]
-        public int Priority { get; set; } = 2;
+        public int Priority { get; set; }
 
         [Display(Name = "Предполагаемая дата завершения")]
         public DateTime? EstimatedCompletionDate { get; set; }
 
-        // Поля, заполняемые только админами/сотрудниками
-        [Display(Name = "Диагностические заметки")]
-        [StringLength(1000)]
-        public string? DiagnosticNotes { get; set; }
+        [Display(Name = "Фактическая дата завершения")]
+        public DateTime? ActualCompletionDate { get; set; }
 
         [Display(Name = "Заметки мастера")]
         [StringLength(1000)]

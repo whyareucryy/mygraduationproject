@@ -2,181 +2,380 @@
 @using Microsoft.AspNetCore.Identity
 
 @{
-    ViewData["Title"] = "Информация об аккаунте";
+    ViewData["Title"] = "Личный профиль";
     Layout = "_Layout";
+    var currentRole = Model.Roles.FirstOrDefault() ?? "Пользователь";
+    
+    var roleColor = "secondary";
+    var roleIcon = "user";
+    var roleName = "Пользователь";
+
+    if (Model.Roles.Contains("Admin"))
+    {
+        roleColor = "danger";
+        roleIcon = "crown";
+        roleName = "Администратор";
+    }
+    else if (Model.Roles.Contains("Employee"))
+    {
+        roleColor = "warning";
+        roleIcon = "briefcase";
+        roleName = "Сотрудник";
+    }
+    else if (Model.Roles.Contains("Client"))
+    {
+        roleColor = "info";
+        roleIcon = "user-tie";
+        roleName = "Клиент";
+    }
 }
 
-<div class="container mt-4">
-    <div class="row">
-        <div class="col-md-12">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Главная</a></li>
-                    <li class="breadcrumb-item"><a asp-controller="Profile" asp-action="Index">Личный кабинет</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Информация об аккаунте</li>
-                </ol>
-            </nav>
-
-            <h2 class="mb-4">Информация об аккаунте</h2>
-
-            <div class="row">
-                <!-- Основная информация -->
-                <div class="col-md-6 mb-4">
-                    <div class="card">
-                        <div class="card-header bg-primary text-white">
-                            <h5 class="mb-0">Основная информация</h5>
-                        </div>
-                        <div class="card-body">
-                            <dl class="row">
-                                <dt class="col-sm-4">Имя:</dt>
-                                <dd class="col-sm-8">@Model.User.FirstName @Model.User.LastName</dd>
-
-                                <dt class="col-sm-4">Email:</dt>
-                                <dd class="col-sm-8">
-                                    @Model.User.Email
-                                    @if (Model.EmailConfirmed)
-                                    {
-                                        <span class="badge bg-success ms-2">Подтвержден</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-warning ms-2">Не подтвержден</span>
-                                    }
-                                </dd>
-
-                                <dt class="col-sm-4">Телефон:</dt>
-                                <dd class="col-sm-8">
-                                    @(Model.User.PhoneNumber ?? "Не указан")
-                                    @if (Model.PhoneNumberConfirmed)
-                                    {
-                                        <span class="badge bg-success ms-2">Подтвержден</span>
-                                    }
-                                </dd>
-
-                                <dt class="col-sm-4">Адрес:</dt>
-                                <dd class="col-sm-8">@(Model.User.Address ?? "Не указан")</dd>
-
-                                <dt class="col-sm-4">Дата регистрации:</dt>
-                                <dd class="col-sm-8">@Model.User.RegistrationDate.ToString("dd.MM.yyyy HH:mm")</dd>
-                            </dl>
-                        </div>
-                    </div>
+<div class="container-fluid mt-4">
+    <!-- Заголовок страницы -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-4 pb-3 border-bottom gap-3">
+        <div class="d-flex align-items-center">
+            <div class="bg-@roleColor bg-gradient text-white rounded-circle d-flex align-items-center justify-content-center me-3 shadow-sm" style="width: 64px; height: 64px; font-size: 1.8rem;">
+                @if (Model.User.FirstName != null)
+                {
+                    @Model.User.FirstName.Substring(0, 1).ToUpper()
+                }
+                else
+                {
+                    <i class="fas fa-@roleIcon"></i>
+                }
+            </div>
+            <div>
+                <h2 class="mb-1 fw-bold text-dark">Профиль, @Model.User.FirstName!</h2>
+                <div class="d-flex align-items-center flex-wrap gap-2 text-muted">
+                    <span class="badge bg-@roleColor bg-opacity-10 text-@roleColor border border-@roleColor border-opacity-25 rounded-pill px-2 py-1">
+                        <i class="fas fa-@roleIcon me-1"></i> @roleName
+                    </span>
+                    @if (Model.Technician != null)
+                    {
+                        <span class="text-muted small"><i class="fas fa-tools me-1"></i>@Model.Technician.Specialization</span>
+                    }
+                    <span class="text-muted small ms-2"><i class="fas fa-calendar-alt me-1"></i>С нами с @Model.RegistrationDate.ToString("dd.MM.yyyy")</span>
                 </div>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            @if (Model.Roles.Contains("Admin"))
+            {
+                <a asp-controller="Dashboard" asp-action="Index" class="btn btn-outline-danger rounded-pill px-4 shadow-sm fw-medium">
+                    <i class="fas fa-chart-line me-2"></i>Панель управления
+                </a>
+            }
+            else if (Model.Roles.Contains("Employee"))
+            {
+                <a asp-controller="ServiceOrders" asp-action="MyAssignedOrders" class="btn btn-outline-warning text-dark rounded-pill px-4 shadow-sm fw-medium">
+                    <i class="fas fa-tasks me-2"></i>Мои задачи
+                </a>
+            }
+            else if (Model.Roles.Contains("Client"))
+            {
+                <a asp-controller="ServiceOrders" asp-action="MyOrders" class="btn btn-outline-info text-dark rounded-pill px-4 shadow-sm fw-medium">
+                    <i class="fas fa-box-open me-2"></i>Мои заказы
+                </a>
+            }
+        </div>
+    </div>
 
-                <!-- Безопасность и роли -->
-                <div class="col-md-6 mb-4">
-                    <div class="card">
-                        <div class="card-header bg-info text-white">
-                            <h5 class="mb-0">Безопасность и роли</h5>
-                        </div>
-                        <div class="card-body">
-                            <dl class="row">
-                                <dt class="col-sm-4">Роли:</dt>
-                                <dd class="col-sm-8">
-                                    @foreach (var role in Model.Roles)
-                                    {
-                                        <span class="badge bg-primary me-1">@role</span>
-                                    }
-                                </dd>
+    <!-- Уведомления -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show border-success border-opacity-25 bg-success bg-opacity-10 rounded-3 d-flex align-items-center mb-4 shadow-sm" role="alert">
+            <i class="fas fa-check-circle text-success fs-4 me-3"></i> 
+            <div class="fw-medium text-success">@TempData["SuccessMessage"]</div>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+        </div>
+    }
 
-                                <dt class="col-sm-4">2FA:</dt>
-                                <dd class="col-sm-8">
-                                    @if (Model.TwoFactorEnabled)
-                                    {
-                                        <span class="badge bg-success">Включена</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-secondary">Выключена</span>
-                                    }
-                                </dd>
-
-                                <dt class="col-sm-4">Блокировка:</dt>
-                                <dd class="col-sm-8">
-                                    @if (Model.LockoutEnd.HasValue && Model.LockoutEnd > DateTimeOffset.Now)
-                                    {
-                                        <span class="badge bg-danger">Заблокирован до @Model.LockoutEnd.Value.ToString("dd.MM.yyyy HH:mm")</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-success">Активен</span>
-                                    }
-                                </dd>
-
-                                <dt class="col-sm-4">Неудачных попыток:</dt>
-                                <dd class="col-sm-8">@Model.AccessFailedCount</dd>
-                            </dl>
-                        </div>
+    <div class="row g-4">
+        <!-- Левая колонка (меню профиля) -->
+        <div class="col-lg-3">
+            <div class="card border-0 shadow-sm rounded-4 position-sticky" style="top: 80px;">
+                <div class="card-body p-0">
+                    <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+                        <button class="nav-link active px-4 py-3 rounded-0 rounded-top-4 d-flex align-items-center fw-medium border-bottom border-light" id="v-pills-profile-tab" data-bs-toggle="pill" data-bs-target="#v-pills-profile" type="button" role="tab" aria-controls="v-pills-profile" aria-selected="true">
+                            <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center me-3 nav-icon" style="width: 32px; height: 32px;"><i class="fas fa-user"></i></div>
+                            Личные данные
+                        </button>
+                        <button class="nav-link px-4 py-3 rounded-0 d-flex align-items-center fw-medium border-bottom border-light" id="v-pills-edit-tab" data-bs-toggle="pill" data-bs-target="#v-pills-edit" type="button" role="tab" aria-controls="v-pills-edit" aria-selected="false">
+                            <div class="bg-info bg-opacity-10 text-info rounded-circle d-flex align-items-center justify-content-center me-3 nav-icon" style="width: 32px; height: 32px;"><i class="fas fa-user-edit"></i></div>
+                            Редактировать профиль
+                        </button>
+                        <button class="nav-link px-4 py-3 rounded-0 d-flex align-items-center fw-medium border-bottom border-light" id="v-pills-security-tab" data-bs-toggle="pill" data-bs-target="#v-pills-security" type="button" role="tab" aria-controls="v-pills-security" aria-selected="false">
+                            <div class="bg-warning bg-opacity-10 text-warning rounded-circle d-flex align-items-center justify-content-center me-3 nav-icon" style="width: 32px; height: 32px;"><i class="fas fa-shield-alt"></i></div>
+                            Безопасность
+                        </button>
+                        <button class="nav-link px-4 py-3 rounded-0 rounded-bottom-4 d-flex align-items-center fw-medium" id="v-pills-tech-tab" data-bs-toggle="pill" data-bs-target="#v-pills-tech" type="button" role="tab" aria-controls="v-pills-tech" aria-selected="false">
+                            <div class="bg-secondary bg-opacity-10 text-secondary rounded-circle d-flex align-items-center justify-content-center me-3 nav-icon" style="width: 32px; height: 32px;"><i class="fas fa-cogs"></i></div>
+                            Системная информация
+                        </button>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Внешние логины -->
-            @if (Model.Logins.Any())
-            {
-                <div class="card mb-4">
-                    <div class="card-header bg-warning">
-                        <h5 class="mb-0">Внешние сервисы входа</h5>
-                    </div>
-                    <div class="card-body">
-                        <ul class="list-group">
-                            @foreach (var login in Model.Logins)
-                            {
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <strong>@login.LoginProvider</strong>
-                                        <small class="text-muted ms-2">@login.ProviderDisplayName</small>
+        <!-- Правая колонка (содержимое вкладок) -->
+        <div class="col-lg-9">
+            <div class="tab-content" id="v-pills-tabContent">
+                
+                <!-- Вкладка 1: Личные данные -->
+                <div class="tab-pane fade show active" id="v-pills-profile" role="tabpanel" aria-labelledby="v-pills-profile-tab" tabindex="0">
+                    <div class="card border-0 shadow-sm rounded-4 mb-4">
+                        <div class="card-header bg-transparent border-bottom pt-4 pb-3 px-4">
+                            <h5 class="fw-bold mb-0 text-dark"><i class="fas fa-address-card text-primary me-2"></i> Карточка пользователя</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="row g-4">
+                                <div class="col-md-6">
+                                    <div class="d-flex flex-column gap-3">
+                                        <div class="p-3 bg-light rounded-3 d-flex align-items-center">
+                                            <div class="bg-white rounded-circle shadow-sm d-flex align-items-center justify-content-center me-3 text-secondary" style="width: 40px; height: 40px;"><i class="fas fa-user"></i></div>
+                                            <div>
+                                                <div class="small text-muted fw-semibold">ФИО</div>
+                                                <div class="fw-bold text-dark">@Model.User.FirstName @Model.User.LastName</div>
+                                            </div>
+                                        </div>
+                                        <div class="p-3 bg-light rounded-3 d-flex align-items-center">
+                                            <div class="bg-white rounded-circle shadow-sm d-flex align-items-center justify-content-center me-3 text-secondary" style="width: 40px; height: 40px;"><i class="fas fa-envelope"></i></div>
+                                            <div>
+                                                <div class="small text-muted fw-semibold">Email</div>
+                                                <div class="fw-bold text-dark">
+                                                    @Model.User.Email
+                                                    @if (Model.EmailConfirmed)
+                                                    {
+                                                        <i class="fas fa-check-circle text-success ms-1" title="Подтвержден"></i>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <span class="badge bg-info">@login.ProviderKey</span>
-                                </li>
-                            }
-                        </ul>
-                    </div>
-                </div>
-            }
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="d-flex flex-column gap-3">
+                                        <div class="p-3 bg-light rounded-3 d-flex align-items-center">
+                                            <div class="bg-white rounded-circle shadow-sm d-flex align-items-center justify-content-center me-3 text-secondary" style="width: 40px; height: 40px;"><i class="fas fa-phone"></i></div>
+                                            <div>
+                                                <div class="small text-muted fw-semibold">Телефон</div>
+                                                <div class="fw-bold text-dark">
+                                                    @(string.IsNullOrEmpty(Model.User.PhoneNumber) ? "Не указан" : Model.User.PhoneNumber)
+                                                    @if (Model.PhoneNumberConfirmed)
+                                                    {
+                                                        <i class="fas fa-check-circle text-success ms-1" title="Подтвержден"></i>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="p-3 bg-light rounded-3 d-flex align-items-center">
+                                            <div class="bg-white rounded-circle shadow-sm d-flex align-items-center justify-content-center me-3 text-secondary" style="width: 40px; height: 40px;"><i class="fas fa-map-marker-alt"></i></div>
+                                            <div>
+                                                <div class="small text-muted fw-semibold">Адрес</div>
+                                                <div class="fw-bold text-dark">@(string.IsNullOrEmpty(Model.User.Address) ? "Не указан" : Model.User.Address)</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
-            <!-- Claims -->
-            @if (Model.Claims.Any())
-            {
-                <div class="card">
-                    <div class="card-header bg-secondary text-white">
-                        <h5 class="mb-0">Claims (утверждения)</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-sm table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Тип</th>
-                                        <th>Значение</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var claim in Model.Claims)
-                                    {
-                                        <tr>
-                                            <td><code>@claim.Type</code></td>
-                                            <td>@claim.Value</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
+                            @if (Model.Technician != null)
+                            {
+                                <hr class="my-4">
+                                <h6 class="fw-bold mb-3 text-dark"><i class="fas fa-tools text-warning me-2"></i> Данные сотрудника</h6>
+                                <div class="row g-4">
+                                    <div class="col-md-4">
+                                        <div class="p-3 border border-warning border-opacity-25 bg-warning bg-opacity-10 rounded-3">
+                                            <div class="small text-muted fw-semibold">Специализация</div>
+                                            <div class="fw-bold text-dark">@Model.Technician.Specialization</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="p-3 border border-success border-opacity-25 bg-success bg-opacity-10 rounded-3">
+                                            <div class="small text-muted fw-semibold">Часовая ставка</div>
+                                            <div class="fw-bold text-dark">@(Model.Technician.HourlyRate?.ToString("C0") ?? "Не указана")</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="p-3 border border-info border-opacity-25 bg-info bg-opacity-10 rounded-3">
+                                            <div class="small text-muted fw-semibold">Статус мастера</div>
+                                            <div class="fw-bold text-dark">
+                                                <span class="badge bg-@(Model.Technician.IsActive ? "success" : "danger") rounded-pill">
+                                                    @(Model.Technician.IsActive ? "Активен" : "Неактивен")
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
                         </div>
                     </div>
                 </div>
-            }
 
-            <!-- Кнопки действий -->
-            <div class="mt-4">
-                <a asp-action="EditProfile" class="btn btn-primary">
-                    <i class="fas fa-edit"></i> Редактировать профиль
-                </a>
-                <a asp-action="ChangePassword" class="btn btn-warning ms-2">
-                    <i class="fas fa-key"></i> Сменить пароль
-                </a>
-                <a asp-controller="Profile" asp-action="Index" class="btn btn-secondary ms-2">
-                    <i class="fas fa-arrow-left"></i> Назад в кабинет
-                </a>
+                <!-- Вкладка 2: Редактирование профиля -->
+                <div class="tab-pane fade" id="v-pills-edit" role="tabpanel" aria-labelledby="v-pills-edit-tab" tabindex="0">
+                    <div class="card border-0 shadow-sm rounded-4 mb-4">
+                        <div class="card-header bg-transparent border-bottom pt-4 pb-3 px-4 d-flex align-items-center">
+                            <h5 class="fw-bold mb-0 text-dark"><i class="fas fa-user-edit text-info me-2"></i> Редактирование профиля</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <form asp-action="EditProfile" asp-controller="Profile" method="post">
+                                @Html.AntiForgeryToken()
+                                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                                
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <div class="form-floating">
+                                            <input asp-for="EditProfileModel.FirstName" class="form-control rounded-3" placeholder="Имя" />
+                                            <label asp-for="EditProfileModel.FirstName">Имя <span class="text-danger">*</span></label>
+                                            <span asp-validation-for="EditProfileModel.FirstName" class="text-danger small"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-floating">
+                                            <input asp-for="EditProfileModel.LastName" class="form-control rounded-3" placeholder="Фамилия" />
+                                            <label asp-for="EditProfileModel.LastName">Фамилия <span class="text-danger">*</span></label>
+                                            <span asp-validation-for="EditProfileModel.LastName" class="text-danger small"></span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-floating mb-3">
+                                    <input asp-for="EditProfileModel.Email" class="form-control rounded-3" placeholder="Email" />
+                                    <label asp-for="EditProfileModel.Email">Email-адрес <span class="text-danger">*</span></label>
+                                    <span asp-validation-for="EditProfileModel.Email" class="text-danger small"></span>
+                                </div>
+
+                                <div class="form-floating mb-3">
+                                    <input asp-for="EditProfileModel.PhoneNumber" class="form-control rounded-3" placeholder="Телефон" />
+                                    <label asp-for="EditProfileModel.PhoneNumber">Номер телефона</label>
+                                    <span asp-validation-for="EditProfileModel.PhoneNumber" class="text-danger small"></span>
+                                </div>
+
+                                <div class="form-floating mb-4">
+                                    <textarea asp-for="EditProfileModel.Address" class="form-control rounded-3" placeholder="Адрес" style="height: 100px"></textarea>
+                                    <label asp-for="EditProfileModel.Address">Домашний адрес</label>
+                                    <span asp-validation-for="EditProfileModel.Address" class="text-danger small"></span>
+                                </div>
+
+                                <div class="d-flex justify-content-end">
+                                    <button type="submit" class="btn btn-primary rounded-pill px-5 fw-medium">
+                                        <i class="fas fa-save me-2"></i>Сохранить изменения
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Вкладка 3: Безопасность -->
+                <div class="tab-pane fade" id="v-pills-security" role="tabpanel" aria-labelledby="v-pills-security-tab" tabindex="0">
+                    <div class="card border-0 shadow-sm rounded-4 mb-4">
+                        <div class="card-header bg-transparent border-bottom pt-4 pb-3 px-4">
+                            <h5 class="fw-bold mb-0 text-dark"><i class="fas fa-shield-alt text-warning me-2"></i> Изменение пароля</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <form asp-action="ChangePassword" asp-controller="Profile" method="post">
+                                @Html.AntiForgeryToken()
+                                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                                
+                                <div class="alert alert-info border-info border-opacity-25 bg-info bg-opacity-10 rounded-3 mb-4">
+                                    <i class="fas fa-info-circle me-2"></i> Для безопасности вашего аккаунта используйте надежный пароль, содержащий не менее 6 символов, включая цифры и специальные знаки.
+                                </div>
+
+                                <div class="form-floating mb-3">
+                                    <input asp-for="ChangePasswordModel.OldPassword" type="password" class="form-control rounded-3" placeholder="Текущий пароль" />
+                                    <label asp-for="ChangePasswordModel.OldPassword">Текущий пароль <span class="text-danger">*</span></label>
+                                    <span asp-validation-for="ChangePasswordModel.OldPassword" class="text-danger small"></span>
+                                </div>
+
+                                <div class="form-floating mb-3">
+                                    <input asp-for="ChangePasswordModel.NewPassword" type="password" class="form-control rounded-3" placeholder="Новый пароль" />
+                                    <label asp-for="ChangePasswordModel.NewPassword">Новый пароль <span class="text-danger">*</span></label>
+                                    <span asp-validation-for="ChangePasswordModel.NewPassword" class="text-danger small"></span>
+                                </div>
+
+                                <div class="form-floating mb-4">
+                                    <input asp-for="ChangePasswordModel.ConfirmPassword" type="password" class="form-control rounded-3" placeholder="Подтвердите пароль" />
+                                    <label asp-for="ChangePasswordModel.ConfirmPassword">Подтвердите новый пароль <span class="text-danger">*</span></label>
+                                    <span asp-validation-for="ChangePasswordModel.ConfirmPassword" class="text-danger small"></span>
+                                </div>
+
+                                <div class="d-flex justify-content-end">
+                                    <button type="submit" class="btn btn-warning rounded-pill px-5 fw-medium text-dark">
+                                        <i class="fas fa-key me-2"></i>Сменить пароль
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Вкладка 4: Системная информация -->
+                <div class="tab-pane fade" id="v-pills-tech" role="tabpanel" aria-labelledby="v-pills-tech-tab" tabindex="0">
+                    <div class="card border-0 shadow-sm rounded-4 mb-4">
+                        <div class="card-header bg-transparent border-bottom pt-4 pb-3 px-4">
+                            <h5 class="fw-bold mb-0 text-dark"><i class="fas fa-cogs text-secondary me-2"></i> Системная информация</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="row g-4 mb-4">
+                                <div class="col-md-6">
+                                    <div class="p-3 border rounded-3">
+                                        <div class="small text-muted fw-semibold mb-1">Статус блокировки</div>
+                                        <div>
+                                            @if (Model.LockoutEnd.HasValue && Model.LockoutEnd > DateTimeOffset.Now)
+                                            {
+                                                <span class="badge bg-danger rounded-pill"><i class="fas fa-lock me-1"></i>Заблокирован до @Model.LockoutEnd.Value.ToString("dd.MM.yyyy HH:mm")</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill"><i class="fas fa-unlock me-1"></i>Активен</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="p-3 border rounded-3">
+                                        <div class="small text-muted fw-semibold mb-1">Двухфакторная аутентификация (2FA)</div>
+                                        <div>
+                                            @if (Model.TwoFactorEnabled)
+                                            {
+                                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill"><i class="fas fa-check me-1"></i>Включена</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 rounded-pill"><i class="fas fa-times me-1"></i>Выключена</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="p-3 border rounded-3">
+                                        <div class="small text-muted fw-semibold mb-1">Неудачных попыток входа</div>
+                                        <div class="fw-bold text-dark">@Model.AccessFailedCount</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="p-3 border rounded-3">
+                                        <div class="small text-muted fw-semibold mb-1">Внешние логины</div>
+                                        @if (Model.Logins.Any())
+                                        {
+                                            foreach (var login in Model.Logins)
+                                            {
+                                                <span class="badge bg-primary rounded-pill me-1">@login.ProviderDisplayName</span>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">Нет привязанных соц. сетей</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -184,24 +383,66 @@
 
 @section Styles {
     <style>
-        .card {
-            border: none;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+        .rounded-4 { border-radius: 1rem !important; }
+        .nav-pills .nav-link {
+            color: #495057;
+            transition: all 0.2s ease-in-out;
         }
-
-        .card-header {
-            border-radius: 0.375rem 0.375rem 0 0 !important;
+        .nav-pills .nav-link.active {
+            background-color: transparent;
+            color: #0d6efd;
+            border-right: 4px solid #0d6efd;
+            background: linear-gradient(90deg, rgba(13,110,253,0) 0%, rgba(13,110,253,0.05) 100%);
         }
-
-        dt {
-            font-weight: 600;
+        .nav-pills .nav-link.active .nav-icon {
+            background-color: #0d6efd !important;
+            color: white !important;
         }
-
-        .breadcrumb {
-            background-color: #f8f9fa;
-            border-radius: 0.375rem;
-            padding: 0.75rem 1rem;
+        .nav-pills .nav-link:hover:not(.active) {
+            background-color: rgba(0,0,0,0.02);
+        }
+        .form-floating > .form-control:focus ~ label, .form-floating > .form-control:not(:placeholder-shown) ~ label {
+            color: #0d6efd;
+        }
+        .form-control:focus {
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+            border-color: #86b7fe;
         }
     </style>
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        // Активация нужной вкладки при наличии ошибок валидации
+        $(document).ready(function() {
+            var urlHash = window.location.hash;
+            if (urlHash) {
+                var triggerEl = document.querySelector('button[data-bs-target="' + urlHash + '"]')
+                if (triggerEl) {
+                    var tab = new bootstrap.Tab(triggerEl)
+                    tab.show()
+                }
+            }
+
+            // Если есть ошибки в форме изменения пароля, открываем эту вкладку
+            if ($('form[action*="ChangePassword"] .input-validation-error').length > 0 || 
+                $('form[action*="ChangePassword"] .validation-summary-errors').length > 0) {
+                var tab = new bootstrap.Tab(document.querySelector('#v-pills-security-tab'))
+                tab.show()
+            }
+            
+            // Если есть ошибки в форме редактирования профиля, открываем эту вкладку
+            else if ($('form[action*="EditProfile"] .input-validation-error').length > 0 || 
+                     $('form[action*="EditProfile"] .validation-summary-errors').length > 0) {
+                var tab = new bootstrap.Tab(document.querySelector('#v-pills-edit-tab'))
+                tab.show()
+            }
+
+            // Автоматическое скрытие уведомлений
+            setTimeout(function() {
+                $('.alert').alert('close');
+            }, 5000);
+        });
+    </script>
 }

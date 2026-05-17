@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		}
+	],
+	"settings": {
+		"csharp-dev-tools.roslyn.projectOrSolutionFiles": [
+			"c:\\Users\\mihai\\source\\repos\\ComputerRepairService\\ComputerRepairService.sln"
+		]
+	}
+}

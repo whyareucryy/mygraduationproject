@@ -418,14 +418,21 @@ namespace ComputerRepairService.Data
         private static async Task EnsureOrderStatusesAsync(RepairDbContext context, ILogger logger)
         {
             var ready = await context.OrderStatuses.FindAsync(OrderStatusIds.ReadyForPickup);
-            if (ready != null && ready.StatusName == "Готово")
+            if (ready != null && ready.StatusName != OrderStatusNames.ReadyForPickup)
             {
                 ready.StatusName = OrderStatusNames.ReadyForPickup;
-                ready.Description = "Оплачен, устройство можно забрать в сервисном центре";
-                logger.LogInformation("Статус #5 переименован в «Готово к получению»");
+                ready.Description = "Ремонт завершён, устройство ожидает выдачи и/или оплаты";
+                logger.LogInformation("Статус #5 переименован в «Готово к выдаче»");
             }
 
-            if (!await context.OrderStatuses.AnyAsync(s => s.StatusName == OrderStatusNames.AwaitingPayment))
+            var awaiting = await context.OrderStatuses.FindAsync(OrderStatusIds.AwaitingApproval);
+            if (awaiting != null && awaiting.StatusName != OrderStatusNames.AwaitingApproval)
+            {
+                awaiting.StatusName = OrderStatusNames.AwaitingApproval;
+                awaiting.Description = "Требуется согласие клиента на стоимость ремонта";
+                logger.LogInformation("Статус #8 переименован в «Требует согласования»");
+            }
+            else if (awaiting == null)
             {
                 await context.Database.ExecuteSqlRawAsync(
                     @"SET IDENTITY_INSERT OrderStatuses ON;
@@ -433,10 +440,10 @@ namespace ComputerRepairService.Data
                       SELECT {0}, {1}, {2}
                       WHERE NOT EXISTS (SELECT 1 FROM OrderStatuses WHERE StatusId = {0});
                       SET IDENTITY_INSERT OrderStatuses OFF;",
-                    OrderStatusIds.AwaitingPayment,
-                    OrderStatusNames.AwaitingPayment,
-                    "Ремонт завершён мастером, ожидается оплата клиентом");
-                logger.LogInformation("Добавлен статус «Ожидание оплаты» (Id={StatusId})", OrderStatusIds.AwaitingPayment);
+                    OrderStatusIds.AwaitingApproval,
+                    OrderStatusNames.AwaitingApproval,
+                    "Требуется согласие клиента на стоимость ремонта");
+                logger.LogInformation("Добавлен статус «Требует согласования» (Id={StatusId})", OrderStatusIds.AwaitingApproval);
             }
 
             await context.SaveChangesAsync();

@@ -1,6 +1,7 @@
 using ComputerRepairService.Data;
 using ComputerRepairService.Models.Entities;
 using ComputerRepairService.Services;
+using ComputerRepairService.Services.Interfaces;
 using ComputerRepairService.Services.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
@@ -8,27 +9,27 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Добавляем сервисы в контейнер зависимостей
+//     
 builder.Services.AddControllersWithViews();
 
-// Настройка контекста базы данных
+//    
 builder.Services.AddDbContext<RepairDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Настройка Identity
+//  Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
-    // Упрощенные настройки пароля (по вашему желанию)
+    //    (  )
     options.Password.RequireDigit = false;
     options.Password.RequiredLength = 6;
     options.Password.RequireNonAlphanumeric = false;
     options.Password.RequireUppercase = false;
     options.Password.RequireLowercase = false;
 
-    // Настройки пользователя
+    //  
     options.User.RequireUniqueEmail = true;
 
-    // Настройки блокировки (по умолчанию, можно изменить)
+    //   ( ,  )
     options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
     options.Lockout.MaxFailedAccessAttempts = 5;
     options.Lockout.AllowedForNewUsers = true;
@@ -40,7 +41,7 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 // Development email sink for Identity pages (Forgot Password, Confirm Email, etc.)
 builder.Services.AddTransient<IEmailSender, DevelopmentEmailSender>();
 
-// Настройка Application Cookie
+//  Application Cookie
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/Identity/Account/Login";
@@ -49,7 +50,7 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.SlidingExpiration = true;
     options.ExpireTimeSpan = TimeSpan.FromDays(30);
 
-    // Для защиты от CSRF
+    //    CSRF
     options.Cookie.HttpOnly = true;
     options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
         ? CookieSecurePolicy.None
@@ -57,7 +58,7 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.SameSite = SameSiteMode.Strict;
 });
 
-// Настройка сессий (если всё ещё нужны)
+//   (   )
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromMinutes(30);
@@ -66,19 +67,22 @@ builder.Services.AddSession(options =>
     options.Cookie.SameSite = SameSiteMode.Strict;
 });
 
-// Настройка кэширования
+//  
 builder.Services.AddMemoryCache();
 
-// Регистрация других сервисов (если есть в проекте)
+//  
+builder.Services.AddScoped<IOrderManagementService, OrderManagementService>();
+
+//    (   )
 // builder.Services.AddScoped<IService, Service>();
 
 var app = builder.Build();
 
-// Конфигурация конвейера HTTP запросов
+//   HTTP 
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
-    // UseMigrationsEndPoint удален - он несовместим с WebApplication в .NET 8
+    // UseMigrationsEndPoint  -    WebApplication  .NET 8
 }
 else
 {
@@ -90,7 +94,7 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 
-// ВАЖНО: UseAuthentication ДО UseAuthorization
+// : UseAuthentication  UseAuthorization
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseSession();
@@ -104,7 +108,7 @@ using (var scope = app.Services.CreateScope())
         var context = services.GetRequiredService<RepairDbContext>();
         //context.Database.Migrate();
 
-        // Вызываем SeedData с логированием
+        //  SeedData  
         Console.WriteLine("=== STARTING SEED DATA ===");
         await SeedData.Initialize(services);
         Console.WriteLine("=== SEED DATA COMPLETED ===");
@@ -112,16 +116,16 @@ using (var scope = app.Services.CreateScope())
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "Ошибка при инициализации базы данных");
+        logger.LogError(ex, "    ");
         Console.WriteLine($"SEED DATA ERROR: {ex.Message}");
         Console.WriteLine($"STACK TRACE: {ex.StackTrace}");
     }
 }
 
-// Настройка маршрутов для Identity Razor Pages
-app.MapRazorPages(); // Это для страниц Identity (логин, регистрация и т.д.)
+//    Identity Razor Pages
+app.MapRazorPages(); //    Identity (,   ..)
 
-// Маршрутизация контроллеров - ВАЖНО: используем Dashboard как главную страницу
+//   - :  Dashboard   
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");

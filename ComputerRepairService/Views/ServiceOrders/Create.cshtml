@@ -1,4 +1,4 @@
-﻿@model ComputerRepairService.Models.Entities.ServiceOrder
+﻿@model ComputerRepairService.Models.ViewModels.OrderCreateViewModel
 
 @{
     ViewData["Title"] = "Создать заказ";
@@ -37,7 +37,7 @@
                                     <i class="fas fa-info-circle me-1"></i>
                                     Заявка оформляется от вашего профиля автоматически. После отправки с вами свяжется менеджер для уточнения деталей.
                                 </div>
-                                <input asp-for="CustomerId" type="hidden" />
+                                <input asp-for="CustomerId" type="hidden" value="@ViewBag.CustomerId" />
                             }
                             else
                             {
@@ -80,11 +80,14 @@
                         </div>
 
                         <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label asp-for="SerialNumber" class="form-label">Серийный номер</label>
-                                <input asp-for="SerialNumber" class="form-control" />
-                                <span asp-validation-for="SerialNumber" class="text-danger"></span>
-                            </div>
+                            @if (!isClient)
+                            {
+                                <div class="form-group mb-3">
+                                    <label asp-for="SerialNumber" class="form-label">Серийный номер</label>
+                                    <input asp-for="SerialNumber" class="form-control" />
+                                    <span asp-validation-for="SerialNumber" class="text-danger"></span>
+                                </div>
+                            }
 
                             @if (!isClient)
                             {

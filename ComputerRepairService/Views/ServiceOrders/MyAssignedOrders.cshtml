@@ -12,9 +12,12 @@
     var activeStatuses = new[] { "Новая", "Диагностика", "Ожидание запчастей", "В ремонте" };
 
     var totalOrders = orders.Count;
-    var activeOrders = orders.Count(o => activeStatuses.Contains(o.OrderStatus?.StatusName ?? string.Empty));
+    var activeOrdersList = orders.Where(o => o.StatusId != ComputerRepairService.Models.Enums.OrderStatusIds.Issued && o.StatusId != ComputerRepairService.Models.Enums.OrderStatusIds.Cancelled).ToList();
+    var completedOrdersList = orders.Where(o => o.StatusId == ComputerRepairService.Models.Enums.OrderStatusIds.Issued || o.StatusId == ComputerRepairService.Models.Enums.OrderStatusIds.Cancelled).ToList();
+
+    var activeOrdersCount = activeOrdersList.Count;
     var diagnosticOrders = orders.Count(o => (o.OrderStatus?.StatusName ?? string.Empty) == "Диагностика");
-    var highPriorityOrders = orders.Count(o => o.Priority >= 3);
+    var highPriorityOrders = activeOrdersList.Count(o => o.Priority >= 3);
 
     string GetPriorityText(int priority) => priority switch
     {
@@ -88,7 +91,7 @@
         <div class="col-6 col-md-3">
             <div class="card bg-warning text-dark h-100">
                 <div class="card-body text-center py-3">
-                    <h4 class="card-title mb-1">@activeOrders</h4>
+                    <h4 class="card-title mb-1">@activeOrdersCount</h4>
                     <p class="card-text small mb-0">Активные</p>
                 </div>
             </div>
@@ -126,84 +129,169 @@
     }
     else
     {
-        <div class="card shadow-sm">
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0" id="ordersTable">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>№</th>
-                                <th>Клиент</th>
-                                <th>Устройство</th>
-                                <th>Проблема</th>
-                                <th>Статус</th>
-                                <th>Приоритет</th>
-                                <th>Дата создания</th>
-                                <th class="text-end">Действия</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var order in orders)
-                            {
-                                var statusName = order.OrderStatus?.StatusName ?? "Неизвестно";
-                                var problemText = order.ProblemDescription ?? string.Empty;
-                                var deviceType = order.DeviceType?.TypeName ?? "Не указан";
-                                var deviceLabel = string.Join(" ", new[] { order.DeviceBrand, order.DeviceModel }.Where(v => !string.IsNullOrWhiteSpace(v)));
-                                var customerName = order.Customer != null
-                                    ? $"{order.Customer.FirstName} {order.Customer.LastName}".Trim()
-                                    : "Клиент не указан";
+        <ul class="nav nav-tabs mb-4" id="ordersTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active fw-bold" id="active-tab" data-bs-toggle="tab" data-bs-target="#active-orders" type="button" role="tab" aria-controls="active-orders" aria-selected="true">
+                    Актуальные <span class="badge bg-primary ms-1">@activeOrdersList.Count</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold" id="completed-tab" data-bs-toggle="tab" data-bs-target="#completed-orders" type="button" role="tab" aria-controls="completed-orders" aria-selected="false">
+                    Завершенные <span class="badge bg-secondary ms-1">@completedOrdersList.Count</span>
+                </button>
+            </li>
+        </ul>
 
-                                <tr data-status="@statusName.ToLower()" data-priority="@order.Priority">
-                                    <td><strong>#@order.OrderId</strong></td>
-                                    <td>
-                                        <div class="fw-semibold">@customerName</div>
-                                        @if (!string.IsNullOrWhiteSpace(order.Customer?.Phone))
-                                        {
-                                            <small class="text-muted">@order.Customer.Phone</small>
-                                        }
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-secondary">@deviceType</span>
-                                        <div class="small mt-1">@(string.IsNullOrWhiteSpace(deviceLabel) ? "Модель не указана" : deviceLabel)</div>
-                                    </td>
-                                    <td>
-                                        <div class="text-truncate" style="max-width: 280px;" title="@problemText">
-                                            @(problemText.Length > 120 ? problemText.Substring(0, 120) + "..." : problemText)
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <partial name="_OrderStatusBadge" model="statusName" />
-                                    </td>
-                                    <td>
-                                        <span class="badge @GetPriorityClass(order.Priority)">@GetPriorityText(order.Priority)</span>
-                                    </td>
-                                    <td>@order.CreatedDate.ToString("dd.MM.yyyy")</td>
-                                    <td class="text-end">
-                                        <div class="btn-group btn-group-sm" role="group">
-                                            <a asp-action="Details" asp-route-id="@order.OrderId" class="btn btn-info" title="Детали">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            @if (OrderPaymentHelper.CanEmployeeComplete(order))
-                                            {
-                                                <a asp-action="CompleteOrder" asp-route-id="@order.OrderId" class="btn btn-success" title="Заказ выполнен">
-                                                    <i class="fas fa-check-double"></i>
+        <div class="tab-content" id="ordersTabsContent">
+            <!-- Вкладка: Актуальные заказы -->
+            <div class="tab-pane fade show active" id="active-orders" role="tabpanel" aria-labelledby="active-tab">
+                <div class="card shadow-sm">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0" id="ordersTable">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>№</th>
+                                        <th>Клиент</th>
+                                        <th>Устройство</th>
+                                        <th>Проблема</th>
+                                        <th>Статус</th>
+                                        <th>Приоритет</th>
+                                        <th>Дата создания</th>
+                                        <th class="text-end">Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (!activeOrdersList.Any())
+                                    {
+                                        <tr>
+                                            <td colspan="8" class="text-center py-4 text-muted">Нет актуальных заказов</td>
+                                        </tr>
+                                    }
+                                    @foreach (var order in activeOrdersList)
+                                    {
+                                        var statusName = order.OrderStatus?.StatusName ?? "Неизвестно";
+                                        var problemText = order.ProblemDescription ?? string.Empty;
+                                        var deviceType = order.DeviceType?.TypeName ?? "Не указан";
+                                        var deviceLabel = string.Join(" ", new[] { order.DeviceBrand, order.DeviceModel }.Where(v => !string.IsNullOrWhiteSpace(v)));
+                                        var customerName = order.Customer != null
+                                            ? $"{order.Customer.FirstName} {order.Customer.LastName}".Trim()
+                                            : "Клиент не указан";
+
+                                        <tr data-status="@statusName.ToLower()" data-priority="@order.Priority">
+                                            <td><strong>#@order.OrderId</strong></td>
+                                            <td>
+                                                <div class="fw-semibold">@customerName</div>
+                                                @if (!string.IsNullOrWhiteSpace(order.Customer?.Phone))
+                                                {
+                                                    <small class="text-muted">@order.Customer.Phone</small>
+                                                }
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-secondary">@deviceType</span>
+                                                <div class="small mt-1">@(string.IsNullOrWhiteSpace(deviceLabel) ? "Модель не указана" : deviceLabel)</div>
+                                            </td>
+                                            <td>
+                                                <div class="text-truncate" style="max-width: 280px;" title="@problemText">
+                                                    @(problemText.Length > 120 ? problemText.Substring(0, 120) + "..." : problemText)
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <partial name="_OrderStatusBadge" model="statusName" />
+                                            </td>
+                                            <td>
+                                                <span class="badge @GetPriorityClass(order.Priority)">@GetPriorityText(order.Priority)</span>
+                                            </td>
+                                            <td>@order.CreatedDate.ToString("dd.MM.yyyy")</td>
+                                            <td class="text-end">
+                                                <div class="btn-group btn-group-sm" role="group">
+                                                    <a asp-action="Details" asp-route-id="@order.OrderId" class="btn btn-info" title="Детали">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    @if (ComputerRepairService.Services.OrderPaymentHelper.CanIssueDevice(order))
+                                                    {
+                                                        <a asp-action="IssueOrder" asp-route-id="@order.OrderId" class="btn btn-primary" title="Выдать устройство">
+                                                            <i class="fas fa-box-open"></i>
+                                                        </a>
+                                                    }
+                                                    else if (OrderPaymentHelper.CanEmployeeComplete(order))
+                                                    {
+                                                        <a asp-action="CompleteOrder" asp-route-id="@order.OrderId" class="btn btn-success" title="Заказ выполнен">
+                                                            <i class="fas fa-check-double"></i>
+                                                        </a>
+                                                    }
+                                                    <a asp-action="Edit" asp-route-id="@order.OrderId" class="btn btn-warning" title="Редактировать">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Вкладка: Завершенные заказы -->
+            <div class="tab-pane fade" id="completed-orders" role="tabpanel" aria-labelledby="completed-tab">
+                <div class="card shadow-sm opacity-75">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0" id="completedOrdersTable">
+                                <thead class="table-light text-muted">
+                                    <tr>
+                                        <th>№</th>
+                                        <th>Клиент</th>
+                                        <th>Устройство</th>
+                                        <th>Статус</th>
+                                        <th>Дата создания</th>
+                                        <th>Дата завершения</th>
+                                        <th class="text-end">Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (!completedOrdersList.Any())
+                                    {
+                                        <tr>
+                                            <td colspan="7" class="text-center py-4 text-muted">Нет завершенных заказов</td>
+                                        </tr>
+                                    }
+                                    @foreach (var order in completedOrdersList)
+                                    {
+                                        var statusName = order.OrderStatus?.StatusName ?? "Неизвестно";
+                                        var deviceType = order.DeviceType?.TypeName ?? "Не указан";
+                                        var customerName = order.Customer != null
+                                            ? $"{order.Customer.FirstName} {order.Customer.LastName}".Trim()
+                                            : "Клиент не указан";
+
+                                        <tr>
+                                            <td class="text-muted">#@order.OrderId</td>
+                                            <td>
+                                                <div class="fw-semibold">@customerName</div>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-secondary">@deviceType</span>
+                                            </td>
+                                            <td>
+                                                <partial name="_OrderStatusBadge" model="statusName" />
+                                            </td>
+                                            <td class="text-muted">@order.CreatedDate.ToString("dd.MM.yyyy")</td>
+                                            <td class="text-muted">
+                                                @(order.ActualCompletionDate?.ToString("dd.MM.yyyy") ?? "—")
+                                            </td>
+                                            <td class="text-end">
+                                                <a asp-action="Details" asp-route-id="@order.OrderId" class="btn btn-sm btn-outline-info" title="Детали">
+                                                    <i class="fas fa-eye"></i> Детали
                                                 </a>
-                                            }
-                                            else if (order.StatusId == ComputerRepairService.Models.Enums.OrderStatusIds.AwaitingPayment)
-                                            {
-                                                <span class="btn btn-outline-warning disabled" title="Ожидает оплаты">
-                                                    <i class="fas fa-hourglass-half"></i>
-                                                </span>
-                                            }
-                                            <a asp-action="Edit" asp-route-id="@order.OrderId" class="btn btn-warning" title="Редактировать">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

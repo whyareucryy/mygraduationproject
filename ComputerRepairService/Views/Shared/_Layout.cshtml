@@ -3,6 +3,45 @@
 @inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
 
+@{
+    var controllerNames = new Dictionary<string, string>
+    {
+        { "Home", "Главная" },
+        { "Dashboard", "Панель управления" },
+        { "Profile", "Личный профиль" },
+        { "ServiceOrders", "Заказы" },
+        { "Customers", "Клиенты" },
+        { "Technicians", "Мастера" },
+        { "Inventory", "Склад" },
+        { "Payments", "Платежи" },
+        { "DeviceTypes", "Типы устройств" },
+        { "Account", "Аккаунт" }
+    };
+
+    var actionNames = new Dictionary<string, string>
+    {
+        { "Index", "Список" },
+        { "Create", "Добавление" },
+        { "Edit", "Редактирование" },
+        { "Details", "Подробности" },
+        { "Delete", "Удаление" },
+        { "ClientRequests", "Заявки клиентов" },
+        { "MyAssignedOrders", "Мои задачи" },
+        { "MyOrders", "Мои заказы" },
+        { "UnpaidOrders", "Ожидают оплаты" },
+        { "AccountInfo", "Настройки" },
+        { "Login", "Вход" },
+        { "Register", "Регистрация" },
+        { "IssueOrder", "Выдача устройства" }
+    };
+
+    var controllerName = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    var actionName = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+
+    var displayController = controllerNames.ContainsKey(controllerName) ? controllerNames[controllerName] : controllerName;
+    var displayAction = actionNames.ContainsKey(actionName) ? actionNames[actionName] : actionName;
+}
+
 <!DOCTYPE html>
 <html lang="ru" data-bs-theme="light">
 <head>
@@ -36,279 +75,11 @@
 
     @await RenderSectionAsync("Styles", required: false)
 
-    <style>
-        :root {
-            --primary-color: #4361ee;
-            --secondary-color: #3a0ca3;
-            --success-color: #4cc9f0;
-            --danger-color: #f72585;
-            --warning-color: #f8961e;
-            --info-color: #7209b7;
-            --light-color: #f8f9fa;
-            --dark-color: #212529;
-            --sidebar-width: 250px;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f5f7fb;
-        }
-
-        .navbar-brand {
-            font-weight: 700;
-            font-size: 1.5rem;
-        }
-
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 100vh;
-            width: var(--sidebar-width);
-            background: linear-gradient(180deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-            padding-top: 70px;
-            z-index: 1000;
-            transition: all 0.3s;
-            box-shadow: 3px 0 10px rgba(0,0,0,0.1);
-        }
-
-            .sidebar.collapsed {
-                margin-left: calc(-1 * var(--sidebar-width));
-            }
-
-        .sidebar-menu {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-            .sidebar-menu li {
-                position: relative;
-            }
-
-            .sidebar-menu a {
-                display: flex;
-                align-items: center;
-                padding: 15px 20px;
-                color: rgba(255,255,255,0.9);
-                text-decoration: none;
-                transition: all 0.3s;
-                border-left: 4px solid transparent;
-            }
-
-                .sidebar-menu a:hover {
-                    background-color: rgba(255,255,255,0.1);
-                    color: white;
-                    border-left-color: var(--success-color);
-                }
-
-                .sidebar-menu a.active {
-                    background-color: rgba(255,255,255,0.15);
-                    color: white;
-                    border-left-color: var(--warning-color);
-                }
-
-            .sidebar-menu i {
-                width: 25px;
-                font-size: 1.2rem;
-                margin-right: 10px;
-            }
-
-        .sidebar-submenu {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            background-color: rgba(0,0,0,0.2);
-            display: none;
-        }
-
-            .sidebar-submenu.show {
-                display: block;
-            }
-
-            .sidebar-submenu a {
-                padding-left: 50px;
-                font-size: 0.9rem;
-            }
-
-        .badge-role {
-            font-size: 0.7em;
-            padding: 3px 8px;
-        }
-
-        .notification-badge {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 0.6em;
-            padding: 2px 5px;
-        }
-
-        .main-content {
-            margin-left: var(--sidebar-width);
-            transition: all 0.3s;
-            min-height: 100vh;
-        }
-
-            .main-content.expanded {
-                margin-left: 0;
-            }
-
-        .content-wrapper {
-            padding: 20px;
-        }
-
-        .page-header {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-
-        .card {
-            border: none;
-            border-radius: 10px;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.05);
-            margin-bottom: 20px;
-            transition: transform 0.3s, box-shadow 0.3s;
-        }
-
-            .card:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-            }
-
-        .btn-primary {
-            background-color: var(--primary-color);
-            border-color: var(--primary-color);
-        }
-
-            .btn-primary:hover {
-                background-color: var(--secondary-color);
-                border-color: var(--secondary-color);
-            }
-
-        .table th {
-            border-top: none;
-            font-weight: 600;
-            color: var(--dark-color);
-            background-color: #f8f9fa;
-        }
-
-        .table-striped tbody tr:nth-of-type(odd) {
-            background-color: rgba(67, 97, 238, 0.05);
-        }
-
-        .footer {
-            background: var(--dark-color);
-            color: white;
-            padding: 20px 0;
-            margin-top: 40px;
-        }
-
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: linear-gradient(45deg, var(--primary-color), var(--success-color));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-        }
-
-        .dropdown-menu {
-            border: none;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-            border-radius: 10px;
-            padding: 10px 0;
-        }
-
-        .dropdown-item {
-            padding: 10px 20px;
-            color: var(--dark-color);
-            transition: all 0.3s;
-        }
-
-            .dropdown-item:hover {
-                background-color: rgba(67, 97, 238, 0.1);
-                color: var(--primary-color);
-            }
-
-        .dropdown-divider {
-            margin: 5px 0;
-        }
-
-        .navbar-toggler {
-            border: none;
-            outline: none;
-        }
-
-            .navbar-toggler:focus {
-                box-shadow: none;
-            }
-
-        /* Темная тема */
-        [data-bs-theme="dark"] body {
-            background-color: #121212;
-            color: #e0e0e0;
-        }
-
-        [data-bs-theme="dark"] .page-header,
-        [data-bs-theme="dark"] .card {
-            background-color: #1e1e1e;
-            color: #e0e0e0;
-        }
-
-        [data-bs-theme="dark"] .table th {
-            background-color: #2d2d2d;
-            color: #e0e0e0;
-        }
-
-        [data-bs-theme="dark"] .table {
-            color: #e0e0e0;
-        }
-
-        [data-bs-theme="dark"] .table-striped tbody tr:nth-of-type(odd) {
-            background-color: #2d2d2d;
-        }
-
-        /* Адаптивность */
-        @@media (max-width: 992px) {
-            .sidebar {
-                margin-left: calc(-1 * var(--sidebar-width));
-            }
-
-                .sidebar.show {
-                    margin-left: 0;
-                }
-
-            .main-content {
-                margin-left: 0;
-            }
-
-            .sidebar-overlay {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background-color: rgba(0,0,0,0.5);
-                z-index: 999;
-                display: none;
-            }
-
-                .sidebar-overlay.show {
-                    display: block;
-                }
-        }
-    </style>
+    
 </head>
 <body>
     <!-- Верхняя панель навигации -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top shadow-sm">
+    <nav class="navbar navbar-expand-lg navbar-light bg-white fixed-top shadow-sm">
         <div class="container-fluid">
             <!-- Кнопка меню -->
             <button class="btn btn-primary me-3" id="sidebarToggle">
@@ -321,55 +92,14 @@
             </a>
 
             <!-- Кнопка переключения темы -->
-            <button class="btn btn-outline-light me-3" id="themeToggle">
+            <button class="btn btn-outline-secondary me-3" id="themeToggle">
                 <i class="fas fa-moon"></i>
             </button>
 
             <!-- Основное меню -->
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" asp-controller="Home" asp-action="Index">
-                            <i class="fas fa-home"></i> Главная
-                        </a>
-                    </li>
-
-                    @if (SignInManager.IsSignedIn(User))
-                    {
-                        @if (User.IsInRole("Admin") || User.IsInRole("Employee"))
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link" asp-controller="Dashboard" asp-action="Index">
-                                    <i class="fas fa-tachometer-alt"></i> Панель управления
-                                </a>
-                            </li>
-                        }
-
-                        @if (User.IsInRole("Admin") || User.IsInRole("Employee"))
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link" asp-controller="ServiceOrders" asp-action="Index">
-                                    <i class="fas fa-clipboard-list"></i> Заказы
-                                </a>
-                            </li>
-                        }
-
-                        @if (User.IsInRole("Admin"))
-                        {
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                    <i class="fas fa-cogs"></i> Управление
-                                </a>
-                                <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item" asp-controller="Customers" asp-action="Index"><i class="fas fa-users"></i> Клиенты</a></li>
-                                    <li><a class="dropdown-item" asp-controller="Technicians" asp-action="Index"><i class="fas fa-user-cog"></i> Мастера</a></li>
-                                    <li><a class="dropdown-item" asp-controller="Inventory" asp-action="Index"><i class="fas fa-boxes"></i> Склад</a></li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item" asp-controller="Services" asp-action="Index"><i class="fas fa-concierge-bell"></i> Услуги</a></li>
-                                </ul>
-                            </li>
-                        }
-                    }
+                    <!-- Ссылки были удалены по просьбе пользователя, так как они дублируются в боковой панели -->
                 </ul>
 
                 <!-- Правая часть: уведомления и пользователь -->
@@ -421,54 +151,77 @@
                                     </small>
                                 </div>
                             </a>
-                            <ul class="dropdown-menu dropdown-menu-end">
+                            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3" style="min-width: 260px; padding: 0.5rem 0;">
+                                <li class="px-3 py-3 border-bottom mb-2 bg-light rounded-top-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="user-avatar bg-primary text-white rounded-circle d-flex justify-content-center align-items-center me-3 shadow-sm" style="width: 48px; height: 48px; font-size: 1.5rem; flex-shrink: 0;">
+                                            @if (User.Identity.Name != null)
+                                            {
+                                                @User.Identity.Name.Substring(0, 1).ToUpper()
+                                            }
+                                        </div>
+                                        <div class="overflow-hidden">
+                                            <div class="fw-bold text-truncate" style="font-size: 1.05rem;">@User.Identity.Name</div>
+                                            <div class="text-muted small">
+                                                @if (User.IsInRole("Admin")) { <span class="text-danger fw-semibold"><i class="fas fa-crown me-1"></i>Администратор</span> }
+                                                else if (User.IsInRole("Employee")) { <span class="text-warning text-dark fw-semibold"><i class="fas fa-briefcase me-1"></i>Сотрудник</span> }
+                                                else { <span class="text-info text-dark fw-semibold"><i class="fas fa-user-tie me-1"></i>Клиент</span> }
+                                            </div>
+                                        </div>
+                                    </div>
+                                </li>
+
                                 <li>
-                                    <a class="dropdown-item" asp-controller="Profile" asp-action="Index">
-                                        <i class="fas fa-user me-2"></i> Личный кабинет
+                                    <a class="dropdown-item py-2 d-flex align-items-center" asp-controller="Home" asp-action="Index">
+                                        <div class="bg-success bg-opacity-10 text-success rounded p-2 me-3 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;"><i class="fas fa-home"></i></div>
+                                        <span class="fw-medium">Главная страница</span>
                                     </a>
                                 </li>
-                                <li>
-                                    <a class="dropdown-item" asp-controller="Profile" asp-action="EditProfile">
-                                        <i class="fas fa-edit me-2"></i> Редактировать профиль
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" asp-controller="Profile" asp-action="ChangePassword">
-                                        <i class="fas fa-key me-2"></i> Сменить пароль
-                                    </a>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
 
                                 @if (User.IsInRole("Admin"))
                                 {
                                     <li>
-                                        <a class="dropdown-item" asp-controller="Profile" asp-action="Admin">
-                                            <i class="fas fa-crown me-2"></i> Панель администратора
+                                        <a class="dropdown-item py-2 d-flex align-items-center" asp-controller="Dashboard" asp-action="Index">
+                                            <div class="bg-danger bg-opacity-10 text-danger rounded p-2 me-3 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;"><i class="fas fa-chart-line"></i></div>
+                                            <span class="fw-medium">Панель управления</span>
                                         </a>
                                     </li>
                                 }
                                 else if (User.IsInRole("Employee"))
                                 {
                                     <li>
-                                        <a class="dropdown-item" asp-controller="Profile" asp-action="Employee">
-                                            <i class="fas fa-briefcase me-2"></i> Панель сотрудника
+                                        <a class="dropdown-item py-2 d-flex align-items-center" asp-controller="ServiceOrders" asp-action="MyAssignedOrders">
+                                            <div class="bg-warning bg-opacity-10 text-warning rounded p-2 me-3 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;"><i class="fas fa-tasks"></i></div>
+                                            <span class="fw-medium">Мои задачи</span>
                                         </a>
                                     </li>
                                 }
                                 else if (User.IsInRole("Client"))
                                 {
                                     <li>
-                                        <a class="dropdown-item" asp-controller="Profile" asp-action="Client">
-                                            <i class="fas fa-user-tie me-2"></i> Личный кабинет клиента
+                                        <a class="dropdown-item py-2 d-flex align-items-center" asp-controller="ServiceOrders" asp-action="MyOrders">
+                                            <div class="bg-info bg-opacity-10 text-info rounded p-2 me-3 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;"><i class="fas fa-box-open"></i></div>
+                                            <span class="fw-medium">Мои заказы</span>
                                         </a>
                                     </li>
                                 }
 
-                                <li><hr class="dropdown-divider"></li>
+                                <li><hr class="dropdown-divider my-2"></li>
+                                <li><h6 class="dropdown-header text-uppercase text-muted small fw-bold" style="letter-spacing: 0.5px;">Настройки</h6></li>
+                                
                                 <li>
-                                    <form class="form-inline" asp-area="Identity" asp-page="/Account/Logout" method="post">
-                                        <button type="submit" class="dropdown-item">
-                                            <i class="fas fa-sign-out-alt me-2"></i> Выйти
+                                    <a class="dropdown-item py-2 d-flex align-items-center" asp-controller="Profile" asp-action="AccountInfo">
+                                        <div class="bg-secondary bg-opacity-10 text-secondary rounded p-2 me-3 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;"><i class="fas fa-user-circle"></i></div>
+                                        <span>Личный профиль</span>
+                                    </a>
+                                </li>
+
+                                <li><hr class="dropdown-divider my-2"></li>
+                                <li class="px-2">
+                                    <form class="form-inline m-0" asp-area="Identity" asp-page="/Account/Logout" method="post">
+                                        <button type="submit" class="dropdown-item py-2 d-flex align-items-center text-danger rounded">
+                                            <i class="fas fa-sign-out-alt me-3" style="width: 16px; text-align: center;"></i>
+                                            <span class="fw-medium">Выйти из аккаунта</span>
                                         </button>
                                     </form>
                                 </li>
@@ -502,7 +255,7 @@
     <div class="sidebar" id="sidebar">
         <ul class="sidebar-menu">
             <li class="menu-header mb-3 px-3">
-                <small class="text-uppercase text-light opacity-75">Основное меню</small>
+                <small class="text-uppercase text-muted">Основное меню</small>
             </li>
 
             <li>
@@ -523,8 +276,8 @@
                 }
 
                 <li>
-                    <a asp-controller="Profile" asp-action="Index" class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Profile" ? "active" : "")">
-                        <i class="fas fa-user"></i> Личный кабинет
+                    <a asp-controller="Profile" asp-action="AccountInfo" class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Profile" && ViewContext.RouteData.Values["action"]?.ToString() == "AccountInfo" ? "active" : "")">
+                        <i class="fas fa-user"></i> Личный профиль
                     </a>
                 </li>
 
@@ -562,17 +315,19 @@
                     <li>
                         <a href="#" class="has-submenu @(ViewContext.RouteData.Values["controller"]?.ToString() == "Customers" ||
                                                                                              ViewContext.RouteData.Values["controller"]?.ToString() == "Technicians" ||
-                                                                                             ViewContext.RouteData.Values["controller"]?.ToString() == "Inventory" ? "active" : "")">
+                                                                                             ViewContext.RouteData.Values["controller"]?.ToString() == "Inventory" ||
+                                                                                             ViewContext.RouteData.Values["controller"]?.ToString() == "DeviceTypes" ? "active" : "")">
                             <i class="fas fa-cogs"></i> Управление
                             <i class="fas fa-chevron-right ms-auto"></i>
                         </a>
                         <ul class="sidebar-submenu @(ViewContext.RouteData.Values["controller"]?.ToString() == "Customers" ||
                                                                                  ViewContext.RouteData.Values["controller"]?.ToString() == "Technicians" ||
-                                                                                 ViewContext.RouteData.Values["controller"]?.ToString() == "Inventory" ? "show" : "")">
+                                                                                 ViewContext.RouteData.Values["controller"]?.ToString() == "Inventory" ||
+                                                                                 ViewContext.RouteData.Values["controller"]?.ToString() == "DeviceTypes" ? "show" : "")">
                             <li><a asp-controller="Customers" asp-action="Index"><i class="fas fa-users"></i> Клиенты</a></li>
                             <li><a asp-controller="Technicians" asp-action="Index"><i class="fas fa-user-cog"></i> Мастера</a></li>
                             <li><a asp-controller="Inventory" asp-action="Index"><i class="fas fa-boxes"></i> Склад</a></li>
-                            <li><a asp-controller="Services" asp-action="Index"><i class="fas fa-concierge-bell"></i> Услуги</a></li>
+                            <li><a asp-controller="DeviceTypes" asp-action="Index"><i class="fas fa-laptop"></i> Типы устройств</a></li>
                         </ul>
                     </li>
 
@@ -581,22 +336,6 @@
                            class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Payments" ? "active" : "")">
                             <i class="fas fa-credit-card"></i> Платежи
                         </a>
-                    </li>
-
-                    <li class="menu-header mb-3 px-3 mt-4">
-                        <small class="text-uppercase text-light opacity-75">Справочники</small>
-                    </li>
-
-                    <li>
-                        <a href="#" class="has-submenu">
-                            <i class="fas fa-book"></i> Справочники
-                            <i class="fas fa-chevron-right ms-auto"></i>
-                        </a>
-                        <ul class="sidebar-submenu">
-                            <li><a asp-controller="DeviceTypes" asp-action="Index"><i class="fas fa-laptop"></i> Типы устройств</a></li>
-                            <li><a asp-controller="PartCategories" asp-action="Index"><i class="fas fa-microchip"></i> Категории запчастей</a></li>
-                            <li><a asp-controller="OrderStatuses" asp-action="Index"><i class="fas fa-tasks"></i> Статусы заказов</a></li>
-                        </ul>
                     </li>
                 }
 
@@ -617,7 +356,6 @@
                         <ul class="sidebar-submenu @(ViewContext.RouteData.Values["controller"]?.ToString() == "Payments" ||
                                                                                  ViewContext.RouteData.Values["controller"]?.ToString() == "DeviceTypes" ? "show" : "")">
                             <li><a asp-controller="Payments" asp-action="Index"><i class="fas fa-credit-card"></i> Платежи</a></li>
-                            <li><a asp-controller="Payments" asp-action="Create"><i class="fas fa-plus-circle"></i> Новый платёж</a></li>
                             <li><a asp-controller="DeviceTypes" asp-action="Index"><i class="fas fa-laptop"></i> Типы устройств</a></li>
                             <li><a asp-controller="DeviceTypes" asp-action="Create"><i class="fas fa-plus"></i> Новый тип устройства</a></li>
                         </ul>
@@ -626,7 +364,7 @@
             }
 
             <li class="menu-header mb-3 px-3 mt-4">
-                <small class="text-uppercase text-light opacity-75">Дополнительно</small>
+                <small class="text-uppercase text-muted">Дополнительно</small>
             </li>
 
             <li>
@@ -635,19 +373,11 @@
                 </a>
             </li>
 
-            @if (SignInManager.IsSignedIn(User))
-            {
-                <li>
-                    <a asp-controller="Profile" asp-action="AccountInfo">
-                        <i class="fas fa-info-circle"></i> Информация об аккаунте
-                    </a>
-                </li>
-            }
         </ul>
 
         <!-- Версия приложения -->
         <div class="sidebar-footer position-absolute bottom-0 w-100 p-3">
-            <small class="text-light opacity-75">
+            <small class="text-muted">
                 <i class="fas fa-code-branch me-1"></i> Версия 1.0.0
             </small>
         </div>
@@ -659,30 +389,33 @@
     <!-- Основной контент -->
     <div class="main-content" id="mainContent">
         <div class="content-wrapper">
-            <!-- Хлебные крошки -->
-            <nav aria-label="breadcrumb" class="mb-4">
-                <ol class="breadcrumb bg-white p-3 rounded shadow-sm">
-                    <li class="breadcrumb-item">
-                        <a asp-controller="Home" asp-action="Index">
-                            <i class="fas fa-home"></i> Главная
-                        </a>
-                    </li>
-                    @if (ViewContext.RouteData.Values["controller"]?.ToString() != "Home")
-                    {
+            @if (!string.IsNullOrEmpty(controllerName))
+            {
+                <!-- Хлебные крошки -->
+                <nav aria-label="breadcrumb" class="mb-4">
+                    <ol class="breadcrumb bg-white p-3 rounded shadow-sm">
                         <li class="breadcrumb-item">
-                            <a asp-controller="@ViewContext.RouteData.Values["controller"]" asp-action="Index">
-                                @ViewContext.RouteData.Values["controller"]
+                            <a asp-controller="Home" asp-action="Index">
+                                <i class="fas fa-home"></i> Главная
                             </a>
                         </li>
-                    }
-                    @if (ViewContext.RouteData.Values["action"]?.ToString() != "Index")
-                    {
-                        <li class="breadcrumb-item active" aria-current="page">
-                            @ViewContext.RouteData.Values["action"]
-                        </li>
-                    }
-                </ol>
-            </nav>
+                        @if (controllerName != "Home")
+                        {
+                            <li class="breadcrumb-item">
+                                <a asp-controller="@controllerName" asp-action="Index">
+                                    @displayController
+                                </a>
+                            </li>
+                        }
+                        @if (actionName != "Index")
+                        {
+                            <li class="breadcrumb-item active" aria-current="page">
+                                @displayAction
+                            </li>
+                        }
+                    </ol>
+                </nav>
+            }
 
             <!-- Уведомления -->
             @if (TempData["SuccessMessage"] != null)

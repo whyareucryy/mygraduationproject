@@ -46,12 +46,13 @@ namespace ComputerRepairService.ViewComponents
                         .AsNoTracking()
                         .Include(o => o.Payments)
                         .Where(o => o.CustomerId == customer.CustomerId
-                            && o.StatusId == OrderStatusIds.AwaitingPayment)
+                            && o.StatusId != OrderStatusIds.New && o.StatusId != OrderStatusIds.Cancelled)
                         .OrderByDescending(o => o.ActualCompletionDate ?? o.CreatedDate)
-                        .Take(10)
                         .ToListAsync();
 
-                    foreach (var order in orders.Where(OrderPaymentHelper.CanClientPay))
+                    var unpaidOrders = orders.Where(OrderPaymentHelper.CanClientPay).Take(10);
+                    
+                    foreach (var order in unpaidOrders)
                     {
                         model.Items.Add(new PaymentNotificationItem
                         {
@@ -91,9 +92,13 @@ namespace ComputerRepairService.ViewComponents
                     });
                 }
 
-                var awaitingCount = await _context.ServiceOrders
+                var allOrders = await _context.ServiceOrders
                     .AsNoTracking()
-                    .CountAsync(o => o.StatusId == OrderStatusIds.AwaitingPayment);
+                    .Include(o => o.Payments)
+                    .Where(o => o.StatusId != OrderStatusIds.New && o.StatusId != OrderStatusIds.Cancelled)
+                    .ToListAsync();
+                
+                var awaitingCount = allOrders.Count(OrderPaymentHelper.CanClientPay);
 
                 if (awaitingCount > 0 && model.Items.Count < 6)
                 {

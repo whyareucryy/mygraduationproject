@@ -1,0 +1,95 @@
+@model ComputerRepairService.Models.ViewModels.IssueOrderViewModel
+
+@{
+    ViewData["Title"] = "Выдача устройства";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-primary text-white">
+                <h4 class="card-title mb-0"><i class="fas fa-box-open"></i> Выдача устройства по заказу #@Model.OrderId</h4>
+            </div>
+            <div class="card-body">
+                @if (TempData["ErrorMessage"] != null)
+                {
+                    <div class="alert alert-danger">
+                        @TempData["ErrorMessage"]
+                    </div>
+                }
+
+                <div class="alert alert-info">
+                    <strong>Клиент:</strong> @Model.CustomerName <br />
+                    <strong>Устройство:</strong> @Model.DeviceDescription
+                </div>
+
+                <div class="row text-center mb-4">
+                    <div class="col-4">
+                        <div class="border rounded p-3 bg-light">
+                            <h5 class="text-muted mb-1">Итого</h5>
+                            <h4 class="mb-0">@Model.TotalCost.ToString("C")</h4>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="border rounded p-3 bg-light">
+                            <h5 class="text-muted mb-1">Оплачено</h5>
+                            <h4 class="mb-0 text-success">@Model.PaidAmount.ToString("C")</h4>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="border rounded p-3 bg-light border-danger">
+                            <h5 class="text-muted mb-1">Остаток</h5>
+                            <h4 class="mb-0 @(Model.AmountDue > 0 ? "text-danger" : "text-success")">@Model.AmountDue.ToString("C")</h4>
+                        </div>
+                    </div>
+                </div>
+
+                <form asp-action="IssueOrder" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="OrderId" />
+                    <input type="hidden" asp-for="CustomerName" />
+                    <input type="hidden" asp-for="DeviceDescription" />
+                    <input type="hidden" asp-for="TotalCost" />
+                    <input type="hidden" asp-for="PaidAmount" />
+                    <input type="hidden" asp-for="AmountDue" />
+
+                    @if (Model.AmountDue > 0)
+                    {
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> Внимание: Клиент должен оплатить <strong>@Model.AmountDue.ToString("C")</strong> перед выдачей.
+                        </div>
+
+                        <div class="mb-4 p-3 border rounded">
+                            <h5 class="mb-3">Оплата остатка на месте</h5>
+                            <div class="form-group">
+                                <label asp-for="PaymentMethod" class="form-label"></label>
+                                <select asp-for="PaymentMethod" class="form-select">
+                                    <option value="Наличные">Наличные</option>
+                                    <option value="Банковская карта (терминал)">Банковская карта (терминал)</option>
+                                    <option value="Перевод">Перевод (по реквизитам)</option>
+                                </select>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle"></i> Заказ полностью оплачен. Устройство готово к выдаче.
+                        </div>
+                        <input type="hidden" asp-for="PaymentMethod" value="Не требуется" />
+                    }
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <a asp-action="Details" asp-route-id="@Model.OrderId" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Назад
+                        </a>
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-check"></i> 
+                            @(Model.AmountDue > 0 ? "Принять оплату и выдать устройство" : "Выдать устройство")
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

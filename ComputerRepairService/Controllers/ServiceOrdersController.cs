@@ -3,6 +3,7 @@ using ComputerRepairService.Models.Entities;
 using ComputerRepairService.Models.Enums;
 using ComputerRepairService.Models.ViewModels;
 using ComputerRepairService.Services;
+using ComputerRepairService.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -15,11 +16,13 @@ namespace ComputerRepairService.Controllers
     {
         private readonly RepairDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IOrderManagementService _orderService;
 
-        public ServiceOrdersController(RepairDbContext context, UserManager<ApplicationUser> userManager)
+        public ServiceOrdersController(RepairDbContext context, UserManager<ApplicationUser> userManager, IOrderManagementService orderService)
         {
             _context = context;
             _userManager = userManager;
+            _orderService = orderService;
         }
 
         // GET: ServiceOrders
@@ -31,7 +34,7 @@ namespace ComputerRepairService.Controllers
             if (roles.Contains("Admin") || roles.Contains("Employee"))
             {
                 // Админ и сотрудники видят ВСЕ заказы
-                var serviceOrders = await _context.ServiceOrders
+                var serviceOrders = await _context.ServiceOrders.AsNoTracking()
                     .Include(so => so.Customer)
                     .Include(so => so.DeviceType)
                     .Include(so => so.OrderStatus)
@@ -181,68 +184,17 @@ namespace ComputerRepairService.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> TakeInWork(int id)
         {
-            var order = await _context.ServiceOrders
-                .Include(so => so.OrderTechnicians)
-                .FirstOrDefaultAsync(so => so.OrderId == id);
-
-            if (order == null)
-            {
-                TempData["ErrorMessage"] = "Заявка не найдена.";
-                return RedirectToAction(nameof(ClientRequests));
-            }
-
-            if (order.StatusId is 5 or 6 or 7)
-            {
-                TempData["ErrorMessage"] = "Заявка уже завершена или отменена.";
-                return RedirectToAction(nameof(ClientRequests));
-            }
-
             var user = await _userManager.GetUserAsync(User);
-            if (user == null)
+            bool success = await _orderService.TakeOrderInWorkAsync(id, user?.Id, User.Identity?.Name, User.IsInRole("Employee"));
+            
+            if (success)
             {
-                TempData["ErrorMessage"] = "Пользователь не найден.";
-                return RedirectToAction(nameof(ClientRequests));
+                TempData["SuccessMessage"] = $"Заявка #{id} взята в работу.";
             }
-
-            var diagnosisStatusId = await GetStatusIdByNameAsync("Диагностика");
-            if (diagnosisStatusId.HasValue)
+            else
             {
-                order.StatusId = diagnosisStatusId.Value;
+                TempData["ErrorMessage"] = "Ошибка при взятии заявки в работу.";
             }
-
-            var note = "Заявка взята в работу";
-
-            // Для сотрудника автоматически назначаем его исполнителем.
-            if (User.IsInRole("Employee"))
-            {
-                var technician = await _context.Technicians
-                    .FirstOrDefaultAsync(t => t.UserId == user.Id ||
-                                              (!string.IsNullOrWhiteSpace(user.Email) && t.Email == user.Email));
-
-                if (technician != null && !order.OrderTechnicians.Any(ot => ot.TechnicianId == technician.TechnicianId))
-                {
-                    _context.OrderTechnicians.Add(new OrderTechnician
-                    {
-                        OrderId = order.OrderId,
-                        TechnicianId = technician.TechnicianId,
-                        AssignedDate = DateTime.Now,
-                        IsPrimary = true
-                    });
-                    note += $"; назначен мастер {technician.FirstName} {technician.LastName}";
-                }
-            }
-
-            _context.OrderStatusHistory.Add(new OrderStatusHistory
-            {
-                OrderId = order.OrderId,
-                StatusId = order.StatusId,
-                ChangedDate = DateTime.Now,
-                ChangedBy = User.Identity?.Name ?? "System",
-                Notes = note
-            });
-
-            await _context.SaveChangesAsync();
-            TempData["SuccessMessage"] = $"Заявка #{order.OrderId} взята в работу.";
             return RedirectToAction(nameof(ClientRequests));
         }
 
@@ -276,7 +228,7 @@ namespace ComputerRepairService.Controllers
 
             // Проверка прав доступа
             var user = await _userManager.GetUserAsync(User);
-            var roles = await _userManager.GetRolesAsync(user);
+            var roles = await _userManager.GetRolesAsync(user!);
 
             if (roles.Contains("Admin") || roles.Contains("Employee"))
             {
@@ -287,7 +239,7 @@ namespace ComputerRepairService.Controllers
             {
                 // Клиенты видят только свои заказы
                 var customer = await _context.Customers
-                    .FirstOrDefaultAsync(c => c.UserId == user.Id);
+                    .FirstOrDefaultAsync(c => c.UserId == user!.Id);
 
                 if (customer != null && serviceOrder.CustomerId == customer.CustomerId)
                 {
@@ -304,8 +256,6 @@ namespace ComputerRepairService.Controllers
 
             return RedirectToAction("AccessDenied", "Home");
         }
-
-        // GET: ServiceOrders/Create
         public async Task<IActionResult> Create()
         {
             var user = await _userManager.GetUserAsync(User);
@@ -334,166 +284,38 @@ namespace ComputerRepairService.Controllers
         // POST: ServiceOrders/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(
-            [Bind("CustomerId,DeviceTypeId,DeviceBrand,DeviceModel,SerialNumber,ProblemDescription,DiagnosticNotes,StatusId,Priority,EstimatedCompletionDate,TechnicianNotes")]
-            ServiceOrder serviceOrder,
-            int[] selectedTechnicians)
+        public async Task<IActionResult> Create(OrderCreateViewModel model)
         {
-            Console.WriteLine($"=== CREATE ORDER STARTED ===");
-
-            var user = await _userManager.GetUserAsync(User);
-            var roles = await _userManager.GetRolesAsync(user);
-
-            // Для клиентов: автоматически подставляем CustomerId из профиля
-            if (roles.Contains("Client"))
+            if (!ModelState.IsValid)
             {
-                var customer = await _context.Customers
-                    .FirstOrDefaultAsync(c => c.UserId == user.Id);
-
-                if (customer != null)
-                {
-                    serviceOrder.CustomerId = customer.CustomerId;
-                }
-                else
-                {
-                    ModelState.AddModelError("CustomerId", "Профиль клиента не найден");
-                }
-
-                // Клиент не может назначать мастеров и заполнять служебные поля вручную.
-                selectedTechnicians = Array.Empty<int>();
-                serviceOrder.StatusId = 1; // "Новая"
-                serviceOrder.EstimatedCompletionDate = null;
-                serviceOrder.DiagnosticNotes = null;
-                serviceOrder.TechnicianNotes = null;
-                serviceOrder.Priority = serviceOrder.Priority is < 1 or > 5 ? 2 : serviceOrder.Priority;
-
-                // Удаляем ошибки по служебным полям, которых нет в форме клиента.
-                if (customer != null)
-                {
-                    ModelState.Remove("CustomerId");
-                }
-                ModelState.Remove("StatusId");
-                ModelState.Remove("EstimatedCompletionDate");
-                ModelState.Remove("DiagnosticNotes");
-                ModelState.Remove("TechnicianNotes");
+                await LoadCreateViewData();
+                return View(model);
             }
 
-            Console.WriteLine($"CustomerId: {serviceOrder.CustomerId}, DeviceTypeId: {serviceOrder.DeviceTypeId}, StatusId: {serviceOrder.StatusId}");
-
-            // ВАЖНО: Отключаем валидацию навигационных свойств
-            ModelState.Remove("Customer");
-            ModelState.Remove("DeviceType");
-            ModelState.Remove("OrderStatus");
-            ModelState.Remove("OrderTechnicians");
-            ModelState.Remove("OrderServices");
-            ModelState.Remove("OrderParts");
-            ModelState.Remove("OrderStatusHistories");
-            ModelState.Remove("Payments");
-
-            // Проверяем только нужные поля
-            if (serviceOrder.CustomerId == 0)
-                ModelState.AddModelError("CustomerId", "Выберите клиента");
-
-            if (serviceOrder.DeviceTypeId == 0)
-                ModelState.AddModelError("DeviceTypeId", "Выберите тип устройства");
-
-            if (serviceOrder.StatusId == 0)
-                serviceOrder.StatusId = 1; // Статус "Новая" по умолчанию
-
-            if (string.IsNullOrEmpty(serviceOrder.ProblemDescription))
-                ModelState.AddModelError("ProblemDescription", "Описание проблемы обязательно");
-
-            // Проверяем, есть ли ошибки после наших проверок
-            var hasErrors = ModelState.Values.Any(v => v.Errors.Count > 0);
-
-            if (!hasErrors)
+            try
             {
-                try
+                var user = await _userManager.GetUserAsync(User);
+                var roles = await _userManager.GetRolesAsync(user);
+
+                if (roles.Contains("Client"))
                 {
-                    // Устанавливаем обязательные поля
-                    serviceOrder.CreatedDate = DateTime.Now;
-
-                    // Для клиентов: приоритет по умолчанию
-                    if (serviceOrder.Priority == 0)
-                        serviceOrder.Priority = 2;
-
-                    // Для клиентов: нельзя выбирать статус кроме "Новая"
-                    if (roles.Contains("Client"))
-                    {
-                        serviceOrder.StatusId = 1; // Только "Новая"
-                    }
-
-                    _context.Add(serviceOrder);
-                    await _context.SaveChangesAsync();
-
-                    Console.WriteLine($"Order created with ID: {serviceOrder.OrderId}");
-
-                    // Добавляем назначенных мастеров (только для админов и сотрудников)
-                    if ((roles.Contains("Admin") || roles.Contains("Employee")) &&
-                        selectedTechnicians != null && selectedTechnicians.Length > 0)
-                    {
-                        Console.WriteLine($"Adding {selectedTechnicians.Length} technicians to order");
-
-                        foreach (var techId in selectedTechnicians)
-                        {
-                            var orderTechnician = new OrderTechnician
-                            {
-                                OrderId = serviceOrder.OrderId,
-                                TechnicianId = techId,
-                                AssignedDate = DateTime.Now,
-                                IsPrimary = true
-                            };
-                            _context.Add(orderTechnician);
-                        }
-                        await _context.SaveChangesAsync();
-                        Console.WriteLine("Technicians added successfully");
-                    }
-
-                    // Добавляем запись в историю статусов
-                    var statusHistory = new OrderStatusHistory
-                    {
-                        OrderId = serviceOrder.OrderId,
-                        StatusId = serviceOrder.StatusId,
-                        ChangedDate = DateTime.Now,
-                        ChangedBy = User.Identity?.Name ?? "System",
-                        Notes = roles.Contains("Client") ? "Заказ создан клиентом" : "Заказ создан"
-                    };
-                    _context.OrderStatusHistory.Add(statusHistory);
-                    await _context.SaveChangesAsync();
-
-                    TempData["SuccessMessage"] = "Заказ успешно создан!";
-                    Console.WriteLine("=== CREATE ORDER COMPLETED SUCCESSFULLY ===");
-
-                    if (roles.Contains("Client"))
-                    {
-                        return RedirectToAction(nameof(MyOrders));
-                    }
-                    else
-                    {
-                        return RedirectToAction(nameof(Details), new { id = serviceOrder.OrderId });
-                    }
+                    var customer = await _context.Customers.FirstOrDefaultAsync(c => c.UserId == user.Id);
+                    if (customer != null) model.CustomerId = customer.CustomerId;
+                    model.SelectedTechnicians = Array.Empty<int>();
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"ERROR creating service order: {ex.Message}");
-                    ModelState.AddModelError("", $"Ошибка при создании заказа: {ex.Message}");
-                }
+
+                var serviceOrder = await _orderService.CreateOrderAsync(model, user.Id, roles);
+                TempData["SuccessMessage"] = "Заказ успешно создан!";
+                
+                if (roles.Contains("Client")) return RedirectToAction(nameof(MyOrders));
+                return RedirectToAction(nameof(Details), new { id = serviceOrder.OrderId });
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine("Validation failed - showing errors to user");
-                foreach (var kvp in ModelState)
-                {
-                    foreach (var error in kvp.Value.Errors)
-                    {
-                        Console.WriteLine($"ModelState error [{kvp.Key}]: {error.ErrorMessage}");
-                    }
-                }
+                ModelState.AddModelError("", $"Ошибка при создании заказа: {ex.Message}");
+                await LoadCreateViewData();
+                return View(model);
             }
-
-            await LoadCreateViewData();
-            Console.WriteLine("=== CREATE ORDER FAILED ===");
-            return View(serviceOrder);
         }
 
         // GET: ServiceOrders/Edit/5 - ТОЛЬКО для админов и сотрудников
@@ -514,167 +336,52 @@ namespace ComputerRepairService.Controllers
                 return NotFound();
             }
 
+            var model = new OrderEditViewModel
+            {
+                OrderId = serviceOrder.OrderId,
+                CustomerId = serviceOrder.CustomerId,
+                DeviceTypeId = serviceOrder.DeviceTypeId,
+                DeviceBrand = serviceOrder.DeviceBrand,
+                DeviceModel = serviceOrder.DeviceModel,
+                SerialNumber = serviceOrder.SerialNumber,
+                ProblemDescription = serviceOrder.ProblemDescription,
+                DiagnosticNotes = serviceOrder.DiagnosticNotes,
+                StatusId = serviceOrder.StatusId,
+                Priority = serviceOrder.Priority,
+                EstimatedCompletionDate = serviceOrder.EstimatedCompletionDate,
+                ActualCompletionDate = serviceOrder.ActualCompletionDate,
+                TechnicianNotes = serviceOrder.TechnicianNotes,
+                SelectedTechnicians = serviceOrder.OrderTechnicians.Select(ot => ot.TechnicianId).ToArray()
+            };
+
             await LoadCreateViewData();
-            return View(serviceOrder);
+            return View(model);
         }
 
         // POST: ServiceOrders/Edit/5 - ТОЛЬКО для админов и сотрудников
         [Authorize(Roles = "Admin,Employee")]
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id,
-            [Bind("OrderId,CustomerId,DeviceTypeId,DeviceBrand,DeviceModel,SerialNumber,ProblemDescription,DiagnosticNotes,StatusId,Priority,EstimatedCompletionDate,ActualCompletionDate,TechnicianNotes,CreatedDate")]
-            ServiceOrder serviceOrder,
-            int[] selectedTechnicians)
+        public async Task<IActionResult> Edit(int id, OrderEditViewModel model)
         {
-            Console.WriteLine($"=== EDIT ORDER STARTED ===");
-            Console.WriteLine($"Order ID: {id}, Model ID: {serviceOrder.OrderId}");
-
-            if (id != serviceOrder.OrderId)
+            if (id != model.OrderId || !ModelState.IsValid)
             {
-                Console.WriteLine("ID mismatch");
-                return NotFound();
+                await LoadCreateViewData();
+                return View(model);
             }
 
-            // Отключаем валидацию навигационных свойств
-            ModelState.Remove("Customer");
-            ModelState.Remove("DeviceType");
-            ModelState.Remove("OrderStatus");
-            ModelState.Remove("OrderTechnicians");
-            ModelState.Remove("OrderServices");
-            ModelState.Remove("OrderParts");
-            ModelState.Remove("OrderStatusHistories");
-            ModelState.Remove("Payments");
-
-            // Проверяем обязательные поля
-            if (serviceOrder.CustomerId == 0)
-                ModelState.AddModelError("CustomerId", "Выберите клиента");
-
-            if (serviceOrder.DeviceTypeId == 0)
-                ModelState.AddModelError("DeviceTypeId", "Выберите тип устройства");
-
-            if (serviceOrder.StatusId == 0)
-                ModelState.AddModelError("StatusId", "Выберите статус");
-
-            if (string.IsNullOrEmpty(serviceOrder.ProblemDescription))
-                ModelState.AddModelError("ProblemDescription", "Описание проблемы обязательно");
-
-            // Проверяем, есть ли ошибки
-            var hasErrors = ModelState.Values.Any(v => v.Errors.Count > 0);
-
-            if (!hasErrors)
+            try
             {
-                try
-                {
-                    // Находим существующий заказ
-                    var existingOrder = await _context.ServiceOrders
-                        .Include(so => so.OrderTechnicians)
-                        .FirstOrDefaultAsync(so => so.OrderId == id);
-
-                    if (existingOrder == null)
-                    {
-                        return NotFound();
-                    }
-
-                    var previousStatusId = existingOrder.StatusId;
-
-                    // Обновляем поля
-                    existingOrder.CustomerId = serviceOrder.CustomerId;
-                    existingOrder.DeviceTypeId = serviceOrder.DeviceTypeId;
-                    existingOrder.DeviceBrand = serviceOrder.DeviceBrand;
-                    existingOrder.DeviceModel = serviceOrder.DeviceModel;
-                    existingOrder.SerialNumber = serviceOrder.SerialNumber;
-                    existingOrder.ProblemDescription = serviceOrder.ProblemDescription;
-                    existingOrder.DiagnosticNotes = serviceOrder.DiagnosticNotes;
-                    existingOrder.StatusId = serviceOrder.StatusId;
-                    existingOrder.Priority = serviceOrder.Priority;
-                    existingOrder.EstimatedCompletionDate = serviceOrder.EstimatedCompletionDate;
-                    existingOrder.TechnicianNotes = serviceOrder.TechnicianNotes;
-
-                    if (serviceOrder.StatusId == OrderStatusIds.AwaitingPayment && existingOrder.ActualCompletionDate == null)
-                    {
-                        existingOrder.ActualCompletionDate = DateTime.Now;
-                    }
-
-                    // Обновляем мастеров
-                    // Удаляем текущих мастеров
-                    _context.OrderTechnicians.RemoveRange(existingOrder.OrderTechnicians);
-
-                    // Добавляем выбранных мастеров
-                    if (selectedTechnicians != null && selectedTechnicians.Length > 0)
-                    {
-                        foreach (var techId in selectedTechnicians)
-                        {
-                            var orderTechnician = new OrderTechnician
-                            {
-                                OrderId = existingOrder.OrderId,
-                                TechnicianId = techId,
-                                AssignedDate = DateTime.Now,
-                                IsPrimary = true
-                            };
-                            _context.OrderTechnicians.Add(orderTechnician);
-                        }
-                    }
-
-                    // Добавляем запись в историю статусов если статус изменился
-                    if (previousStatusId != serviceOrder.StatusId)
-                    {
-                        var historyNotes = "Статус изменен при редактировании заказа";
-                        if (serviceOrder.StatusId == OrderStatusIds.AwaitingPayment)
-                        {
-                            historyNotes = "Заказ переведён в ожидание оплаты.";
-                        }
-
-                        var statusHistory = new OrderStatusHistory
-                        {
-                            OrderId = id,
-                            StatusId = serviceOrder.StatusId,
-                            ChangedDate = DateTime.Now,
-                            ChangedBy = User.Identity?.Name ?? "System",
-                            Notes = historyNotes
-                        };
-                        _context.OrderStatusHistory.Add(statusHistory);
-                    }
-
-                    await _context.SaveChangesAsync();
-
-                    TempData["SuccessMessage"] = "Заказ успешно обновлен!";
-                    Console.WriteLine("=== EDIT ORDER COMPLETED SUCCESSFULLY ===");
-                    return RedirectToAction(nameof(Details), new { id = existingOrder.OrderId });
-                }
-                catch (DbUpdateConcurrencyException ex)
-                {
-                    Console.WriteLine($"Concurrency error: {ex.Message}");
-                    if (!ServiceOrderExists(serviceOrder.OrderId))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"ERROR updating order: {ex.Message}");
-                    ModelState.AddModelError("", $"Ошибка при обновлении заказа: {ex.Message}");
-                }
+                await _orderService.EditOrderAsync(model, User.Identity?.Name);
+                TempData["SuccessMessage"] = "Заказ успешно обновлен!";
+                return RedirectToAction(nameof(Details), new { id });
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine("Validation failed in Edit");
+                ModelState.AddModelError("", $"Ошибка при обновлении заказа: {ex.Message}");
+                await LoadCreateViewData();
+                return View(model);
             }
-
-            // Если дошли сюда, перезагружаем данные для формы
-            await LoadCreateViewData();
-
-            // Перезагружаем OrderTechnicians для модели
-            serviceOrder.OrderTechnicians = await _context.OrderTechnicians
-                .Where(ot => ot.OrderId == id)
-                .ToListAsync();
-
-            Console.WriteLine("=== EDIT ORDER FAILED ===");
-            return View(serviceOrder);
         }
 
         // GET: ServiceOrders/Delete/5 - ТОЛЬКО для админов
@@ -789,13 +496,12 @@ namespace ComputerRepairService.Controllers
 
                 var oldStatusId = serviceOrder.StatusId;
 
-                if (statusId == OrderStatusIds.ReadyForPickup && oldStatusId != OrderStatusIds.AwaitingPayment)
+                if (statusId == OrderStatusIds.ReadyForPickup && oldStatusId != OrderStatusIds.ReadyForPickup)
                 {
-                    TempData["ErrorMessage"] = "Статус «Готово к получению» устанавливается только после подтверждения оплаты.";
-                    return RedirectToAction(nameof(Details), new { id });
+                    TempData["ErrorMessage"] = "Выдать устройство можно только после подтверждения готовности.";
                 }
 
-                if (statusId == OrderStatusIds.AwaitingPayment && serviceOrder.TotalCost <= 0)
+                if (statusId == OrderStatusIds.AwaitingApproval && serviceOrder.TotalCost <= 0)
                 {
                     TempData["ErrorMessage"] = "Сначала укажите стоимость через «Заказ выполнен» или редактирование заказа.";
                     return RedirectToAction(nameof(Details), new { id });
@@ -815,7 +521,7 @@ namespace ComputerRepairService.Controllers
 
                 _context.OrderStatusHistory.Add(statusHistory);
 
-                if (statusId == OrderStatusIds.AwaitingPayment)
+                if (statusId == OrderStatusIds.AwaitingApproval)
                 {
                     if (serviceOrder.ActualCompletionDate == null)
                     {
@@ -823,13 +529,13 @@ namespace ComputerRepairService.Controllers
                     }
 
                     statusHistory.Notes = string.IsNullOrWhiteSpace(notes)
-                        ? "Ожидается оплата клиентом."
+                        ? "Ожидается согласование клиентом."
                         : notes;
                 }
 
                 await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = statusId == OrderStatusIds.AwaitingPayment
-                    ? "Заказ ожидает оплаты клиентом."
+                TempData["SuccessMessage"] = statusId == OrderStatusIds.AwaitingApproval
+                    ? "Заказ ожидает согласования клиентом."
                     : "Статус заказа успешно обновлен!";
                 Console.WriteLine("=== CHANGE STATUS COMPLETED SUCCESSFULLY ===");
             }
@@ -847,66 +553,14 @@ namespace ComputerRepairService.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CancelOrder(int id)
         {
-            Console.WriteLine($"=== CANCEL ORDER STARTED ===");
+            var user = await _userManager.GetUserAsync(User);
+            var customer = await _context.Customers.FirstOrDefaultAsync(c => c.UserId == user.Id);
+            if (customer == null) return RedirectToAction("AccessDenied", "Home");
 
-            try
-            {
-                var user = await _userManager.GetUserAsync(User);
-                var customer = await _context.Customers
-                    .FirstOrDefaultAsync(c => c.UserId == user.Id);
-
-                if (customer == null)
-                {
-                    TempData["ErrorMessage"] = "Профиль клиента не найден";
-                    return RedirectToAction("AccessDenied", "Home");
-                }
-
-                var order = await _context.ServiceOrders.FindAsync(id);
-                if (order == null)
-                {
-                    return NotFound();
-                }
-
-                // Проверяем, что заказ принадлежит клиенту
-                if (order.CustomerId != customer.CustomerId)
-                {
-                    TempData["ErrorMessage"] = "Вы можете отменять только свои заказы";
-                    return RedirectToAction("AccessDenied", "Home");
-                }
-
-                // Проверяем, можно ли отменить заказ
-                if (order.StatusId != 1 && order.StatusId != 2) // Только "Новая" и "Диагностика"
-                {
-                    TempData["ErrorMessage"] = "Невозможно отменить заказ на этой стадии";
-                    return RedirectToAction(nameof(Details), new { id });
-                }
-
-                // Меняем статус на "Отменено" (7)
-                var oldStatusId = order.StatusId;
-                order.StatusId = 7; // Отменено
-
-                // Добавляем запись в историю статусов
-                var statusHistory = new OrderStatusHistory
-                {
-                    OrderId = id,
-                    StatusId = 7,
-                    ChangedDate = DateTime.Now,
-                    ChangedBy = User.Identity?.Name ?? "System",
-                    Notes = "Заказ отменен клиентом"
-                };
-                _context.OrderStatusHistory.Add(statusHistory);
-
-                await _context.SaveChangesAsync();
-
-                TempData["SuccessMessage"] = "Заказ успешно отменен!";
-                Console.WriteLine("=== CANCEL ORDER COMPLETED SUCCESSFULLY ===");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"ERROR cancelling order: {ex.Message}");
-                TempData["ErrorMessage"] = $"Ошибка при отмене заказа: {ex.Message}";
-            }
-
+            bool success = await _orderService.CancelOrderAsync(id, customer.CustomerId, User.Identity?.Name);
+            if (success) TempData["SuccessMessage"] = "Заказ успешно отменен!";
+            else TempData["ErrorMessage"] = "Ошибка при отмене заказа.";
+            
             return RedirectToAction(nameof(MyOrders));
         }
 
@@ -924,7 +578,7 @@ namespace ComputerRepairService.Controllers
             }
 
             var orders = await _context.ServiceOrders
-                .Where(o => o.CustomerId == customer.CustomerId && o.StatusId == OrderStatusIds.AwaitingPayment)
+                .Where(o => o.CustomerId == customer.CustomerId && o.StatusId != OrderStatusIds.New && o.StatusId != OrderStatusIds.Cancelled)
                 .Include(o => o.DeviceType)
                 .Include(o => o.OrderStatus)
                 .Include(o => o.Payments)
@@ -933,6 +587,7 @@ namespace ComputerRepairService.Controllers
                 .OrderByDescending(o => o.ActualCompletionDate ?? o.CreatedDate)
                 .ToListAsync();
 
+            orders = orders.Where(o => OrderPaymentHelper.CanClientPay(o)).ToList();
             return View(orders);
         }
 
@@ -1064,22 +719,179 @@ namespace ComputerRepairService.Controllers
 
             order.TotalCost = model.TotalCost;
             order.TechnicianNotes = model.TechnicianNotes;
-            order.StatusId = OrderStatusIds.AwaitingPayment;
             order.ActualCompletionDate = DateTime.Now;
+
+            order.StatusId = OrderStatusIds.ReadyForPickup;
+
+            string statusNote = model.TotalCost > 0 
+                ? $"Работы завершены. Стоимость: {model.TotalCost:C}. Ожидается оплата и выдача клиенту."
+                : "Работы завершены (бесплатно/по гарантии). Заказ готов к выдаче клиенту.";
 
             _context.OrderStatusHistory.Add(new OrderStatusHistory
             {
                 OrderId = order.OrderId,
-                StatusId = OrderStatusIds.AwaitingPayment,
+                StatusId = OrderStatusIds.ReadyForPickup,
                 ChangedDate = DateTime.Now,
                 ChangedBy = User.Identity?.Name ?? "Employee",
-                Notes = $"Работы завершены. Стоимость: {model.TotalCost:C}. Ожидается оплата клиентом."
+                Notes = statusNote
             });
 
             await _context.SaveChangesAsync();
 
-            TempData["SuccessMessage"] = $"Заказ #{order.OrderId} завершён. Стоимость {model.TotalCost:C}. Клиенту отправлено на оплату.";
-            return RedirectToAction(nameof(MyAssignedOrders));
+            TempData["SuccessMessage"] = $"Заказ #{order.OrderId} завершён. Готов к выдаче.";
+            
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        // GET: ServiceOrders/IssueOrder/5
+        [Authorize(Roles = "Admin,Employee")]
+        public async Task<IActionResult> IssueOrder(int? id)
+        {
+            if (id == null) return NotFound();
+
+            var order = await _context.ServiceOrders
+                .Include(o => o.Customer)
+                .Include(o => o.DeviceType)
+                .Include(o => o.Payments)
+                .FirstOrDefaultAsync(o => o.OrderId == id);
+
+            if (order == null) return NotFound();
+
+            var amountDue = OrderPaymentHelper.GetAmountDue(order);
+
+            var model = new IssueOrderViewModel
+            {
+                OrderId = order.OrderId,
+                CustomerName = order.Customer != null ? $"{order.Customer.FirstName} {order.Customer.LastName}" : "—",
+                DeviceDescription = $"{order.DeviceType?.TypeName} {order.DeviceBrand} {order.DeviceModel}".Trim(),
+                TotalCost = order.TotalCost,
+                PaidAmount = OrderPaymentHelper.GetPaidAmount(order),
+                AmountDue = amountDue,
+                PaymentMethod = amountDue > 0 ? "Наличные" : "Не требуется"
+            };
+
+            return View(model);
+        }
+
+        // POST: ServiceOrders/IssueOrder/5
+        [Authorize(Roles = "Admin,Employee")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> IssueOrder(int id, IssueOrderViewModel model)
+        {
+            if (id != model.OrderId) return NotFound();
+
+            var order = await _context.ServiceOrders.Include(o => o.Payments).FirstOrDefaultAsync(o => o.OrderId == id);
+            if (order == null) return NotFound();
+
+            var amountDue = OrderPaymentHelper.GetAmountDue(order);
+
+            if (amountDue > 0 && model.PaymentMethod != "Не требуется")
+            {
+                // Регистрируем платеж
+                var (success, error) = await OrderPaymentService.RegisterPaymentAsync(
+                    _context,
+                    order,
+                    amountDue,
+                    model.PaymentMethod,
+                    $"POS-{Guid.NewGuid():N}"[..12],
+                    "Оплата при выдаче",
+                    User.Identity?.Name ?? "Employee");
+
+                if (!success)
+                {
+                    TempData["ErrorMessage"] = "Ошибка при регистрации оплаты: " + error;
+                    return View(model);
+                }
+            }
+            else if (amountDue > 0)
+            {
+                TempData["ErrorMessage"] = "Необходимо выбрать способ оплаты для погашения остатка.";
+                return View(model);
+            }
+
+            order.StatusId = OrderStatusIds.Issued;
+            order.ActualCompletionDate = order.ActualCompletionDate ?? DateTime.Now;
+            
+            _context.OrderStatusHistory.Add(new OrderStatusHistory
+            {
+                OrderId = order.OrderId,
+                StatusId = OrderStatusIds.Issued,
+                ChangedDate = DateTime.Now,
+                ChangedBy = User.Identity?.Name ?? "Employee",
+                Notes = "Устройство выдано клиенту. Заказ закрыт."
+            });
+
+            await _context.SaveChangesAsync();
+            TempData["SuccessMessage"] = $"Заказ #{id} успешно закрыт и выдан.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        // POST: ServiceOrders/RequireApproval/5
+        [Authorize(Roles = "Admin,Employee")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RequireApproval(int id, decimal estimatedCost, string notes)
+        {
+            var order = await _context.ServiceOrders.FindAsync(id);
+            if (order == null) return NotFound();
+
+            if (!OrderStatusIds.ActiveWorkStatuses.Contains(order.StatusId) && order.StatusId != OrderStatusIds.New)
+            {
+                TempData["ErrorMessage"] = "Перевести в «Требует согласования» можно только активный или новый заказ.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+
+            order.TotalCost = estimatedCost; // Временно сохраняем как TotalCost, это будет сумма к согласованию
+            order.StatusId = OrderStatusIds.AwaitingApproval;
+
+            _context.OrderStatusHistory.Add(new OrderStatusHistory
+            {
+                OrderId = order.OrderId,
+                StatusId = OrderStatusIds.AwaitingApproval,
+                ChangedDate = DateTime.Now,
+                ChangedBy = User.Identity?.Name ?? "Employee",
+                Notes = $"Требуется согласование. Предварительная стоимость: {estimatedCost:C}. Заметки: {notes}"
+            });
+
+            await _context.SaveChangesAsync();
+            TempData["SuccessMessage"] = $"Заказ #{id} переведен в статус «Требует согласования».";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        // POST: ServiceOrders/ApproveOrder/5
+        [Authorize(Roles = "Client")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ApproveOrder(int id)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            var customer = await _context.Customers.FirstOrDefaultAsync(c => c.UserId == user!.Id);
+            if (customer == null) return NotFound();
+
+            var order = await _context.ServiceOrders.FindAsync(id);
+            if (order == null || order.CustomerId != customer.CustomerId) return NotFound();
+
+            if (order.StatusId != OrderStatusIds.AwaitingApproval)
+            {
+                TempData["ErrorMessage"] = "Этот заказ не требует согласования.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+
+            order.StatusId = OrderStatusIds.InRepair;
+
+            _context.OrderStatusHistory.Add(new OrderStatusHistory
+            {
+                OrderId = order.OrderId,
+                StatusId = OrderStatusIds.InRepair,
+                ChangedDate = DateTime.Now,
+                ChangedBy = User.Identity?.Name ?? "Client",
+                Notes = $"Клиент подтвердил ремонт и стоимость ({order.TotalCost:C})."
+            });
+
+            await _context.SaveChangesAsync();
+            TempData["SuccessMessage"] = $"Вы успешно подтвердили заказ #{id}. Мы начинаем ремонт!";
+            return RedirectToAction(nameof(Details), new { id });
         }
 
         private async Task<ServiceOrder?> LoadOrderForEmployeeCompletionAsync(int orderId)

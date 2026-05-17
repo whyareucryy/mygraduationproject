@@ -29,7 +29,7 @@ namespace ComputerRepairService.Services
 
         public static bool IsAwaitingPayment(ServiceOrder order)
         {
-            return order.StatusId == OrderStatusIds.AwaitingPayment
+            return order.StatusId == OrderStatusIds.ReadyForPickup
                 && order.TotalCost > 0
                 && GetAmountDue(order) > 0;
         }
@@ -39,11 +39,27 @@ namespace ComputerRepairService.Services
             return order.TotalCost > 0 && GetAmountDue(order) <= 0;
         }
 
-        public static bool CanClientPay(ServiceOrder order) => IsAwaitingPayment(order);
+        public static bool CanClientPay(ServiceOrder order) 
+        {
+            // Клиент может платить, если есть неоплаченный остаток и заказ не отменен/новый
+            return GetAmountDue(order) > 0 && order.StatusId != OrderStatusIds.New && order.StatusId != OrderStatusIds.Cancelled;
+        }
 
         public static bool CanEmployeeComplete(ServiceOrder order)
         {
             return OrderStatusIds.ActiveWorkStatuses.Contains(order.StatusId);
+        }
+
+        public static bool CanClientApprove(ServiceOrder order)
+        {
+            return order.StatusId == OrderStatusIds.AwaitingApproval;
+        }
+
+        public static bool CanIssueDevice(ServiceOrder order)
+        {
+            // Мы можем перейти к выдаче устройства если статус "Готово к выдаче" ИЛИ "В ремонте".
+            // Оплата (если есть долг) будет принята прямо на странице выдачи.
+            return order.StatusId == OrderStatusIds.ReadyForPickup || order.StatusId == OrderStatusIds.InRepair;
         }
     }
 }

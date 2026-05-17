@@ -107,18 +107,67 @@
                     </div>
                 }
 
-                <div class="mt-4">
-                    <a asp-action="Edit" asp-route-id="@Model.OrderId" class="btn btn-warning">
+                <div class="mt-4 d-flex flex-wrap gap-2">
+                    @if (ComputerRepairService.Services.OrderPaymentHelper.CanEmployeeComplete(Model) || Model.StatusId == ComputerRepairService.Models.Enums.OrderStatusIds.New)
+                    {
+                        <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#requireApprovalModal">
+                            <i class="fas fa-hand-holding-usd"></i> На согласование
+                        </button>
+                    }
+                    
+                    @if (ComputerRepairService.Services.OrderPaymentHelper.CanEmployeeComplete(Model))
+                    {
+                        <a asp-action="CompleteOrder" asp-route-id="@Model.OrderId" class="btn btn-success">
+                            <i class="fas fa-check-circle"></i> Завершить ремонт
+                        </a>
+                    }
+                    
+                    @if (ComputerRepairService.Services.OrderPaymentHelper.CanIssueDevice(Model))
+                    {
+                        <a asp-action="IssueOrder" asp-route-id="@Model.OrderId" class="btn btn-primary">
+                            <i class="fas fa-box-open"></i> Выдать устройство
+                        </a>
+                    }
+
+                    <a asp-action="Edit" asp-route-id="@Model.OrderId" class="btn btn-outline-warning">
                         <i class="fas fa-edit"></i> Редактировать
                     </a>
-                    <a asp-action="ChangeStatus" asp-route-id="@Model.OrderId" class="btn btn-info">
+                    <a asp-action="ChangeStatus" asp-route-id="@Model.OrderId" class="btn btn-outline-info">
                         <i class="fas fa-sync-alt"></i> Изменить статус
                     </a>
-                    <a asp-action="Index" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Назад к списку
+                    <a asp-action="MyAssignedOrders" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Назад
                     </a>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для "На согласование" -->
+    <div class="modal fade" id="requireApprovalModal" tabindex="-1" aria-labelledby="requireApprovalModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <form asp-action="RequireApproval" asp-route-id="@Model.OrderId" method="post" class="modal-content">
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h5 class="modal-title" id="requireApprovalModalLabel">Запросить согласование</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Клиенту будет отправлено уведомление для подтверждения стоимости ремонта.</p>
+                    <div class="mb-3">
+                        <label for="estimatedCost" class="form-label">Предварительная стоимость (₽)</label>
+                        <input type="number" class="form-control" id="estimatedCost" name="estimatedCost" min="0" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Комментарий для клиента (диагностика)</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-warning">Отправить на согласование</button>
+                </div>
+            </form>
         </div>
     </div>
 

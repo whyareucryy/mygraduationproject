@@ -1,4 +1,4 @@
-﻿@model ComputerRepairService.Models.Entities.ServiceOrder
+﻿@model ComputerRepairService.Models.ViewModels.OrderEditViewModel
 
 @{
     ViewData["Title"] = "Редактировать заказ";
@@ -31,7 +31,6 @@
                 <form asp-action="Edit">
                     @Html.AntiForgeryToken()
                     <input type="hidden" asp-for="OrderId" />
-                    <input type="hidden" asp-for="CreatedDate" />
 
                     <div class="row">
                         <div class="col-md-6">
@@ -133,7 +132,7 @@
                         <label class="form-label">Назначить мастеров</label>
                         <select name="selectedTechnicians" class="form-select" multiple>
                             @{
-                                var assignedTechnicianIds = Model.OrderTechnicians?.Select(ot => ot.TechnicianId).ToList() ?? new List<int>();
+                                var assignedTechnicianIds = Model.SelectedTechnicians?.ToList() ?? new List<int>();
                             }
                             @foreach (var technician in ViewBag.Technicians as List<ComputerRepairService.Models.Entities.Technician>)
                             {
@@ -167,6 +166,6 @@
 
     <script>
         console.log('Edit form loaded for order: @Model.OrderId');
-        console.log('Current technicians: @string.Join(", ", Model.OrderTechnicians?.Select(ot => ot.TechnicianId) ?? new List<int>())');
+        console.log('Current technicians: @string.Join(", ", Model.SelectedTechnicians ?? Array.Empty<int>())');
     </script>
 }

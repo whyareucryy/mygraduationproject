@@ -16,9 +16,9 @@ namespace ComputerRepairService.Services
             string? notes,
             string changedBy)
         {
-            if (order.StatusId != OrderStatusIds.AwaitingPayment)
+            if (order.StatusId == OrderStatusIds.Cancelled)
             {
-                return (false, "Платёж можно провести только для заказов в статусе «Ожидание оплаты».");
+                return (false, "Нельзя принять оплату по отменённому заказу.");
             }
 
             if (amount < 0.01m)
@@ -48,21 +48,10 @@ namespace ComputerRepairService.Services
             context.OrderStatusHistory.Add(new OrderStatusHistory
             {
                 OrderId = order.OrderId,
-                StatusId = OrderStatusIds.AwaitingPayment,
+                StatusId = order.StatusId, // Status doesn't change on payment automatically, it stays ReadyForPickup or whatever it was
                 ChangedDate = DateTime.Now,
                 ChangedBy = changedBy,
                 Notes = $"Получена оплата {amount:C} ({paymentMethod})"
-            });
-
-            order.StatusId = OrderStatusIds.ReadyForPickup;
-
-            context.OrderStatusHistory.Add(new OrderStatusHistory
-            {
-                OrderId = order.OrderId,
-                StatusId = OrderStatusIds.ReadyForPickup,
-                ChangedDate = DateTime.Now,
-                ChangedBy = changedBy,
-                Notes = "Оплата подтверждена. Заказ готов к выдаче клиенту."
             });
 
             await context.SaveChangesAsync();
