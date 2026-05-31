@@ -13,385 +13,329 @@
     }
 }
 
-@if (TempData["SuccessMessage"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        <i class="fas fa-check-circle"></i> @TempData["SuccessMessage"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-
-@if (TempData["ErrorMessage"] != null)
-{
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        <i class="fas fa-exclamation-circle"></i> @TempData["ErrorMessage"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="fas fa-clipboard-list"></i> Заказы на обслуживание</h2>
-    <div class="btn-group">
-        <a asp-action="Create" class="btn btn-success">
-            <i class="fas fa-plus"></i> Создать заказ
-        </a>
-        <a asp-action="ClientRequests" class="btn btn-outline-primary">
-            <i class="fas fa-inbox"></i> Заявки клиентов
-        </a>
-
-        @if (User.IsInRole("Employee"))
-        {
-            <a asp-action="MyAssignedOrders" class="btn btn-primary">
-                <i class="fas fa-tasks"></i> Мои задачи
+<div class="container-fluid mt-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-4 pb-3 border-bottom gap-3">
+        <div class="d-flex align-items-center">
+            <div class="bg-primary bg-gradient text-white rounded-circle d-flex align-items-center justify-content-center me-3 shadow-sm" style="width: 64px; height: 64px; font-size: 1.8rem;">
+                <i class="fas fa-clipboard-list"></i>
+            </div>
+            <div>
+                <h2 class="mb-1 fw-bold text-dark">Все заказы</h2>
+                <div class="text-muted small">Управление заказами на ремонт и обслуживание</div>
+            </div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a asp-action="Create" class="btn btn-success rounded-pill px-4 shadow-sm fw-medium">
+                <i class="fas fa-plus me-2"></i>Создать заказ
             </a>
-        }
-
-        @if (User.IsInRole("Admin"))
-        {
-            <div class="btn-group" role="group">
-                <button type="button" class="btn btn-outline-info dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="fas fa-download"></i> Экспорт
-                </button>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="#"><i class="fas fa-file-excel"></i> Excel</a></li>
-                    <li><a class="dropdown-item" href="#"><i class="fas fa-file-pdf"></i> PDF</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item" href="#"><i class="fas fa-print"></i> Печать</a></li>
-                </ul>
-            </div>
-        }
-    </div>
-</div>
-
-<!-- Статистика для админов и сотрудников -->
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card bg-primary text-white">
-            <div class="card-body text-center py-3">
-                <h4 class="card-title mb-1">@Model.Count()</h4>
-                <p class="card-text small mb-0">Всего заказов</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card bg-warning text-dark">
-            <div class="card-body text-center py-3">
-                <h4 class="card-title mb-1">@Model.Count(o => o.OrderStatus?.StatusName == "В ремонте" || o.OrderStatus?.StatusName == "Диагностика")</h4>
-                <p class="card-text small mb-0">Активные</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card bg-success text-white">
-            <div class="card-body text-center py-3">
-                <h4 class="card-title mb-1">@Model.Count(o => o.OrderStatus?.StatusName == "Готово к получению" || o.OrderStatus?.StatusName == "Готово" || o.OrderStatus?.StatusName == "Ожидание оплаты")</h4>
-                <p class="card-text small mb-0">Готовы</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card bg-danger text-white">
-            <div class="card-body text-center py-3">
-                <h4 class="card-title mb-1">@Model.Count(o => o.OrderStatus?.StatusName == "Отменено")</h4>
-                <p class="card-text small mb-0">Отменены</p>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Фильтры -->
-<div class="card mb-4">
-    <div class="card-body">
-        <div class="row g-3 align-items-center">
-            <div class="col-md-3">
-                <label class="form-label">Статус:</label>
-                <select class="form-select" id="statusFilter">
-                    <option value="all">Все статусы</option>
-                    <option value="new">Новые</option>
-                    <option value="active">В работе</option>
-                    <option value="ready">Готовы</option>
-                    <option value="cancelled">Отменены</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Приоритет:</label>
-                <select class="form-select" id="priorityFilter">
-                    <option value="all">Все приоритеты</option>
-                    <option value="1">Низкий</option>
-                    <option value="2">Средний</option>
-                    <option value="3">Высокий</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Дата с:</label>
-                <input type="date" class="form-control" id="dateFromFilter">
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Дата по:</label>
-                <input type="date" class="form-control" id="dateToFilter">
-                <button class="btn btn-outline-secondary mt-2" onclick="resetFilters()">
-                    <i class="fas fa-redo"></i> Сбросить
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="card">
-    <div class="card-body">
-        @if (Model.Any())
-        {
-            <div class="table-responsive">
-                <table class="table table-striped table-hover" id="ordersTable">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>ID</th>
-                            <th>Клиент</th>
-                            <th>Устройство</th>
-                            <th>Проблема</th>
-                            <th>Статус</th>
-                            <th>Приоритет</th>
-                            <th>Дата создания</th>
-                            <th>Стоимость</th>
-                            <th>Действия</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var item in Model.OrderByDescending(o => o.CreatedDate))
-                        {
-                            <tr data-status="@item.OrderStatus?.StatusName?.ToLower()"
-                                data-priority="@item.Priority"
-                                data-date="@item.CreatedDate.ToString("yyyy-MM-dd")">
-                                <td><strong>#@item.OrderId</strong></td>
-                                <td>
-                                    @if (item.Customer != null)
-                                    {
-                                        <div>
-                                            @item.Customer.FirstName @item.Customer.LastName
-                                            <br>
-                                            <small class="text-muted">@item.Customer.Phone</small>
-                                        </div>
-                                    }
-                                </td>
-                                <td>
-                                    @if (item.DeviceType != null)
-                                    {
-                                        <span class="badge bg-secondary">@item.DeviceType.TypeName</span>
-                                    }
-                                    <br>
-                                    <small>@item.DeviceBrand @item.DeviceModel</small>
-                                </td>
-                                <td>
-                                    <div class="text-truncate" style="max-width: 200px;" title="@item.ProblemDescription">
-                                        @item.ProblemDescription
-                                    </div>
-                                </td>
-                                <td>
-                                    <partial name="_OrderStatusBadge" model="item.OrderStatus?.StatusName" />
-                                </td>
-                                <td>
-                                    @{
-                                        var priorityClass = item.Priority switch
-                                        {
-                                            1 => "bg-success",
-                                            2 => "bg-info",
-                                            3 => "bg-warning",
-                                            4 => "bg-orange",
-                                            5 => "bg-danger",
-                                            _ => "bg-secondary"
-                                        };
-                                        var priorityText = item.Priority switch
-                                        {
-                                            1 => "Низкий",
-                                            2 => "Средний",
-                                            3 => "Высокий",
-                                            4 => "Срочный",
-                                            5 => "Критичный",
-                                            _ => "Неизвестно"
-                                        };
-                                    }
-                                    <span class="badge @priorityClass">@priorityText</span>
-                                </td>
-                                <td>@item.CreatedDate.ToString("dd.MM.yyyy")</td>
-                                <td>
-                                    @if (item.TotalCost > 0)
-                                    {
-                                        <span class="badge bg-success">@item.TotalCost.ToString("C")</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-secondary">Не рассчитана</span>
-                                    }
-                                </td>
-                                <td>
-                                    <div class="btn-group btn-group-sm" role="group">
-                                        <a asp-action="Details" asp-route-id="@item.OrderId" class="btn btn-info" title="Детали">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-
-                                        @if (User.IsInRole("Admin") || User.IsInRole("Employee"))
-                                        {
-                                            <a asp-action="Edit" asp-route-id="@item.OrderId" class="btn btn-warning" title="Редактировать">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                            <a asp-action="ChangeStatus" asp-route-id="@item.OrderId" class="btn btn-secondary" title="Изменить статус">
-                                                <i class="fas fa-sync-alt"></i>
-                                            </a>
-                                        }
-
-                                        @if (User.IsInRole("Admin"))
-                                        {
-                                            <a asp-action="Delete" asp-route-id="@item.OrderId" class="btn btn-danger" title="Удалить">
-                                                <i class="fas fa-trash"></i>
-                                            </a>
-                                        }
-                                    </div>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Сводная информация -->
-            <div class="row mt-4">
-                <div class="col-md-6">
-                    <div class="card bg-light">
-                        <div class="card-body">
-                            <h6 class="card-title"><i class="fas fa-chart-pie"></i> Распределение по статусам</h6>
-                            <div class="d-flex flex-wrap gap-2">
-                                @{
-                                    var statusGroups = Model.GroupBy(o => o.OrderStatus?.StatusName ?? "Неизвестно")
-                                    .Select(g => new { Status = g.Key, Count = g.Count() });
-                                }
-                                @foreach (var group in statusGroups)
-                                {
-                                    <span class="badge bg-secondary">
-                                        @group.Status: @group.Count
-                                    </span>
-                                }
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card bg-light">
-                        <div class="card-body">
-                            <h6 class="card-title"><i class="fas fa-money-bill-wave"></i> Финансовая сводка</h6>
-                            <div class="row">
-                                <div class="col-6">
-                                    <small class="text-muted">Общая стоимость:</small>
-                                    <h5>@Model.Where(o => o.TotalCost > 0).Sum(o => o.TotalCost).ToString("C")</h5>
-                                </div>
-                                <div class="col-6">
-                                    <small class="text-muted">Средняя стоимость:</small>
-                                    <h5>@(Model.Where(o => o.TotalCost > 0).Average(o => o.TotalCost).ToString("C"))</h5>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        }
-        else
-        {
-            <div class="text-center py-4">
-                <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
-                <h4>Заказы не найдены</h4>
-                <p class="text-muted">Начните с создания первого заказа.</p>
-                <a asp-action="Create" class="btn btn-success">
-                    <i class="fas fa-plus"></i> Создать заказ
+            <a asp-action="ClientRequests" class="btn btn-outline-primary rounded-pill px-4 shadow-sm fw-medium">
+                <i class="fas fa-inbox me-2"></i>Заявки с сайта
+            </a>
+            @if (User.IsInRole("Employee"))
+            {
+                <a asp-action="MyAssignedOrders" class="btn btn-primary rounded-pill px-4 shadow-sm fw-medium">
+                    <i class="fas fa-tasks me-2"></i>Мои задачи
                 </a>
+            }
+            @if (User.IsInRole("Admin"))
+            {
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary rounded-pill px-4 shadow-sm fw-medium dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-file-export me-2"></i>Экспорт
+                    </button>
+                    <ul class="dropdown-menu border-0 shadow" aria-labelledby="exportDropdown">
+                        <li><a class="dropdown-item py-2" href="#"><i class="fas fa-file-excel text-success me-2"></i>В Excel</a></li>
+                        <li><a class="dropdown-item py-2" href="#"><i class="fas fa-file-pdf text-danger me-2"></i>В PDF</a></li>
+                    </ul>
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show border-success border-opacity-25 bg-success bg-opacity-10 rounded-4 mb-4 shadow-sm" role="alert">
+            <i class="fas fa-check-circle text-success me-2"></i> <span class="text-success fw-medium">@TempData["SuccessMessage"]</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show border-danger border-opacity-25 bg-danger bg-opacity-10 rounded-4 mb-4 shadow-sm" role="alert">
+            <i class="fas fa-exclamation-circle text-danger me-2"></i> <span class="text-danger fw-medium">@TempData["ErrorMessage"]</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden">
+                <div class="card-body p-4 position-relative">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                            <i class="fas fa-list fs-5"></i>
+                        </div>
+                    </div>
+                    <h2 class="display-6 fw-bold mb-1 text-dark">@Model.Count()</h2>
+                    <p class="text-muted mb-0 fw-medium text-uppercase small" style="letter-spacing: 0.5px;">Всего заказов</p>
+                </div>
             </div>
-        }
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden">
+                <div class="card-body p-4 position-relative">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="bg-warning bg-opacity-10 text-warning rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                            <i class="fas fa-tools fs-5 text-dark"></i>
+                        </div>
+                    </div>
+                    <h2 class="display-6 fw-bold mb-1 text-dark">@Model.Count(o => o.OrderStatus?.StatusName == "В ремонте" || o.OrderStatus?.StatusName == "Диагностика")</h2>
+                    <p class="text-muted mb-0 fw-medium text-uppercase small" style="letter-spacing: 0.5px;">В работе</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden">
+                <div class="card-body p-4 position-relative">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                            <i class="fas fa-check-double fs-5"></i>
+                        </div>
+                    </div>
+                    <h2 class="display-6 fw-bold mb-1 text-dark">@Model.Count(o => o.OrderStatus?.StatusName == "Готово к выдаче")</h2>
+                    <p class="text-muted mb-0 fw-medium text-uppercase small" style="letter-spacing: 0.5px;">Ожидают выдачи</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden">
+                <div class="card-body p-4 position-relative">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="bg-danger bg-opacity-10 text-danger rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                            <i class="fas fa-times-circle fs-5"></i>
+                        </div>
+                    </div>
+                    <h2 class="display-6 fw-bold mb-1 text-dark">@Model.Count(o => o.OrderStatus?.StatusName == "Отменено")</h2>
+                    <p class="text-muted mb-0 fw-medium text-uppercase small" style="letter-spacing: 0.5px;">Отмененные</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-header bg-transparent border-bottom pt-4 pb-3 px-4">
+            <h6 class="fw-bold mb-0 text-dark"><i class="fas fa-filter text-secondary me-2"></i> Быстрые фильтры</h6>
+        </div>
+        <div class="card-body p-4">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="form-floating">
+                        <select class="form-select rounded-3" id="statusFilter">
+                            <option value="all">Все статусы</option>
+                            <option value="новая">Новые</option>
+                            <option value="в ремонте">В ремонте</option>
+                            <option value="диагностика">На диагностике</option>
+                            <option value="готово к выдаче">Готовы к выдаче</option>
+                            <option value="отменено">Отмененные</option>
+                        </select>
+                        <label>Статус</label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-floating">
+                        <select class="form-select rounded-3" id="priorityFilter">
+                            <option value="all">Все</option>
+                            <option value="1">Низкий</option>
+                            <option value="2">Средний</option>
+                            <option value="3">Высокий</option>
+                            <option value="4">Срочный</option>
+                            <option value="5">Критичный</option>
+                        </select>
+                        <label>Приоритет</label>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-floating">
+                        <input type="date" class="form-control rounded-3" id="dateFromFilter">
+                        <label>Дата (от)</label>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-floating">
+                        <input type="date" class="form-control rounded-3" id="dateToFilter">
+                        <label>Дата (до)</label>
+                    </div>
+                </div>
+                <div class="col-md-2 d-flex align-items-center">
+                    <button class="btn btn-light rounded-pill w-100 py-3 shadow-sm border" onclick="resetFilters()">
+                        <i class="fas fa-redo me-2"></i>Сбросить
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-4">
+            @if (Model.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 data-table w-100" id="ordersTable">
+                        <thead class="table-light text-muted small text-uppercase">
+                            <tr>
+                                <th class="ps-4 border-0">Заказ</th>
+                                <th class="border-0">Клиент</th>
+                                <th class="border-0">Устройство</th>
+                                <th class="border-0">Статус</th>
+                                <th class="border-0">Приоритет</th>
+                                <th class="border-0">Сумма</th>
+                                <th class="pe-4 border-0 text-end">Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.OrderByDescending(o => o.CreatedDate))
+                            {
+                                <tr data-status="@item.OrderStatus?.StatusName?.ToLower()" data-priority="@item.Priority" data-date="@item.CreatedDate.ToString("yyyy-MM-dd")">
+                                    <td class="ps-4 border-bottom-0">
+                                        <div class="fw-bold text-dark">#@item.OrderId</div>
+                                        <div class="small text-muted">@item.CreatedDate.ToString("dd.MM.yy HH:mm")</div>
+                                    </td>
+                                    <td class="border-bottom-0">
+                                        @if (item.Customer != null)
+                                        {
+                                            <div class="fw-medium text-dark">@item.Customer.FirstName @item.Customer.LastName</div>
+                                            <div class="small text-muted"><i class="fas fa-phone-alt me-1"></i>@item.Customer.Phone</div>
+                                        }
+                                    </td>
+                                    <td class="border-bottom-0">
+                                        <div class="fw-medium text-dark">@item.DeviceBrand @item.DeviceModel</div>
+                                        <span class="badge border" style="background-color: var(--bg-color); color: var(--text-main);">@(item.DeviceType?.TypeName ?? "Устройство")</span>
+                                    </td>
+                                    <td class="border-bottom-0">
+                                        <partial name="_OrderStatusBadge" model="item.OrderStatus?.StatusName" />
+                                    </td>
+                                    <td class="border-bottom-0">
+                                        @{
+                                            var priorityClass = item.Priority switch {
+                                                1 => "bg-success bg-opacity-10 text-success border border-success border-opacity-25",
+                                                2 => "bg-info bg-opacity-10 text-info border border-info border-opacity-25",
+                                                3 => "bg-warning bg-opacity-10 text-warning border border-warning border-opacity-50",
+                                                4 => "bg-orange bg-opacity-10 text-orange border border-orange border-opacity-50",
+                                                5 => "bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25",
+                                                _ => "bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25"
+                                            };
+                                            var priorityText = item.Priority switch { 1 => "Низкий", 2 => "Средний", 3 => "Высокий", 4 => "Срочный", 5 => "Критичный", _ => "Неизвестно" };
+                                        }
+                                        <span class="badge rounded-pill px-2 py-1 @priorityClass">@priorityText</span>
+                                    </td>
+                                    <td class="border-bottom-0">
+                                        @if (item.TotalCost > 0)
+                                        {
+                                            <span class="fw-bold text-success">@item.TotalCost.ToString("C0")</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="small text-muted">—</span>
+                                        }
+                                    </td>
+                                    <td class="pe-4 border-bottom-0 text-end">
+                                        <div class="btn-group shadow-sm rounded-pill">
+                                            <a asp-action="Details" asp-route-id="@item.OrderId" class="btn btn-light btn-sm text-info px-3" title="Детали">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            @if (User.IsInRole("Admin") || User.IsInRole("Employee"))
+                                            {
+                                                <a asp-action="Edit" asp-route-id="@item.OrderId" class="btn btn-light btn-sm text-warning px-3 border-start" title="Редактировать">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <a asp-action="ChangeStatus" asp-route-id="@item.OrderId" class="btn btn-light btn-sm text-secondary px-3 border-start" title="Изменить статус">
+                                                    <i class="fas fa-sync-alt"></i>
+                                                </a>
+                                            }
+                                            @if (User.IsInRole("Admin"))
+                                            {
+                                                <a asp-action="Delete" asp-route-id="@item.OrderId" class="btn btn-light btn-sm text-danger px-3 border-start" title="Удалить">
+                                                    <i class="fas fa-trash"></i>
+                                                </a>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5 text-muted">
+                    <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px; background-color: var(--bg-color);">
+                        <i class="fas fa-clipboard-list fa-2x opacity-50"></i>
+                    </div>
+                    <h5 class="fw-bold text-dark">Заказы не найдены</h5>
+                    <p class="mb-4">В системе пока нет зарегистрированных заказов.</p>
+                    <a asp-action="Create" class="btn btn-success rounded-pill px-4 shadow-sm">
+                        <i class="fas fa-plus me-2"></i> Создать первый заказ
+                    </a>
+                </div>
+            }
+        </div>
     </div>
 </div>
 
 @section Scripts {
     <script>
-        // Фильтрация таблицы
-        function applyFilters() {
-            const statusFilter = document.getElementById('statusFilter').value;
-            const priorityFilter = document.getElementById('priorityFilter').value;
-            const dateFrom = document.getElementById('dateFromFilter').value;
-            const dateTo = document.getElementById('dateToFilter').value;
-
-            const rows = document.querySelectorAll('#ordersTable tbody tr');
-
-            rows.forEach(row => {
-                const status = row.getAttribute('data-status');
-                const priority = row.getAttribute('data-priority');
-                const date = row.getAttribute('data-date');
-
-                let show = true;
-
-                // Фильтр по статусу
-                if (statusFilter !== 'all') {
-                    switch(statusFilter) {
-                        case 'new':
-                            show = status === 'новая';
-                            break;
-                        case 'active':
-                            show = status === 'диагностика' || status === 'в ремонте' || status === 'ожидание запчастей';
-                            break;
-                        case 'ready':
-                            show = status === 'готово';
-                            break;
-                        case 'cancelled':
-                            show = status === 'отменено';
-                            break;
-                    }
-                }
-
-                // Фильтр по приоритету
-                if (show && priorityFilter !== 'all') {
-                    show = priority === priorityFilter;
-                }
-
-                // Фильтр по дате
-                if (show && dateFrom) {
-                    show = date >= dateFrom;
-                }
-                if (show && dateTo) {
-                    show = date <= dateTo;
-                }
-
-                row.style.display = show ? '' : 'none';
+        $(document).ready(function() {
+            if ($.fn.DataTable.isDataTable('.data-table')) {
+                $('.data-table').DataTable().destroy();
+            }
+            
+            var table = $('.data-table').DataTable({
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/ru.json'
+                },
+                responsive: true,
+                pageLength: 25,
+                order: [[ 0, "desc" ]],
+                dom: "<'row mb-3'<'col-sm-12 col-md-6 d-flex align-items-center justify-content-start'l><'col-sm-12 col-md-6 d-flex align-items-center justify-content-end'f>>" +
+                     "<'row'<'col-sm-12'tr>>" +
+                     "<'row mt-3'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>"
             });
-        }
 
-        // Сброс фильтров
-        function resetFilters() {
-            document.getElementById('statusFilter').value = 'all';
-            document.getElementById('priorityFilter').value = 'all';
-            document.getElementById('dateFromFilter').value = '';
-            document.getElementById('dateToFilter').value = '';
-            applyFilters();
-        }
+            function applyCustomFilters() {
+                var status = $('#statusFilter').val();
+                var priority = $('#priorityFilter').val();
+                var dateFrom = $('#dateFromFilter').val();
+                var dateTo = $('#dateToFilter').val();
 
-        // Навешиваем обработчики на фильтры
-        document.getElementById('statusFilter').addEventListener('change', applyFilters);
-        document.getElementById('priorityFilter').addEventListener('change', applyFilters);
-        document.getElementById('dateFromFilter').addEventListener('change', applyFilters);
-        document.getElementById('dateToFilter').addEventListener('change', applyFilters);
+                $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+                    var $tr = $(table.row(dataIndex).node());
+                    var rowStatus = $tr.data('status');
+                    var rowPriority = $tr.data('priority').toString();
+                    var rowDate = $tr.data('date');
 
-        // Автоматическое скрытие уведомлений
-        setTimeout(function() {
-            const alerts = document.querySelectorAll('.alert');
-            alerts.forEach(alert => {
-                const bsAlert = new bootstrap.Alert(alert);
-                bsAlert.close();
-            });
-        }, 5000);
+                    if (status !== 'all' && rowStatus !== status) return false;
+                    if (priority !== 'all' && rowPriority !== priority) return false;
+                    if (dateFrom && rowDate < dateFrom) return false;
+                    if (dateTo && rowDate > dateTo) return false;
 
-        // Для клиентов сразу делаем редирект
-        @if (User.IsInRole("Client"))
-        {
-                <text>
-                setTimeout(function() {
-                    window.location.href = '@Url.Action("MyOrders")';
-                }, 100);
-                </text>
-        }
+                    return true;
+                });
+                
+                table.draw();
+                $.fn.dataTable.ext.search.pop();
+            }
+
+            $('#statusFilter, #priorityFilter, #dateFromFilter, #dateToFilter').on('change', applyCustomFilters);
+
+            window.resetFilters = function() {
+                $('#statusFilter').val('all');
+                $('#priorityFilter').val('all');
+                $('#dateFromFilter').val('');
+                $('#dateToFilter').val('');
+                applyCustomFilters();
+            };
+        });
     </script>
 }

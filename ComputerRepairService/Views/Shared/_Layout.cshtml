@@ -71,7 +71,7 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="~/favicon.ico">
+    <link rel="icon" type="image/png" href="~/icon.png">
 
     @await RenderSectionAsync("Styles", required: false)
 
@@ -128,7 +128,7 @@
                                 </div>
                                 <div class="d-none d-md-block">
                                     <div class="fw-bold">@User.Identity.Name</div>
-                                    <small class="text-light">
+                                    <small class="text-muted mt-1 d-block">
                                         @{
                                             var user = await UserManager.GetUserAsync(User);
                                             if (user != null)
@@ -152,7 +152,7 @@
                                 </div>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3" style="min-width: 260px; padding: 0.5rem 0;">
-                                <li class="px-3 py-3 border-bottom mb-2 bg-light rounded-top-3">
+                                <li class="px-3 py-3 border-bottom custom-border mb-2 rounded-top-3" style="background-color: var(--bg-color);">
                                     <div class="d-flex align-items-center">
                                         <div class="user-avatar bg-primary text-white rounded-circle d-flex justify-content-center align-items-center me-3 shadow-sm" style="width: 48px; height: 48px; font-size: 1.5rem; flex-shrink: 0;">
                                             @if (User.Identity.Name != null)
@@ -164,8 +164,8 @@
                                             <div class="fw-bold text-truncate" style="font-size: 1.05rem;">@User.Identity.Name</div>
                                             <div class="text-muted small">
                                                 @if (User.IsInRole("Admin")) { <span class="text-danger fw-semibold"><i class="fas fa-crown me-1"></i>Администратор</span> }
-                                                else if (User.IsInRole("Employee")) { <span class="text-warning text-dark fw-semibold"><i class="fas fa-briefcase me-1"></i>Сотрудник</span> }
-                                                else { <span class="text-info text-dark fw-semibold"><i class="fas fa-user-tie me-1"></i>Клиент</span> }
+                                                else if (User.IsInRole("Employee")) { <span class="text-warning fw-semibold"><i class="fas fa-briefcase me-1"></i>Сотрудник</span> }
+                                                else { <span class="text-info fw-semibold"><i class="fas fa-user-tie me-1"></i>Клиент</span> }
                                             </div>
                                         </div>
                                     </div>
@@ -393,7 +393,7 @@
             {
                 <!-- Хлебные крошки -->
                 <nav aria-label="breadcrumb" class="mb-4">
-                    <ol class="breadcrumb bg-white p-3 rounded shadow-sm">
+                    <ol class="breadcrumb p-3 rounded shadow-sm" style="background-color: var(--card-bg);">
                         <li class="breadcrumb-item">
                             <a asp-controller="Home" asp-action="Index">
                                 <i class="fas fa-home"></i> Главная
@@ -434,97 +434,12 @@
                 </div>
             }
 
-            <!-- Заголовок страницы -->
-            <div class="page-header mb-4">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h1 class="h3 mb-2">@ViewData["Title"]</h1>
-                        @if (ViewData["Subtitle"] != null)
-                        {
-                            <p class="text-muted mb-0">@ViewData["Subtitle"]</p>
-                        }
-                    </div>
-                    @if (ViewContext.RouteData.Values["action"]?.ToString() == "Index")
-                    {
-                        <div>
-                            @if (ViewContext.RouteData.Values["controller"]?.ToString() == "ServiceOrders" &&
-                                                    (User.IsInRole("Admin") || User.IsInRole("Employee") || User.IsInRole("Client")))
-                            {
-                                <a asp-action="Create" class="btn btn-primary">
-                                    <i class="fas fa-plus me-1"></i> Создать заказ
-                                </a>
-                            }
-                            else if (ViewContext.RouteData.Values["controller"]?.ToString() == "Customers" && User.IsInRole("Admin"))
-                            {
-                                <a asp-action="Create" class="btn btn-primary">
-                                    <i class="fas fa-user-plus me-1"></i> Добавить клиента
-                                </a>
-                            }
-                            else if (ViewContext.RouteData.Values["controller"]?.ToString() == "Technicians" && User.IsInRole("Admin"))
-                            {
-                                <a asp-action="Create" class="btn btn-primary">
-                                    <i class="fas fa-user-cog me-1"></i> Добавить мастера
-                                </a>
-                            }
-                        </div>
-                    }
-                </div>
-            </div>
-
             <!-- Основной контент страницы -->
             <main>
                 @RenderBody()
             </main>
         </div>
-
-        <!-- Футер -->
-        <footer class="footer">
-            <div class="container">
-                <div class="row">
-                    <div class="col-md-6">
-                        <p class="mb-0">
-                            &copy; @DateTime.Now.Year - Компьютерный сервисный центр
-                        </p>
-                        <p class="text-muted small mb-0">
-                            <i class="fas fa-tools me-1"></i> Ваш надежный партнер в ремонте техники
-                        </p>
-                    </div>
-                    <div class="col-md-6 text-md-end">
-                        @if (SignInManager.IsSignedIn(User))
-                        {
-                            <p class="text-muted small mb-0">
-                                Вы вошли как: <strong>@User.Identity.Name</strong>
-                                @{
-                                    var user = await UserManager.GetUserAsync(User);
-                                    if (user != null)
-                                    {
-                                        var roles = await UserManager.GetRolesAsync(user);
-                                        if (roles.Contains("Admin"))
-                                        {
-                                            <span class="badge bg-danger ms-1">Администратор</span>
-                                        }
-                                        else if (roles.Contains("Employee"))
-                                        {
-                                            <span class="badge bg-warning text-dark ms-1">Сотрудник</span>
-                                        }
-                                        else if (roles.Contains("Client"))
-                                        {
-                                            <span class="badge bg-info ms-1">Клиент</span>
-                                        }
-                                    }
-                                }
-                            </p>
-                        }
-                        <p class="text-muted small mb-0">
-                            <i class="fas fa-server me-1"></i> Серверное время: @DateTime.Now.ToString("dd.MM.yyyy HH:mm")
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </footer>
     </div>
-
-    <!-- Скрипты -->
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 

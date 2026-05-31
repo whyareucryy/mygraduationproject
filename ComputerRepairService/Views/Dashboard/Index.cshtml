@@ -54,34 +54,34 @@
 
     <div class="row g-3 mb-4">
         <div class="col-md-3">
-            <div class="card">
+            <div class="card h-100 border-0 shadow-sm" style="background-color: var(--card-bg);">
                 <div class="card-body">
-                    <div class="small text-muted">Выручка за месяц</div>
-                    <div class="h4 mb-0">@Model.RevenueThisMonth.ToString("C")</div>
+                    <div class="small text-muted mb-1">Выручка за месяц</div>
+                    <div class="h4 mb-0 fw-bold text-success">@Model.RevenueThisMonth.ToString("C")</div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card">
+            <div class="card h-100 border-0 shadow-sm" style="background-color: var(--card-bg);">
                 <div class="card-body">
-                    <div class="small text-muted">Средний чек</div>
-                    <div class="h4 mb-0">@Model.AverageCheckThisMonth.ToString("C")</div>
+                    <div class="small text-muted mb-1">Средний чек</div>
+                    <div class="h4 mb-0 fw-bold text-info">@Model.AverageCheckThisMonth.ToString("C")</div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card">
+            <div class="card h-100 border-0 shadow-sm" style="background-color: var(--card-bg);">
                 <div class="card-body">
-                    <div class="small text-muted">Средний срок выполнения</div>
-                    <div class="h4 mb-0">@Model.AverageCompletionDays.ToString("0.0") дн.</div>
+                    <div class="small text-muted mb-1">Средний срок выполнения</div>
+                    <div class="h4 mb-0 fw-bold text-warning">@Model.AverageCompletionDays.ToString("0.0") дн.</div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card">
+            <div class="card h-100 border-0 shadow-sm" style="background-color: var(--card-bg);">
                 <div class="card-body">
-                    <div class="small text-muted">Создано сегодня</div>
-                    <div class="h4 mb-0">@Model.OrdersCreatedToday</div>
+                    <div class="small text-muted mb-1">Создано сегодня</div>
+                    <div class="h4 mb-0 fw-bold text-primary">@Model.OrdersCreatedToday</div>
                 </div>
             </div>
         </div>
@@ -146,34 +146,34 @@
 
     <div class="row g-3 mb-4">
         <div class="col-md-3">
-            <div class="card bg-light">
+            <div class="card border-0 shadow-sm" style="background-color: var(--bg-color);">
                 <div class="card-body text-center">
-                    <div class="text-muted small">Всего заказов</div>
-                    <div class="h5 mb-0">@Model.TotalOrders</div>
+                    <div class="text-muted small mb-1">Всего заказов</div>
+                    <div class="h5 mb-0 fw-bold text-dark">@Model.TotalOrders</div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-light">
+            <div class="card border-0 shadow-sm" style="background-color: var(--bg-color);">
                 <div class="card-body text-center">
-                    <div class="text-muted small">Активные клиенты</div>
-                    <div class="h5 mb-0">@Model.TotalCustomers</div>
+                    <div class="text-muted small mb-1">Активные клиенты</div>
+                    <div class="h5 mb-0 fw-bold text-dark">@Model.TotalCustomers</div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-light">
+            <div class="card border-0 shadow-sm" style="background-color: var(--bg-color);">
                 <div class="card-body text-center">
-                    <div class="text-muted small">Активные мастера</div>
-                    <div class="h5 mb-0">@Model.TotalTechnicians</div>
+                    <div class="text-muted small mb-1">Активные мастера</div>
+                    <div class="h5 mb-0 fw-bold text-dark">@Model.TotalTechnicians</div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-light">
+            <div class="card border-0 shadow-sm" style="background-color: var(--bg-color);">
                 <div class="card-body text-center">
-                    <div class="text-muted small">Низкий запас склада</div>
-                    <div class="h5 mb-0">@Model.LowStockItems</div>
+                    <div class="text-muted small mb-1">Низкий запас склада</div>
+                    <div class="h5 mb-0 fw-bold text-dark">@Model.LowStockItems</div>
                 </div>
             </div>
         </div>

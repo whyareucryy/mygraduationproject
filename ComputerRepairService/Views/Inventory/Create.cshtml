@@ -4,78 +4,98 @@
     ViewData["Title"] = "Добавить позицию склада";
 }
 
-<div class="container mt-4">
-    <h2 class="mb-4"><i class="fas fa-plus-circle"></i> Добавить позицию склада</h2>
+<div class="container-fluid mt-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-4 pb-3 border-bottom gap-3">
+        <div class="d-flex align-items-center">
+            <div class="bg-secondary bg-gradient text-white rounded-circle d-flex align-items-center justify-content-center me-3 shadow-sm" style="width: 64px; height: 64px; font-size: 1.8rem;">
+                <i class="fas fa-box-open"></i>
+            </div>
+            <div>
+                <h2 class="mb-1 fw-bold text-dark">Новая позиция</h2>
+                <div class="text-muted small">Добавление запчастей и расходников на склад</div>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="javascript:history.back()" class="btn btn-outline-secondary rounded-pill px-4 shadow-sm fw-medium">
+                <i class="fas fa-arrow-left me-2"></i>Назад
+            </a>
+        </div>
+    </div>
 
-    <div class="row">
-        <div class="col-lg-8">
-            <form asp-action="Create">
-                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <div class="row justify-content-center">
+        <div class="col-md-10 col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-body p-4 p-md-5">
+                    <form asp-action="Create" method="post">
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
-                <div class="card mb-4">
-                    <div class="card-header bg-primary text-white">Основная информация</div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <label asp-for="PartName" class="form-label"></label>
-                            <input asp-for="PartName" class="form-control" placeholder="Например: SSD Kingston 1TB" />
-                            <span asp-validation-for="PartName" class="text-danger"></span>
-                        </div>
-
-                        <div class="mb-3">
-                            <label asp-for="CategoryId" class="form-label">Категория</label>
-                            <select asp-for="CategoryId" class="form-select" asp-items="ViewBag.CategoryId">
-                                <option value="">Выберите категорию</option>
-                            </select>
-                            <span asp-validation-for="CategoryId" class="text-danger"></span>
-                        </div>
-
-                        <div class="mb-3">
-                            <label asp-for="Description" class="form-label"></label>
-                            <textarea asp-for="Description" class="form-control" rows="3" placeholder="Описание запчасти"></textarea>
-                            <span asp-validation-for="Description" class="text-danger"></span>
-                        </div>
-
-                        <div class="mb-3">
-                            <label asp-for="SupplierInfo" class="form-label"></label>
-                            <input asp-for="SupplierInfo" class="form-control" placeholder="Поставщик / контакт" />
-                            <span asp-validation-for="SupplierInfo" class="text-danger"></span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card mb-4">
-                    <div class="card-header bg-info text-white">Остатки и цена</div>
-                    <div class="card-body">
-                        <div class="row g-3">
-                            <div class="col-md-4">
-                                <label asp-for="QuantityInStock" class="form-label"></label>
-                                <input asp-for="QuantityInStock" class="form-control" min="0" />
-                                <span asp-validation-for="QuantityInStock" class="text-danger"></span>
-                            </div>
-                            <div class="col-md-4">
-                                <label asp-for="ReorderLevel" class="form-label"></label>
-                                <input asp-for="ReorderLevel" class="form-control" min="0" />
-                                <span asp-validation-for="ReorderLevel" class="text-danger"></span>
-                            </div>
-                            <div class="col-md-4">
-                                <label asp-for="UnitPrice" class="form-label"></label>
-                                <div class="input-group">
-                                    <input asp-for="UnitPrice" class="form-control" min="0" step="0.01" />
-                                    <span class="input-group-text">₽</span>
+                        <h5 class="fw-bold mb-4 text-primary border-bottom pb-2">Параметры товара</h5>
+                        
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input asp-for="PartName" class="form-control rounded-3" placeholder="Название запчасти" />
+                                    <label asp-for="PartName">Название запчасти <span class="text-danger">*</span></label>
+                                    <span asp-validation-for="PartName" class="text-danger small"></span>
                                 </div>
-                                <span asp-validation-for="UnitPrice" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <select asp-for="CategoryId" class="form-select rounded-3" asp-items="ViewBag.CategoryId">
+                                        <option value="">-- Выберите категорию --</option>
+                                    </select>
+                                    <label asp-for="CategoryId">Категория</label>
+                                    <span asp-validation-for="CategoryId" class="text-danger small"></span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                <button type="submit" class="btn btn-success">
-                    <i class="fas fa-save"></i> Сохранить
-                </button>
-                <a asp-action="Index" class="btn btn-secondary ms-2">
-                    <i class="fas fa-times"></i> Отмена
-                </a>
-            </form>
+                        <div class="form-floating mb-4">
+                            <textarea asp-for="Description" class="form-control rounded-3" style="height: 100px" placeholder="Описание"></textarea>
+                            <label asp-for="Description">Описание и характеристики</label>
+                            <span asp-validation-for="Description" class="text-danger small"></span>
+                        </div>
+
+                        <div class="form-floating mb-5">
+                            <input asp-for="SupplierInfo" class="form-control rounded-3" placeholder="Поставщик" />
+                            <label asp-for="SupplierInfo">Информация о поставщике</label>
+                            <span asp-validation-for="SupplierInfo" class="text-danger small"></span>
+                        </div>
+
+                        <h5 class="fw-bold mb-4 text-success border-bottom pb-2">Остатки и цена</h5>
+
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-4">
+                                <div class="form-floating">
+                                    <input asp-for="QuantityInStock" class="form-control rounded-3 fs-5 fw-bold" min="0" placeholder="В наличии" />
+                                    <label asp-for="QuantityInStock">В наличии (шт)</label>
+                                    <span asp-validation-for="QuantityInStock" class="text-danger small"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-floating">
+                                    <input asp-for="ReorderLevel" class="form-control rounded-3 text-warning fw-bold" min="0" placeholder="Порог оповещения" />
+                                    <label asp-for="ReorderLevel">Порог оповещения (шт)</label>
+                                    <span asp-validation-for="ReorderLevel" class="text-danger small"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-floating">
+                                    <input asp-for="UnitPrice" class="form-control rounded-3 fs-5 fw-bold text-success border-success" min="0" step="0.01" placeholder="Розничная цена" />
+                                    <label asp-for="UnitPrice">Розничная цена (₽)</label>
+                                    <span asp-validation-for="UnitPrice" class="text-danger small"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                            <button type="submit" class="btn btn-success rounded-pill px-5 fw-bold shadow-sm">
+                                <i class="fas fa-save me-2"></i> Сохранить позицию
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 </div>

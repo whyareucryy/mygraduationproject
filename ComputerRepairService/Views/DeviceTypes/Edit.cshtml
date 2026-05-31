@@ -2,53 +2,70 @@
 
 @{
     ViewData["Title"] = "Редактировать тип устройства";
-    Layout = "_Layout";
 }
 
-<div class="container mt-4">
-    <h1 class="mb-4">Редактировать тип устройства</h1>
-
-    <div class="row">
-        <div class="col-md-6">
-            <form asp-action="Edit">
-                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-                <input type="hidden" asp-for="DeviceTypeId" />
-
-                <div class="form-group mb-3">
-                    <label asp-for="TypeName" class="form-label"></label>
-                    <input asp-for="TypeName" class="form-control" />
-                    <span asp-validation-for="TypeName" class="text-danger"></span>
-                </div>
-
-                <div class="form-group mb-3">
-                    <label asp-for="Description" class="form-label"></label>
-                    <textarea asp-for="Description" class="form-control" rows="3"></textarea>
-                    <span asp-validation-for="Description" class="text-danger"></span>
-                </div>
-
-                <div class="form-group">
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-save"></i> Сохранить изменения
-                    </button>
-                    <a asp-action="Index" class="btn btn-secondary ms-2">
-                        <i class="fas fa-times"></i> Отмена
-                    </a>
-                </div>
-            </form>
+<div class="container-fluid mt-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-4 pb-3 border-bottom gap-3">
+        <div class="d-flex align-items-center">
+            <div class="bg-secondary bg-gradient text-white rounded-circle d-flex align-items-center justify-content-center me-3 shadow-sm" style="width: 64px; height: 64px; font-size: 1.8rem;">
+                <i class="fas fa-laptop"></i>
+            </div>
+            <div>
+                <h2 class="mb-1 fw-bold text-dark">Тип устройства: @Model.TypeName</h2>
+                <div class="text-muted small">Управление категорией ремонта</div>
+            </div>
         </div>
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0"><i class="fas fa-history"></i> История</h5>
-                </div>
-                <div class="card-body">
-                    <dl class="row">
-                        <dt class="col-sm-5">ID типа:</dt>
-                        <dd class="col-sm-7">@Model.DeviceTypeId</dd>
+        <div class="d-flex gap-2">
+            <a href="javascript:history.back()" class="btn btn-outline-secondary rounded-pill px-4 shadow-sm fw-medium">
+                <i class="fas fa-arrow-left me-2"></i>Назад
+            </a>
+        </div>
+    </div>
 
-                        <dt class="col-sm-5">Текущее название:</dt>
-                        <dd class="col-sm-7">@Model.TypeName</dd>
-                    </dl>
+    <div class="row justify-content-center g-4">
+        <div class="col-md-7">
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-body p-4 p-md-5">
+                    <form asp-action="Edit">
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                        <input type="hidden" asp-for="DeviceTypeId" />
+
+                        <div class="form-floating mb-3">
+                            <input asp-for="TypeName" class="form-control rounded-3" placeholder="Название типа" />
+                            <label asp-for="TypeName">Название типа устройства <span class="text-danger">*</span></label>
+                            <span asp-validation-for="TypeName" class="text-danger small"></span>
+                        </div>
+
+                        <div class="form-floating mb-4">
+                            <textarea asp-for="Description" class="form-control rounded-3" style="height: 120px" placeholder="Описание"></textarea>
+                            <label asp-for="Description">Описание категории</label>
+                            <span asp-validation-for="Description" class="text-danger small"></span>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                            <button type="submit" class="btn btn-secondary rounded-pill px-5 fw-bold shadow-sm">
+                                <i class="fas fa-save me-2"></i> Сохранить изменения
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-5">
+            <div class="card border-0 shadow-sm rounded-4 mb-4 bg-light">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-4 text-dark"><i class="fas fa-info-circle text-info me-2"></i> Системная информация</h5>
+                    <div class="d-flex flex-column gap-3">
+                        <div class="d-flex justify-content-between border-bottom pb-2">
+                            <span class="text-muted fw-medium">ID типа устройства:</span>
+                            <span class="fw-bold text-dark">#@Model.DeviceTypeId</span>
+                        </div>
+                        <div class="d-flex justify-content-between border-bottom pb-2">
+                            <span class="text-muted fw-medium">Текущее название:</span>
+                            <span class="fw-bold text-dark">@Model.TypeName</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

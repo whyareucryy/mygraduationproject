@@ -4,156 +4,180 @@
     ViewData["Title"] = "Редактировать заказ";
 }
 
-<div class="row">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">
-                <h4 class="card-title">Редактировать заказ #@Model.OrderId</h4>
+<div class="container-fluid mt-4">
+    <!-- Заголовок -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-4 pb-3 border-bottom gap-3">
+        <div class="d-flex align-items-center">
+            <div class="bg-primary bg-gradient text-white rounded-circle d-flex align-items-center justify-content-center me-3 shadow-sm" style="width: 64px; height: 64px; font-size: 1.8rem;">
+                <i class="fas fa-edit"></i>
             </div>
-            <div class="card-body">
-                <!-- Добавим отладочную информацию -->
-                @if (!ViewData.ModelState.IsValid)
-                {
-                    <div class="alert alert-danger">
-                        <h5>Ошибки валидации:</h5>
-                        <ul>
-                            @foreach (var key in ViewData.ModelState.Keys)
-                            {
-                                foreach (var error in ViewData.ModelState[key]!.Errors)
+            <div>
+                <h2 class="mb-1 fw-bold text-dark">Редактировать заказ #@Model.OrderId</h2>
+                <div class="text-muted small">Изменение данных и назначение мастеров</div>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="javascript:history.back()" class="btn btn-outline-secondary rounded-pill px-4 shadow-sm fw-medium">
+                <i class="fas fa-arrow-left me-2"></i>Назад
+            </a>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-body p-4 p-md-5">
+                    @if (!ViewData.ModelState.IsValid)
+                    {
+                        <div class="alert alert-danger border-danger border-opacity-25 bg-danger bg-opacity-10 rounded-3 mb-4 shadow-sm">
+                            <h5 class="alert-heading text-danger fw-bold"><i class="fas fa-exclamation-triangle me-2"></i>Ошибки валидации:</h5>
+                            <ul class="mb-0 text-danger">
+                                @foreach (var key in ViewData.ModelState.Keys)
                                 {
-                                    <li><strong>@key:</strong> @error.ErrorMessage</li>
+                                    foreach (var error in ViewData.ModelState[key]!.Errors)
+                                    {
+                                        <li><strong>@key:</strong> @error.ErrorMessage</li>
+                                    }
                                 }
-                            }
-                        </ul>
-                    </div>
-                }
+                            </ul>
+                        </div>
+                    }
 
-                <form asp-action="Edit">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" asp-for="OrderId" />
+                    <form asp-action="Edit">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" asp-for="OrderId" />
 
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label class="form-label">Клиент *</label>
-                                <select asp-for="CustomerId" class="form-select" required>
-                                    <option value="">-- Выберите клиента --</option>
-                                    @foreach (var customer in ViewBag.Customers as List<ComputerRepairService.Models.Entities.Customer>)
-                                    {
-                                        <option value="@customer.CustomerId" selected="@(customer.CustomerId == Model.CustomerId)">@customer.LastName @customer.FirstName - @customer.Phone</option>
-                                    }
-                                </select>
-                                <span asp-validation-for="CustomerId" class="text-danger"></span>
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <h5 class="fw-bold mb-3 text-primary border-bottom pb-2">Основные данные</h5>
+                                
+                                <div class="form-floating mb-3">
+                                    <select asp-for="CustomerId" class="form-select rounded-3" required>
+                                        <option value="">-- Выберите клиента --</option>
+                                        @foreach (var customer in ViewBag.Customers as List<ComputerRepairService.Models.Entities.Customer>)
+                                        {
+                                            <option value="@customer.CustomerId" selected="@(customer.CustomerId == Model.CustomerId)">@customer.LastName @customer.FirstName - @customer.Phone</option>
+                                        }
+                                    </select>
+                                    <label>Клиент <span class="text-danger">*</span></label>
+                                    <span asp-validation-for="CustomerId" class="text-danger small"></span>
+                                </div>
+
+                                <div class="form-floating mb-3">
+                                    <select asp-for="DeviceTypeId" class="form-select rounded-3" required>
+                                        <option value="">-- Выберите тип устройства --</option>
+                                        @foreach (var deviceType in ViewBag.DeviceTypes as List<ComputerRepairService.Models.Entities.DeviceType>)
+                                        {
+                                            <option value="@deviceType.DeviceTypeId" selected="@(deviceType.DeviceTypeId == Model.DeviceTypeId)">@deviceType.TypeName</option>
+                                        }
+                                    </select>
+                                    <label>Тип устройства <span class="text-danger">*</span></label>
+                                    <span asp-validation-for="DeviceTypeId" class="text-danger small"></span>
+                                </div>
+
+                                <div class="form-floating mb-3">
+                                    <input asp-for="DeviceBrand" class="form-control rounded-3" placeholder="Бренд" />
+                                    <label asp-for="DeviceBrand">Бренд устройства</label>
+                                    <span asp-validation-for="DeviceBrand" class="text-danger small"></span>
+                                </div>
+
+                                <div class="form-floating mb-3">
+                                    <input asp-for="DeviceModel" class="form-control rounded-3" placeholder="Модель" />
+                                    <label asp-for="DeviceModel">Модель устройства</label>
+                                    <span asp-validation-for="DeviceModel" class="text-danger small"></span>
+                                </div>
+                                
+                                <div class="form-floating mb-3">
+                                    <input asp-for="SerialNumber" class="form-control rounded-3" placeholder="S/N" />
+                                    <label asp-for="SerialNumber">Серийный номер</label>
+                                    <span asp-validation-for="SerialNumber" class="text-danger small"></span>
+                                </div>
                             </div>
 
-                            <div class="form-group mb-3">
-                                <label class="form-label">Тип устройства *</label>
-                                <select asp-for="DeviceTypeId" class="form-select" required>
-                                    <option value="">-- Выберите тип устройства --</option>
-                                    @foreach (var deviceType in ViewBag.DeviceTypes as List<ComputerRepairService.Models.Entities.DeviceType>)
-                                    {
-                                        <option value="@deviceType.DeviceTypeId" selected="@(deviceType.DeviceTypeId == Model.DeviceTypeId)">@deviceType.TypeName</option>
-                                    }
-                                </select>
-                                <span asp-validation-for="DeviceTypeId" class="text-danger"></span>
-                            </div>
+                            <div class="col-md-6">
+                                <h5 class="fw-bold mb-3 text-warning border-bottom pb-2">Статус и планирование</h5>
+                                
+                                <div class="form-floating mb-3">
+                                    <select asp-for="StatusId" class="form-select rounded-3 border-warning" required>
+                                        @foreach (var status in ViewBag.Statuses as List<ComputerRepairService.Models.Entities.OrderStatus>)
+                                        {
+                                            <option value="@status.StatusId" selected="@(status.StatusId == Model.StatusId)">@status.StatusName</option>
+                                        }
+                                    </select>
+                                    <label>Статус заказа <span class="text-danger">*</span></label>
+                                    <span asp-validation-for="StatusId" class="text-danger small"></span>
+                                </div>
 
-                            <div class="form-group mb-3">
-                                <label asp-for="DeviceBrand" class="form-label">Бренд устройства</label>
-                                <input asp-for="DeviceBrand" class="form-control" />
-                                <span asp-validation-for="DeviceBrand" class="text-danger"></span>
-                            </div>
+                                <div class="form-floating mb-3">
+                                    <select asp-for="Priority" class="form-select rounded-3" required>
+                                        <option value="1" selected="@(Model.Priority == 1)">Низкий</option>
+                                        <option value="2" selected="@(Model.Priority == 2)">Средний</option>
+                                        <option value="3" selected="@(Model.Priority == 3)">Высокий</option>
+                                        <option value="4" selected="@(Model.Priority == 4)">Срочный</option>
+                                        <option value="5" selected="@(Model.Priority == 5)">Критичный</option>
+                                    </select>
+                                    <label>Приоритет <span class="text-danger">*</span></label>
+                                    <span asp-validation-for="Priority" class="text-danger small"></span>
+                                </div>
 
-                            <div class="form-group mb-3">
-                                <label asp-for="DeviceModel" class="form-label">Модель устройства</label>
-                                <input asp-for="DeviceModel" class="form-control" />
-                                <span asp-validation-for="DeviceModel" class="text-danger"></span>
+                                <div class="form-floating mb-3">
+                                    <input asp-for="EstimatedCompletionDate" type="date" class="form-control rounded-3" value="@Model.EstimatedCompletionDate?.ToString("yyyy-MM-dd")" />
+                                    <label asp-for="EstimatedCompletionDate">Ожидаемая дата готовности</label>
+                                    <span asp-validation-for="EstimatedCompletionDate" class="text-danger small"></span>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-medium text-muted small">Назначить мастеров</label>
+                                    <select name="selectedTechnicians" class="form-select rounded-3" multiple style="height: 120px;">
+                                        @{
+                                            var assignedTechnicianIds = Model.SelectedTechnicians?.ToList() ?? new List<int>();
+                                        }
+                                        @foreach (var technician in ViewBag.Technicians as List<ComputerRepairService.Models.Entities.Technician>)
+                                        {
+                                            <option value="@technician.TechnicianId" selected="@(assignedTechnicianIds.Contains(technician.TechnicianId))">
+                                                @technician.FirstName @technician.LastName - @technician.Specialization
+                                            </option>
+                                        }
+                                    </select>
+                                    <small class="form-text text-muted"><i class="fas fa-info-circle me-1"></i> Удерживайте Ctrl для множественного выбора</small>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label asp-for="SerialNumber" class="form-label">Серийный номер</label>
-                                <input asp-for="SerialNumber" class="form-control" />
-                                <span asp-validation-for="SerialNumber" class="text-danger"></span>
-                            </div>
+                        <div class="row g-4 mb-4">
+                            <div class="col-12">
+                                <h5 class="fw-bold mb-3 text-info border-bottom pb-2">Детали и заметки</h5>
+                                
+                                <div class="form-floating mb-3">
+                                    <textarea asp-for="ProblemDescription" class="form-control rounded-3" style="height: 100px" placeholder="Описание проблемы" required></textarea>
+                                    <label asp-for="ProblemDescription">Жалоба клиента / Описание проблемы <span class="text-danger">*</span></label>
+                                    <span asp-validation-for="ProblemDescription" class="text-danger small"></span>
+                                </div>
 
-                            <div class="form-group mb-3">
-                                <label class="form-label">Статус *</label>
-                                <select asp-for="StatusId" class="form-select" required>
-                                    @foreach (var status in ViewBag.Statuses as List<ComputerRepairService.Models.Entities.OrderStatus>)
-                                    {
-                                        <option value="@status.StatusId" selected="@(status.StatusId == Model.StatusId)">@status.StatusName</option>
-                                    }
-                                </select>
-                                <span asp-validation-for="StatusId" class="text-danger"></span>
-                            </div>
+                                <div class="form-floating mb-3">
+                                    <textarea asp-for="DiagnosticNotes" class="form-control rounded-3 border-info" style="height: 80px" placeholder="Результаты диагностики"></textarea>
+                                    <label asp-for="DiagnosticNotes">Результаты диагностики</label>
+                                    <span asp-validation-for="DiagnosticNotes" class="text-danger small"></span>
+                                </div>
 
-                            <div class="form-group mb-3">
-                                <label class="form-label">Приоритет *</label>
-                                <select asp-for="Priority" class="form-select" required>
-                                    <option value="1" selected="@(Model.Priority == 1)">Низкий</option>
-                                    <option value="2" selected="@(Model.Priority == 2)">Средний</option>
-                                    <option value="3" selected="@(Model.Priority == 3)">Высокий</option>
-                                    <option value="4" selected="@(Model.Priority == 4)">Срочный</option>
-                                    <option value="5" selected="@(Model.Priority == 5)">Критичный</option>
-                                </select>
-                                <span asp-validation-for="Priority" class="text-danger"></span>
-                            </div>
-
-                            <div class="form-group mb-3">
-                                <label asp-for="EstimatedCompletionDate" class="form-label">Предполагаемая дата завершения</label>
-                                <input asp-for="EstimatedCompletionDate" type="date" class="form-control"
-                                       value="@Model.EstimatedCompletionDate?.ToString("yyyy-MM-dd")" />
-                                <span asp-validation-for="EstimatedCompletionDate" class="text-danger"></span>
+                                <div class="form-floating mb-3">
+                                    <textarea asp-for="TechnicianNotes" class="form-control rounded-3 border-success" style="height: 80px" placeholder="Заметки мастера"></textarea>
+                                    <label asp-for="TechnicianNotes">Внутренние заметки мастера</label>
+                                    <span asp-validation-for="TechnicianNotes" class="text-danger small"></span>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="form-group mb-3">
-                        <label asp-for="ProblemDescription" class="form-label">Описание проблемы *</label>
-                        <textarea asp-for="ProblemDescription" class="form-control" rows="4" required>@Model.ProblemDescription</textarea>
-                        <span asp-validation-for="ProblemDescription" class="text-danger"></span>
-                    </div>
-
-                    <div class="form-group mb-3">
-                        <label asp-for="DiagnosticNotes" class="form-label">Диагностические заметки</label>
-                        <textarea asp-for="DiagnosticNotes" class="form-control" rows="3">@Model.DiagnosticNotes</textarea>
-                        <span asp-validation-for="DiagnosticNotes" class="text-danger"></span>
-                    </div>
-
-                    <div class="form-group mb-3">
-                        <label asp-for="TechnicianNotes" class="form-label">Заметки мастера</label>
-                        <textarea asp-for="TechnicianNotes" class="form-control" rows="3">@Model.TechnicianNotes</textarea>
-                        <span asp-validation-for="TechnicianNotes" class="text-danger"></span>
-                    </div>
-
-                    <div class="form-group mb-3">
-                        <label class="form-label">Назначить мастеров</label>
-                        <select name="selectedTechnicians" class="form-select" multiple>
-                            @{
-                                var assignedTechnicianIds = Model.SelectedTechnicians?.ToList() ?? new List<int>();
-                            }
-                            @foreach (var technician in ViewBag.Technicians as List<ComputerRepairService.Models.Entities.Technician>)
-                            {
-                                <option value="@technician.TechnicianId"
-                                        selected="@(assignedTechnicianIds.Contains(technician.TechnicianId))">
-                                    @technician.FirstName @technician.LastName - @technician.Specialization
-                                </option>
-                            }
-                        </select>
-                        <small class="form-text text-muted">Для выбора нескольких мастеров удерживайте Ctrl</small>
-                    </div>
-
-                    <div class="form-group">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save"></i> Обновить
-                        </button>
-                        <a asp-action="Details" asp-route-id="@Model.OrderId" class="btn btn-secondary">
-                            <i class="fas fa-times"></i> Отмена
-                        </a>
-                    </div>
-                </form>
+                        <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                            <a asp-action="Details" asp-route-id="@Model.OrderId" class="btn btn-light rounded-pill px-4 fw-medium text-dark shadow-sm">
+                                Отмена
+                            </a>
+                            <button type="submit" class="btn btn-primary rounded-pill px-5 fw-bold shadow-sm">
+                                <i class="fas fa-save me-2"></i> Сохранить изменения
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -163,9 +187,4 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
-
-    <script>
-        console.log('Edit form loaded for order: @Model.OrderId');
-        console.log('Current technicians: @string.Join(", ", Model.SelectedTechnicians ?? Array.Empty<int>())');
-    </script>
 }

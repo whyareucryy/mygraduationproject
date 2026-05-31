@@ -4,82 +4,97 @@
     ViewData["Title"] = "Добавить мастера";
 }
 
-<div class="row">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h4 class="card-title">Добавить нового мастера</h4>
+<div class="container-fluid mt-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-4 pb-3 border-bottom gap-3">
+        <div class="d-flex align-items-center">
+            <div class="bg-primary bg-gradient text-white rounded-circle d-flex align-items-center justify-content-center me-3 shadow-sm" style="width: 64px; height: 64px; font-size: 1.8rem;">
+                <i class="fas fa-user-plus"></i>
             </div>
-            <div class="card-body">
-                @if (!ViewData.ModelState.IsValid)
-                {
-                    <div class="alert alert-danger">
-                        <h5>Ошибки валидации:</h5>
-                        <ul>
-                            @foreach (var key in ViewData.ModelState.Keys)
-                            {
-                                foreach (var error in ViewData.ModelState[key]!.Errors)
+            <div>
+                <h2 class="mb-1 fw-bold text-dark">Новый сотрудник</h2>
+                <div class="text-muted small">Добавление мастера в штат сервисного центра</div>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="javascript:history.back()" class="btn btn-outline-secondary rounded-pill px-4 shadow-sm fw-medium">
+                <i class="fas fa-arrow-left me-2"></i>Назад
+            </a>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-body p-4 p-md-5">
+                    @if (!ViewData.ModelState.IsValid)
+                    {
+                        <div class="alert alert-danger border-danger border-opacity-25 bg-danger bg-opacity-10 rounded-3 mb-4 shadow-sm">
+                            <h5 class="alert-heading text-danger fw-bold"><i class="fas fa-exclamation-triangle me-2"></i>Ошибки валидации:</h5>
+                            <ul class="mb-0 text-danger">
+                                @foreach (var key in ViewData.ModelState.Keys)
                                 {
-                                    <li><strong>@key:</strong> @error.ErrorMessage</li>
+                                    foreach (var error in ViewData.ModelState[key]!.Errors)
+                                    {
+                                        <li><strong>@key:</strong> @error.ErrorMessage</li>
+                                    }
                                 }
-                            }
-                        </ul>
-                    </div>
-                }
+                            </ul>
+                        </div>
+                    }
 
-                <form asp-action="Create" method="post">
-                    @Html.AntiForgeryToken()
+                    <form asp-action="Create" method="post">
+                        @Html.AntiForgeryToken()
 
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label asp-for="FirstName" class="form-label">Имя *</label>
-                                <input asp-for="FirstName" class="form-control" />
-                                <span asp-validation-for="FirstName" class="text-danger"></span>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input asp-for="FirstName" class="form-control rounded-3" placeholder="Имя" />
+                                    <label asp-for="FirstName">Имя <span class="text-danger">*</span></label>
+                                    <span asp-validation-for="FirstName" class="text-danger small"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input asp-for="LastName" class="form-control rounded-3" placeholder="Фамилия" />
+                                    <label asp-for="LastName">Фамилия <span class="text-danger">*</span></label>
+                                    <span asp-validation-for="LastName" class="text-danger small"></span>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label asp-for="LastName" class="form-label">Фамилия *</label>
-                                <input asp-for="LastName" class="form-control" />
-                                <span asp-validation-for="LastName" class="text-danger"></span>
-                            </div>
+
+                        <div class="form-floating mb-3">
+                            <input asp-for="Email" type="email" class="form-control rounded-3" placeholder="Email" />
+                            <label asp-for="Email">Email <span class="text-danger">*</span></label>
+                            <span asp-validation-for="Email" class="text-danger small"></span>
                         </div>
-                    </div>
 
-                    <div class="form-group mb-3">
-                        <label asp-for="Email" class="form-label">Email *</label>
-                        <input asp-for="Email" type="email" class="form-control" />
-                        <span asp-validation-for="Email" class="text-danger"></span>
-                    </div>
+                        <div class="form-floating mb-4">
+                            <input asp-for="Phone" class="form-control rounded-3" placeholder="+79991234567" />
+                            <label asp-for="Phone">Телефон</label>
+                            <span asp-validation-for="Phone" class="text-danger small"></span>
+                        </div>
 
-                    <div class="form-group mb-3">
-                        <label asp-for="Phone" class="form-label">Телефон</label>
-                        <input asp-for="Phone" class="form-control" placeholder="+79991234567" />
-                        <span asp-validation-for="Phone" class="text-danger"></span>
-                    </div>
+                        <h5 class="fw-bold mb-3 mt-4 text-warning border-bottom pb-2">Условия работы</h5>
 
-                    <div class="form-group mb-3">
-                        <label asp-for="Specialization" class="form-label">Специализация</label>
-                        <input asp-for="Specialization" class="form-control" placeholder="Например: Ремонт ноутбуков, Замена экранов" />
-                        <span asp-validation-for="Specialization" class="text-danger"></span>
-                    </div>
+                        <div class="form-floating mb-3">
+                            <input asp-for="Specialization" class="form-control rounded-3" placeholder="Специализация" />
+                            <label asp-for="Specialization">Специализация (Например: Ремонт ноутбуков)</label>
+                            <span asp-validation-for="Specialization" class="text-danger small"></span>
+                        </div>
 
-                    <div class="form-group mb-3">
-                        <label asp-for="HourlyRate" class="form-label">Часовая ставка (руб.)</label>
-                        <input asp-for="HourlyRate" type="number" step="0.01" class="form-control" placeholder="500.00" />
-                        <span asp-validation-for="HourlyRate" class="text-danger"></span>
-                    </div>
+                        <div class="form-floating mb-4">
+                            <input asp-for="HourlyRate" type="number" step="0.01" class="form-control rounded-3 fw-bold fs-5 text-success" placeholder="500.00" />
+                            <label asp-for="HourlyRate">Часовая ставка (₽)</label>
+                            <span asp-validation-for="HourlyRate" class="text-danger small"></span>
+                        </div>
 
-                    <div class="form-group">
-                        <button type="submit" class="btn btn-success">
-                            <i class="fas fa-save"></i> Сохранить
-                        </button>
-                        <a asp-action="Index" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left"></i> Назад к списку
-                        </a>
-                    </div>
-                </form>
+                        <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                            <button type="submit" class="btn btn-success rounded-pill px-5 fw-bold shadow-sm">
+                                <i class="fas fa-save me-2"></i> Сохранить мастера
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>

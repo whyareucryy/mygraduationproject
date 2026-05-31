@@ -67,13 +67,13 @@
             }
             else if (Model.Roles.Contains("Employee"))
             {
-                <a asp-controller="ServiceOrders" asp-action="MyAssignedOrders" class="btn btn-outline-warning text-dark rounded-pill px-4 shadow-sm fw-medium">
+                <a asp-controller="ServiceOrders" asp-action="MyAssignedOrders" class="btn btn-outline-warning rounded-pill px-4 shadow-sm fw-medium">
                     <i class="fas fa-tasks me-2"></i>Мои задачи
                 </a>
             }
             else if (Model.Roles.Contains("Client"))
             {
-                <a asp-controller="ServiceOrders" asp-action="MyOrders" class="btn btn-outline-info text-dark rounded-pill px-4 shadow-sm fw-medium">
+                <a asp-controller="ServiceOrders" asp-action="MyOrders" class="btn btn-outline-info rounded-pill px-4 shadow-sm fw-medium">
                     <i class="fas fa-box-open me-2"></i>Мои заказы
                 </a>
             }
@@ -96,15 +96,15 @@
             <div class="card border-0 shadow-sm rounded-4 position-sticky" style="top: 80px;">
                 <div class="card-body p-0">
                     <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
-                        <button class="nav-link active px-4 py-3 rounded-0 rounded-top-4 d-flex align-items-center fw-medium border-bottom border-light" id="v-pills-profile-tab" data-bs-toggle="pill" data-bs-target="#v-pills-profile" type="button" role="tab" aria-controls="v-pills-profile" aria-selected="true">
+                        <button class="nav-link active px-4 py-3 rounded-0 rounded-top-4 d-flex align-items-center fw-medium border-bottom custom-border" id="v-pills-profile-tab" data-bs-toggle="pill" data-bs-target="#v-pills-profile" type="button" role="tab" aria-controls="v-pills-profile" aria-selected="true">
                             <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center me-3 nav-icon" style="width: 32px; height: 32px;"><i class="fas fa-user"></i></div>
                             Личные данные
                         </button>
-                        <button class="nav-link px-4 py-3 rounded-0 d-flex align-items-center fw-medium border-bottom border-light" id="v-pills-edit-tab" data-bs-toggle="pill" data-bs-target="#v-pills-edit" type="button" role="tab" aria-controls="v-pills-edit" aria-selected="false">
+                        <button class="nav-link px-4 py-3 rounded-0 d-flex align-items-center fw-medium border-bottom custom-border" id="v-pills-edit-tab" data-bs-toggle="pill" data-bs-target="#v-pills-edit" type="button" role="tab" aria-controls="v-pills-edit" aria-selected="false">
                             <div class="bg-info bg-opacity-10 text-info rounded-circle d-flex align-items-center justify-content-center me-3 nav-icon" style="width: 32px; height: 32px;"><i class="fas fa-user-edit"></i></div>
                             Редактировать профиль
                         </button>
-                        <button class="nav-link px-4 py-3 rounded-0 d-flex align-items-center fw-medium border-bottom border-light" id="v-pills-security-tab" data-bs-toggle="pill" data-bs-target="#v-pills-security" type="button" role="tab" aria-controls="v-pills-security" aria-selected="false">
+                        <button class="nav-link px-4 py-3 rounded-0 d-flex align-items-center fw-medium border-bottom custom-border" id="v-pills-security-tab" data-bs-toggle="pill" data-bs-target="#v-pills-security" type="button" role="tab" aria-controls="v-pills-security" aria-selected="false">
                             <div class="bg-warning bg-opacity-10 text-warning rounded-circle d-flex align-items-center justify-content-center me-3 nav-icon" style="width: 32px; height: 32px;"><i class="fas fa-shield-alt"></i></div>
                             Безопасность
                         </button>
@@ -131,15 +131,15 @@
                             <div class="row g-4">
                                 <div class="col-md-6">
                                     <div class="d-flex flex-column gap-3">
-                                        <div class="p-3 bg-light rounded-3 d-flex align-items-center">
-                                            <div class="bg-white rounded-circle shadow-sm d-flex align-items-center justify-content-center me-3 text-secondary" style="width: 40px; height: 40px;"><i class="fas fa-user"></i></div>
+                                        <div class="p-3 rounded-3 d-flex align-items-center" style="background-color: var(--bg-color);">
+                                            <div class="rounded-circle shadow-sm d-flex align-items-center justify-content-center me-3 text-secondary" style="width: 40px; height: 40px; background-color: var(--card-bg);"><i class="fas fa-user"></i></div>
                                             <div>
                                                 <div class="small text-muted fw-semibold">ФИО</div>
                                                 <div class="fw-bold text-dark">@Model.User.FirstName @Model.User.LastName</div>
                                             </div>
                                         </div>
-                                        <div class="p-3 bg-light rounded-3 d-flex align-items-center">
-                                            <div class="bg-white rounded-circle shadow-sm d-flex align-items-center justify-content-center me-3 text-secondary" style="width: 40px; height: 40px;"><i class="fas fa-envelope"></i></div>
+                                        <div class="p-3 rounded-3 d-flex align-items-center" style="background-color: var(--bg-color);">
+                                            <div class="rounded-circle shadow-sm d-flex align-items-center justify-content-center me-3 text-secondary" style="width: 40px; height: 40px; background-color: var(--card-bg);"><i class="fas fa-envelope"></i></div>
                                             <div>
                                                 <div class="small text-muted fw-semibold">Email</div>
                                                 <div class="fw-bold text-dark">
@@ -155,8 +155,8 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="d-flex flex-column gap-3">
-                                        <div class="p-3 bg-light rounded-3 d-flex align-items-center">
-                                            <div class="bg-white rounded-circle shadow-sm d-flex align-items-center justify-content-center me-3 text-secondary" style="width: 40px; height: 40px;"><i class="fas fa-phone"></i></div>
+                                        <div class="p-3 rounded-3 d-flex align-items-center" style="background-color: var(--bg-color);">
+                                            <div class="rounded-circle shadow-sm d-flex align-items-center justify-content-center me-3 text-secondary" style="width: 40px; height: 40px; background-color: var(--card-bg);"><i class="fas fa-phone"></i></div>
                                             <div>
                                                 <div class="small text-muted fw-semibold">Телефон</div>
                                                 <div class="fw-bold text-dark">
@@ -168,8 +168,8 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="p-3 bg-light rounded-3 d-flex align-items-center">
-                                            <div class="bg-white rounded-circle shadow-sm d-flex align-items-center justify-content-center me-3 text-secondary" style="width: 40px; height: 40px;"><i class="fas fa-map-marker-alt"></i></div>
+                                        <div class="p-3 rounded-3 d-flex align-items-center" style="background-color: var(--bg-color);">
+                                            <div class="rounded-circle shadow-sm d-flex align-items-center justify-content-center me-3 text-secondary" style="width: 40px; height: 40px; background-color: var(--card-bg);"><i class="fas fa-map-marker-alt"></i></div>
                                             <div>
                                                 <div class="small text-muted fw-semibold">Адрес</div>
                                                 <div class="fw-bold text-dark">@(string.IsNullOrEmpty(Model.User.Address) ? "Не указан" : Model.User.Address)</div>
@@ -385,12 +385,15 @@
     <style>
         .rounded-4 { border-radius: 1rem !important; }
         .nav-pills .nav-link {
-            color: #495057;
+            color: var(--text-main) !important;
             transition: all 0.2s ease-in-out;
+        }
+        .nav-pills .custom-border {
+            border-color: var(--border-color) !important;
         }
         .nav-pills .nav-link.active {
             background-color: transparent;
-            color: #0d6efd;
+            color: #0d6efd !important;
             border-right: 4px solid #0d6efd;
             background: linear-gradient(90deg, rgba(13,110,253,0) 0%, rgba(13,110,253,0.05) 100%);
         }
@@ -400,6 +403,9 @@
         }
         .nav-pills .nav-link:hover:not(.active) {
             background-color: rgba(0,0,0,0.02);
+        }
+        [data-bs-theme="dark"] .nav-pills .nav-link:hover:not(.active) {
+            background-color: rgba(255,255,255,0.05);
         }
         .form-floating > .form-control:focus ~ label, .form-floating > .form-control:not(:placeholder-shown) ~ label {
             color: #0d6efd;

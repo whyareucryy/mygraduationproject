@@ -4,129 +4,166 @@
     ViewData["Title"] = "Детали мастера";
 }
 
-<div class="row">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header bg-primary text-white">
-                <h4 class="card-title mb-0">
-                    <i class="fas fa-tools"></i> Детали мастера
-                </h4>
+<div class="container-fluid mt-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-4 pb-3 border-bottom gap-3">
+        <div class="d-flex align-items-center">
+            <div class="bg-primary bg-gradient text-white rounded-circle d-flex align-items-center justify-content-center me-3 shadow-sm" style="width: 64px; height: 64px; font-size: 1.8rem;">
+                <i class="fas fa-tools"></i>
             </div>
-            <div class="card-body">
-                <dl class="row">
-                    <dt class="col-sm-3">Имя:</dt>
-                    <dd class="col-sm-9">@Model.FirstName</dd>
-
-                    <dt class="col-sm-3">Фамилия:</dt>
-                    <dd class="col-sm-9">@Model.LastName</dd>
-
-                    <dt class="col-sm-3">Email:</dt>
-                    <dd class="col-sm-9">@Model.Email</dd>
-
-                    <dt class="col-sm-3">Телефон:</dt>
-                    <dd class="col-sm-9">@Model.Phone</dd>
-
-                    <dt class="col-sm-3">Специализация:</dt>
-                    <dd class="col-sm-9">@Model.Specialization</dd>
-
-                    <dt class="col-sm-3">Часовая ставка:</dt>
-                    <dd class="col-sm-9">
-                        @if (Model.HourlyRate.HasValue)
-                        {
-                            <span class="badge bg-primary">@Model.HourlyRate.Value.ToString("C")</span>
-                        }
-                        else
-                        {
-                            <span class="text-muted">—</span>
-                        }
-                    </dd>
-
-                    <dt class="col-sm-3">Дата найма:</dt>
-                    <dd class="col-sm-9">@Model.HireDate.ToString("dd.MM.yyyy")</dd>
-
-                    <dt class="col-sm-3">Статус:</dt>
-                    <dd class="col-sm-9">
-                        @if (Model.IsActive)
-                        {
-                            <span class="badge bg-success">Активен</span>
-                        }
-                        else
-                        {
-                            <span class="badge bg-secondary">Неактивен</span>
-                        }
-                    </dd>
-                </dl>
-
-                <div class="mt-4">
-                    <a asp-action="Edit" asp-route-id="@Model.TechnicianId" class="btn btn-warning">
-                        <i class="fas fa-edit"></i> Редактировать
-                    </a>
-                    <a asp-action="Index" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Назад к списку
-                    </a>
+            <div>
+                <h2 class="mb-1 fw-bold text-dark">@Model.FirstName @Model.LastName</h2>
+                <div class="text-muted small">
+                    Работает с @Model.HireDate.ToString("dd.MM.yyyy") • 
+                    @if (Model.IsActive)
+                    {
+                        <span class="badge bg-success ms-1">Активен</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary ms-1">Неактивен</span>
+                    }
                 </div>
             </div>
         </div>
+        <div class="d-flex gap-2">
+            <a asp-action="Edit" asp-route-id="@Model.TechnicianId" class="btn btn-warning rounded-pill px-4 shadow-sm fw-medium">
+                <i class="fas fa-edit me-2"></i>Редактировать
+            </a>
+            <a href="javascript:history.back()" class="btn btn-outline-secondary rounded-pill px-4 shadow-sm fw-medium">
+                <i class="fas fa-arrow-left me-2"></i>Назад
+            </a>
+        </div>
+    </div>
 
-        <!-- Активные заказы -->
-        @if (Model.OrderTechnicians.Any())
-        {
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Активные заказы</h5>
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-header bg-transparent border-bottom pt-4 pb-3 px-4">
+                    <h5 class="fw-bold mb-0 text-dark"><i class="fas fa-address-card text-primary me-2"></i> Профиль сотрудника</h5>
                 </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>ID заказа</th>
-                                    <th>Клиент</th>
-                                    <th>Проблема</th>
-                                    <th>Статус</th>
-                                    <th>Часы работы</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var assignment in Model.OrderTechnicians.Where(ot => ot.ServiceOrder.StatusId != 5 && ot.ServiceOrder.StatusId != 6 && ot.ServiceOrder.StatusId != 7))
-                                {
-                                    <tr>
-                                        <td>#@assignment.ServiceOrder.OrderId</td>
-                                        <td>@assignment.ServiceOrder.Customer.FirstName @assignment.ServiceOrder.Customer.LastName</td>
-                                        <td>@assignment.ServiceOrder.ProblemDescription.Substring(0, Math.Min(50, assignment.ServiceOrder.ProblemDescription.Length))...</td>
-                                        <td>
-                                            <span class="badge bg-info">@assignment.ServiceOrder.OrderStatus.StatusName</span>
-                                        </td>
-                                        <td>@assignment.HoursWorked</td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
+                <div class="card-body p-4">
+                    <div class="row g-4">
+                        <div class="col-sm-6">
+                            <div class="p-3 bg-light rounded-3 h-100 d-flex align-items-center">
+                                <div class="bg-white text-info rounded-circle p-3 me-3 shadow-sm"><i class="fas fa-phone fs-5"></i></div>
+                                <div>
+                                    <div class="text-muted small">Телефон</div>
+                                    <div class="fw-bold fs-6">@(string.IsNullOrEmpty(Model.Phone) ? "—" : Model.Phone)</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="p-3 bg-light rounded-3 h-100 d-flex align-items-center">
+                                <div class="bg-white text-primary rounded-circle p-3 me-3 shadow-sm"><i class="fas fa-envelope fs-5"></i></div>
+                                <div>
+                                    <div class="text-muted small">Email</div>
+                                    <div class="fw-bold fs-6">@(string.IsNullOrEmpty(Model.Email) ? "—" : Model.Email)</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="p-3 bg-light rounded-3 h-100 d-flex align-items-center">
+                                <div class="bg-white text-warning rounded-circle p-3 me-3 shadow-sm"><i class="fas fa-star fs-5"></i></div>
+                                <div>
+                                    <div class="text-muted small">Специализация</div>
+                                    <div class="fw-bold fs-6">@(string.IsNullOrEmpty(Model.Specialization) ? "Общая" : Model.Specialization)</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="p-3 bg-light rounded-3 h-100 d-flex align-items-center">
+                                <div class="bg-white text-success rounded-circle p-3 me-3 shadow-sm"><i class="fas fa-ruble-sign fs-5"></i></div>
+                                <div>
+                                    <div class="text-muted small">Ставка</div>
+                                    <div class="fw-bold fs-6">@(Model.HourlyRate.HasValue ? Model.HourlyRate.Value.ToString("C0") + " / час" : "Не указана")</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        }
-    </div>
 
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Статистика</h5>
-            </div>
-            <div class="card-body">
-                <div class="text-center mb-4">
-                    <h3 class="text-primary">@Model.OrderTechnicians.Count</h3>
-                    <p class="text-muted">Всего назначений</p>
+            @if (Model.OrderTechnicians != null && Model.OrderTechnicians.Any())
+            {
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-header bg-transparent border-bottom pt-4 pb-3 px-4">
+                        <h5 class="fw-bold mb-0 text-dark"><i class="fas fa-tasks text-info me-2"></i> Активные задачи</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light text-muted small text-uppercase">
+                                    <tr>
+                                        <th class="ps-4 py-3 border-0">Заказ</th>
+                                        <th class="py-3 border-0">Описание</th>
+                                        <th class="py-3 border-0">Статус</th>
+                                        <th class="pe-4 py-3 border-0">Часы</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var assignment in Model.OrderTechnicians.Where(ot => ot.ServiceOrder.StatusId != 5 && ot.ServiceOrder.StatusId != 6 && ot.ServiceOrder.StatusId != 7))
+                                    {
+                                        <tr>
+                                            <td class="ps-4 py-3 border-bottom-0">
+                                                <a asp-controller="ServiceOrders" asp-action="Details" asp-route-id="@assignment.ServiceOrder.OrderId" class="fw-bold text-decoration-none">#@assignment.ServiceOrder.OrderId</a>
+                                            </td>
+                                            <td class="py-3 border-bottom-0 text-truncate" style="max-width: 200px;">
+                                                <small>@assignment.ServiceOrder.ProblemDescription</small>
+                                            </td>
+                                            <td class="py-3 border-bottom-0">
+                                                <span class="badge bg-secondary">@assignment.ServiceOrder.OrderStatus?.StatusName</span>
+                                            </td>
+                                            <td class="pe-4 py-3 border-bottom-0">@assignment.HoursWorked</td>
+                                        </tr>
+                                    }
+                                    @if (!Model.OrderTechnicians.Any(ot => ot.ServiceOrder.StatusId != 5 && ot.ServiceOrder.StatusId != 6 && ot.ServiceOrder.StatusId != 7))
+                                    {
+                                        <tr>
+                                            <td colspan="4" class="text-center py-4 text-muted">Нет активных задач</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
+            }
+        </div>
 
-                <div class="text-center mb-4">
-                    <h3 class="text-success">@Model.OrderTechnicians.Sum(ot => ot.HoursWorked)</h3>
-                    <p class="text-muted">Всего часов работы</p>
+        <div class="col-lg-4">
+            <div class="row g-4">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm rounded-4 bg-info bg-gradient text-white position-relative overflow-hidden h-100">
+                        <div class="position-absolute top-0 end-0 p-3 opacity-25">
+                            <i class="fas fa-clipboard-check fa-4x"></i>
+                        </div>
+                        <div class="card-body p-4 position-relative text-center">
+                            <h1 class="display-4 fw-bold mb-0">@(Model.OrderTechnicians?.Count ?? 0)</h1>
+                            <p class="mb-0 fw-medium opacity-75 text-uppercase small" style="letter-spacing: 1px;">Всего назначений</p>
+                        </div>
+                    </div>
                 </div>
-
-                <div class="text-center">
-                    <h3 class="text-warning">@Model.OrderTechnicians.Count(ot => ot.ServiceOrder.StatusId != 5 && ot.ServiceOrder.StatusId != 6 && ot.ServiceOrder.StatusId != 7)</h3>
-                    <p class="text-muted">Активных заказов</p>
+                <div class="col-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-body p-4 text-center">
+                            <div class="bg-success bg-opacity-10 text-success rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 56px; height: 56px;">
+                                <i class="fas fa-clock fs-4"></i>
+                            </div>
+                            <h3 class="fw-bold mb-0 text-dark">@(Model.OrderTechnicians?.Sum(ot => ot.HoursWorked) ?? 0)</h3>
+                            <p class="text-muted small mb-0">Отработано часов</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-body p-4 text-center">
+                            <div class="bg-warning bg-opacity-10 text-warning rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 56px; height: 56px;">
+                                <i class="fas fa-tasks fs-4"></i>
+                            </div>
+                            <h3 class="fw-bold mb-0 text-dark">@(Model.OrderTechnicians?.Count(ot => ot.ServiceOrder.StatusId != 5 && ot.ServiceOrder.StatusId != 6 && ot.ServiceOrder.StatusId != 7) ?? 0)</h3>
+                            <p class="text-muted small mb-0">Активных задач</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

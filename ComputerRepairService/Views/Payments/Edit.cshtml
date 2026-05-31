@@ -3,177 +3,141 @@
 @{
     ViewData["Title"] = "Редактировать платеж";
     Layout = "_Layout";
-
     var serviceOrders = ViewBag.ServiceOrders as List<ComputerRepairService.Models.Entities.ServiceOrder>;
 }
 
-<div class="container mt-4">
-    <h1 class="mb-4">Редактировать платеж</h1>
+<div class="container-fluid mt-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-4 pb-3 border-bottom gap-3">
+        <div class="d-flex align-items-center">
+            <div class="bg-warning bg-gradient text-dark rounded-circle d-flex align-items-center justify-content-center me-3 shadow-sm" style="width: 64px; height: 64px; font-size: 1.8rem;">
+                <i class="fas fa-file-invoice-dollar"></i>
+            </div>
+            <div>
+                <h2 class="mb-1 fw-bold text-dark">Редактирование платежа #@Model.PaymentId</h2>
+                <div class="text-muted small">Корректировка данных транзакции</div>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="javascript:history.back()" class="btn btn-outline-secondary rounded-pill px-4 shadow-sm fw-medium">
+                <i class="fas fa-arrow-left me-2"></i>Назад
+            </a>
+        </div>
+    </div>
 
-    <div class="row">
-        <div class="col-md-8">
-            <form asp-action="Edit">
-                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-                <input type="hidden" asp-for="PaymentId" />
-                <input type="hidden" asp-for="PaymentDate" />
+    <div class="row justify-content-center g-4">
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-body p-4 p-md-5">
+                    <form asp-action="Edit">
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                        <input type="hidden" asp-for="PaymentId" />
+                        <input type="hidden" asp-for="PaymentDate" />
+                        <input type="hidden" asp-for="OrderId" />
 
-                <div class="card mb-4">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0">Основная информация</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="form-group mb-3">
-                            <label asp-for="OrderId" class="form-label">Заказ</label>
-                            <select asp-for="OrderId" class="form-select" disabled>
-                                <option value="">-- Выберите заказ --</option>
-                                @if (serviceOrders != null)
-                                {
-                                    foreach (var order in serviceOrders)
+                        <div class="bg-light p-4 rounded-4 mb-4">
+                            <h6 class="fw-bold mb-3 text-secondary text-uppercase" style="letter-spacing: 0.5px;">Привязка заказа</h6>
+                            <div class="form-floating mb-0">
+                                <select class="form-select rounded-3" disabled>
+                                    @if (serviceOrders != null)
                                     {
-                                        if (Model.OrderId == order.OrderId)
+                                        var order = serviceOrders.FirstOrDefault(o => o.OrderId == Model.OrderId);
+                                        if (order != null)
                                         {
-                                            <option value="@order.OrderId" selected>
-                                                Заказ #@order.OrderId - @order.Customer?.FirstName @order.Customer?.LastName
-                                                (@order.TotalCost.ToString("C"))
-                                            </option>
+                                            <option selected>Заказ #@order.OrderId - @order.Customer?.FirstName @order.Customer?.LastName (@order.TotalCost.ToString("C0"))</option>
                                         }
                                         else
                                         {
-                                            <option value="@order.OrderId">
-                                                Заказ #@order.OrderId - @order.Customer?.FirstName @order.Customer?.LastName
-                                                (@order.TotalCost.ToString("C"))
-                                            </option>
+                                            <option selected>Заказ #@Model.OrderId</option>
                                         }
                                     }
-                                }
-                            </select>
-                            <input type="hidden" asp-for="OrderId" />
-                            <small class="form-text text-muted">Заказ нельзя изменить после создания платежа</small>
-                        </div>
-
-                        <div class="form-group mb-3">
-                            <label asp-for="Amount" class="form-label">Сумма платежа</label>
-                            <div class="input-group">
-                                <input asp-for="Amount" class="form-control" type="number" step="0.01" min="0" />
-                                <span class="input-group-text">₽</span>
+                                    else
+                                    {
+                                        <option selected>Заказ #@Model.OrderId</option>
+                                    }
+                                </select>
+                                <label>Привязанный заказ</label>
                             </div>
-                            <span asp-validation-for="Amount" class="text-danger"></span>
+                            <small class="text-muted mt-2 d-block"><i class="fas fa-lock me-1 text-secondary"></i> Заказ нельзя изменить после проведения платежа.</small>
                         </div>
-                    </div>
-                </div>
 
-                <div class="card mb-4">
-                    <div class="card-header bg-info text-white">
-                        <h5 class="mb-0">Детали оплаты</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
+                        <div class="row g-4 mb-4">
                             <div class="col-md-6">
-                                <div class="form-group mb-3">
-                                    <label asp-for="PaymentMethod" class="form-label">Метод оплаты</label>
-                                    <select asp-for="PaymentMethod" class="form-select">
-                                        <option value="">-- Выберите метод --</option>
+                                <div class="form-floating">
+                                    <input asp-for="Amount" class="form-control rounded-3 border-success fs-5 fw-bold" type="number" step="0.01" min="0" placeholder="Сумма" />
+                                    <label asp-for="Amount">Сумма (₽)</label>
+                                    <span asp-validation-for="Amount" class="text-danger small"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <select asp-for="Status" class="form-select rounded-3 border-warning">
+                                        <option value="Completed">Завершен</option>
+                                        <option value="Pending">Ожидание</option>
+                                        <option value="Failed">Ошибка</option>
+                                        <option value="Refunded">Возврат</option>
+                                    </select>
+                                    <label asp-for="Status">Статус платежа</label>
+                                    <span asp-validation-for="Status" class="text-danger small"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <select asp-for="PaymentMethod" class="form-select rounded-3">
                                         <option value="Cash">Наличные</option>
                                         <option value="Card">Банковская карта</option>
                                         <option value="Bank Transfer">Банковский перевод</option>
                                         <option value="Online">Онлайн-оплата</option>
                                     </select>
-                                    <span asp-validation-for="PaymentMethod" class="text-danger"></span>
+                                    <label asp-for="PaymentMethod">Способ оплаты</label>
+                                    <span asp-validation-for="PaymentMethod" class="text-danger small"></span>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="form-group mb-3">
-                                    <label asp-for="Status" class="form-label">Статус платежа</label>
-                                    <select asp-for="Status" class="form-select">
-                                        <option value="Pending">Ожидание</option>
-                                        <option value="Completed">Завершен</option>
-                                        <option value="Failed">Ошибка</option>
-                                        <option value="Refunded">Возврат</option>
-                                    </select>
-                                    <span asp-validation-for="Status" class="text-danger"></span>
+                                <div class="form-floating">
+                                    <input asp-for="TransactionId" class="form-control rounded-3" placeholder="ID Транзакции" />
+                                    <label asp-for="TransactionId">ID транзакции</label>
+                                    <span asp-validation-for="TransactionId" class="text-danger small"></span>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="form-group mb-3">
-                            <label asp-for="TransactionId" class="form-label">ID транзакции</label>
-                            <input asp-for="TransactionId" class="form-control" />
-                            <small class="form-text text-muted">ID транзакции из платежной системы</small>
-                            <span asp-validation-for="TransactionId" class="text-danger"></span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card mb-4">
-                    <div class="card-header bg-secondary text-white">
-                        <h5 class="mb-0">Дополнительная информация</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group mb-3">
-                                    <label class="form-label">Дата платежа</label>
-                                    <input type="text" class="form-control"
-                                           value="@Model.PaymentDate.ToString("dd.MM.yyyy HH:mm")" readonly />
-                                    <small class="form-text text-muted">Дата создания платежа</small>
-                                </div>
-                            </div>
+                        <div class="form-floating mb-4">
+                            <textarea asp-for="Notes" class="form-control rounded-3" style="height: 100px" placeholder="Комментарий"></textarea>
+                            <label asp-for="Notes">Комментарий к платежу</label>
+                            <span asp-validation-for="Notes" class="text-danger small"></span>
                         </div>
 
-                        <div class="form-group mb-3">
-                            <label asp-for="Notes" class="form-label">Примечания</label>
-                            <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
-                            <span asp-validation-for="Notes" class="text-danger"></span>
+                        <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                            <button type="submit" class="btn btn-warning rounded-pill px-5 fw-bold text-dark shadow-sm">
+                                <i class="fas fa-save me-2"></i> Обновить платеж
+                            </button>
                         </div>
-                    </div>
+                    </form>
                 </div>
-
-                <div class="form-group">
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-save"></i> Сохранить изменения
-                    </button>
-                    <a asp-action="Details" asp-route-id="@Model.PaymentId" class="btn btn-secondary ms-2">
-                        <i class="fas fa-times"></i> Отмена
-                    </a>
-                </div>
-            </form>
+            </div>
         </div>
 
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Информация</h5>
-                </div>
-                <div class="card-body">
-                    <dl>
-                        <dt>ID платежа:</dt>
-                        <dd>@Model.PaymentId</dd>
-
-                        <dt>Дата создания:</dt>
-                        <dd>@Model.PaymentDate.ToString("dd.MM.yyyy HH:mm")</dd>
-
-                        <dt>Текущий статус:</dt>
-                        <dd>
-                            @switch (Model.Status)
-                            {
-                                case "Completed":
-                                    <span class="badge bg-success">Завершен</span>
-                                    break;
-                                case "Pending":
-                                    <span class="badge bg-warning">Ожидание</span>
-                                    break;
-                                case "Failed":
-                                    <span class="badge bg-danger">Ошибка</span>
-                                    break;
-                                case "Refunded":
-                                    <span class="badge bg-info">Возврат</span>
-                                    break;
-                                default:
-                                    <span class="badge bg-secondary">@Model.Status</span>
-                                    break;
-                            }
-                        </dd>
-                    </dl>
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 mb-4 bg-light">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-4 text-dark"><i class="fas fa-info-circle text-info me-2"></i> Сводка</h5>
+                    <div class="d-flex flex-column gap-3">
+                        <div class="d-flex justify-content-between border-bottom pb-2">
+                            <span class="text-muted fw-medium">ID Транзакции:</span>
+                            <span class="fw-bold text-dark">#@Model.PaymentId</span>
+                        </div>
+                        <div class="d-flex justify-content-between border-bottom pb-2">
+                            <span class="text-muted fw-medium">Дата создания:</span>
+                            <span class="fw-bold text-dark">@Model.PaymentDate.ToString("dd.MM.yyyy HH:mm")</span>
+                        </div>
+                        <div class="d-flex justify-content-between border-bottom pb-2">
+                            <span class="text-muted fw-medium">Сумма чека:</span>
+                            <span class="fw-bold text-success">@Model.Amount.ToString("C0")</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

@@ -5,35 +5,60 @@
     Layout = "_Layout";
 }
 
-<div class="container mt-4">
-    <h1 class="mb-4">Подробности о типе устройства</h1>
-
-    <div class="card">
-        <div class="card-header bg-primary text-white">
-            <h4 class="mb-0">Информация о типе</h4>
+<div class="container-fluid mt-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-4 pb-3 border-bottom gap-3">
+        <div class="d-flex align-items-center">
+            <div class="bg-secondary bg-gradient text-white rounded-circle d-flex align-items-center justify-content-center me-3 shadow-sm" style="width: 64px; height: 64px; font-size: 1.8rem;">
+                <i class="fas fa-laptop"></i>
+            </div>
+            <div>
+                <h2 class="mb-1 fw-bold text-dark">@Model.TypeName</h2>
+                <div class="text-muted small">Категория ремонтируемой техники (ID: #@Model.DeviceTypeId)</div>
+            </div>
         </div>
-        <div class="card-body">
-            <dl class="row">
-                <dt class="col-sm-3">ID:</dt>
-                <dd class="col-sm-9">@Model.DeviceTypeId</dd>
-
-                <dt class="col-sm-3">Название типа:</dt>
-                <dd class="col-sm-9">@Model.TypeName</dd>
-
-                <dt class="col-sm-3">Описание:</dt>
-                <dd class="col-sm-9">@(Model.Description ?? "Нет описания")</dd>
-
-                <dt class="col-sm-3">Связанных заказов:</dt>
-                <dd class="col-sm-9">@(ViewBag.RelatedOrdersCount ?? 0)</dd>
-            </dl>
+        <div class="d-flex gap-2">
+            <a asp-action="Edit" asp-route-id="@Model.DeviceTypeId" class="btn btn-warning rounded-pill px-4 shadow-sm fw-medium">
+                <i class="fas fa-edit me-2"></i>Редактировать
+            </a>
+            <a href="javascript:history.back()" class="btn btn-outline-secondary rounded-pill px-4 shadow-sm fw-medium">
+                <i class="fas fa-arrow-left me-2"></i>Назад
+            </a>
         </div>
-        <div class="card-footer">
-            <a asp-action="Edit" asp-route-id="@Model.DeviceTypeId" class="btn btn-warning">
-                <i class="fas fa-edit"></i> Редактировать
-            </a>
-            <a asp-action="Index" class="btn btn-secondary ms-2">
-                <i class="fas fa-arrow-left"></i> Назад к списку
-            </a>
+    </div>
+
+    <div class="row justify-content-center g-4">
+        <div class="col-md-7">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-header bg-transparent border-bottom pt-4 pb-3 px-4">
+                    <h5 class="fw-bold mb-0 text-dark"><i class="fas fa-info-circle text-primary me-2"></i> Описание категории</h5>
+                </div>
+                <div class="card-body p-4">
+                    @if (!string.IsNullOrEmpty(Model.Description))
+                    {
+                        <div class="p-3 bg-light rounded-3 text-dark">
+                            @Model.Description
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="p-4 text-center text-muted">
+                            <p class="mb-0">Описания пока нет</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-5">
+            <div class="card border-0 shadow-sm rounded-4 bg-primary bg-gradient text-white h-100 position-relative overflow-hidden">
+                <div class="position-absolute top-0 end-0 p-3 opacity-25">
+                    <i class="fas fa-clipboard-list fa-5x"></i>
+                </div>
+                <div class="card-body p-4 p-md-5 d-flex flex-column justify-content-center text-center position-relative">
+                    <h1 class="display-3 fw-bold mb-2">@(ViewBag.RelatedOrdersCount ?? 0)</h1>
+                    <h5 class="mb-0 fw-medium opacity-75">Связанных заказов</h5>
+                </div>
+            </div>
         </div>
     </div>
 </div>
