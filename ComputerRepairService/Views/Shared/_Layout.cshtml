@@ -368,8 +368,8 @@
             </li>
 
             <li>
-                <a asp-controller="Home" asp-action="Privacy">
-                    <i class="fas fa-shield-alt"></i> Конфиденциальность
+                <a asp-controller="Home" asp-action="Privacy" class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" && ViewContext.RouteData.Values["action"]?.ToString() == "Privacy" ? "active" : "")">
+                    <i class="fas fa-info-circle"></i> О нас
                 </a>
             </li>
 

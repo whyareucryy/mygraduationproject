@@ -1,6 +1,80 @@
 ﻿@{
-    ViewData["Title"] = "Arseny Gang Policy";
+    ViewData["Title"] = "О нас";
 }
-<h1>@ViewData["Title"]</h1>
 
-<p>Use this page to detail your site's privacy policy.</p>
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Заголовок страницы -->
+            <div class="d-flex align-items-center mb-4 pb-3 border-bottom">
+                <div class="bg-primary bg-gradient text-white rounded-circle d-flex align-items-center justify-content-center me-3 shadow-sm" style="width: 64px; height: 64px; font-size: 1.8rem;">
+                    <i class="fas fa-info"></i>
+                </div>
+                <div>
+                    <h2 class="mb-1 fw-bold text-dark">О нашем сервисном центре</h2>
+                    <div class="text-muted small">Информация о разработчиках и проекте</div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-4 mb-5" style="background-color: var(--card-bg);">
+                <div class="card-body p-5">
+                    <div class="row align-items-center mb-5">
+                        <div class="col-md-7 order-2 order-md-1">
+                            <h4 class="fw-bold mb-3 text-primary"><i class="fas fa-graduation-cap me-2"></i> О проекте</h4>
+                            <p class="lead text-dark">
+                                Данный высокотехнологичный программный комплекс был спроектирован и реализован в рамках выполнения выпускной квалификационной (дипломной) работы.
+                            </p>
+                            <p class="text-muted mb-4">
+                                Мы стремились создать эталонную систему управления процессами ремонтно-восстановительных мероприятий вычислительной техники.
+                            </p>
+                            
+                            <h5 class="fw-bold mb-3"><i class="fas fa-code-branch text-success me-2"></i> Группа разработчиков:</h5>
+                            <ul class="list-group list-group-flush mb-0 border-0">
+                                <li class="list-group-item bg-transparent px-0 text-dark fw-medium border-0">
+                                    <i class="fas fa-user-check text-primary me-2"></i> Гусев М.А.
+                                </li>
+                                <li class="list-group-item bg-transparent px-0 text-dark fw-medium border-0">
+                                    <i class="fas fa-user-check text-primary me-2"></i> Горностаев А.И.
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-5 order-1 order-md-2 mb-4 mb-md-0 text-center">
+                            <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center p-4 shadow-inner" style="width: 200px; height: 200px;">
+                                <i class="fas fa-laptop-code text-primary" style="font-size: 5rem;"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-5" />
+
+                    <div class="text-center mb-4">
+                        <h4 class="fw-bold mb-3"><i class="fas fa-bullhorn text-warning me-2"></i> Официальное коммюнике</h4>
+                        <p class="text-dark fs-5 fst-italic px-md-5">
+                            «Настоящим официально уведомляем всех заинтересованных лиц об успешном вводе в эксплуатацию нашего передового сервисного центра. 
+                            Наша научно-техническая лаборатория недавно открыла свои двери для решения аппаратных и программных инцидентов любой степени тяжести. 
+                            <br><br>
+                            Иными словами — вот, приходите к нам в сервисный центр, недавно открылись! Починим всё, что поддается законам физики.»
+                        </p>
+                    </div>
+
+                    <div class="text-center mt-5">
+                        <div class="position-relative d-inline-block shadow-lg rounded-4 overflow-hidden border border-4 border-light">
+                            <img src="~/Theadore_background.png" alt="Наш талисман" class="img-fluid" style="max-height: 400px; object-fit: cover;" />
+                            <div class="position-absolute bottom-0 start-0 w-100 p-3 bg-dark bg-opacity-75 text-white" style="backdrop-filter: blur(5px);">
+                                <h5 class="mb-0 fw-bold"><i class="fas fa-check-circle text-success me-2"></i> Ждем вас!</h5>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .shadow-inner {
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.1);
+        }
+    </style>
+}
