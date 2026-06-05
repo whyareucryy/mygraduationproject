@@ -22,6 +22,10 @@
                     {
                         <span class="badge bg-secondary ms-1">Неактивен</span>
                     }
+                    @if (!string.IsNullOrEmpty(Model.UserId))
+                    {
+                        <span class="badge bg-primary ms-1"><i class="fas fa-user-check me-1"></i>Есть вход в систему</span>
+                    }
                 </div>
             </div>
         </div>
@@ -83,7 +87,12 @@
                 </div>
             </div>
 
-            @if (Model.OrderTechnicians != null && Model.OrderTechnicians.Any())
+            @{
+                var activeAssignments = Model.OrderTechnicians?
+                    .Where(ot => ot.ServiceOrder.StatusId != 5 && ot.ServiceOrder.StatusId != 6 && ot.ServiceOrder.StatusId != 7)
+                    .ToList() ?? new List<ComputerRepairService.Models.Entities.OrderTechnician>();
+            }
+            @if (activeAssignments.Any())
             {
                 <div class="card border-0 shadow-sm rounded-4">
                     <div class="card-header bg-transparent border-bottom pt-4 pb-3 px-4">
@@ -91,7 +100,7 @@
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
+                            <table class="table table-hover align-middle mb-0 data-table-compact w-100">
                                 <thead class="table-light text-muted small text-uppercase">
                                     <tr>
                                         <th class="ps-4 py-3 border-0">Заказ</th>
@@ -101,25 +110,19 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var assignment in Model.OrderTechnicians.Where(ot => ot.ServiceOrder.StatusId != 5 && ot.ServiceOrder.StatusId != 6 && ot.ServiceOrder.StatusId != 7))
+                                    @foreach (var assignment in activeAssignments)
                                     {
                                         <tr>
-                                            <td class="ps-4 py-3 border-bottom-0">
+                                            <td class="ps-4 py-3 border-bottom-0" data-order="@assignment.ServiceOrder.OrderId">
                                                 <a asp-controller="ServiceOrders" asp-action="Details" asp-route-id="@assignment.ServiceOrder.OrderId" class="fw-bold text-decoration-none">#@assignment.ServiceOrder.OrderId</a>
                                             </td>
-                                            <td class="py-3 border-bottom-0 text-truncate" style="max-width: 200px;">
+                                            <td class="py-3 border-bottom-0 text-truncate" style="max-width: 200px;" data-order="@assignment.ServiceOrder.ProblemDescription">
                                                 <small>@assignment.ServiceOrder.ProblemDescription</small>
                                             </td>
-                                            <td class="py-3 border-bottom-0">
+                                            <td class="py-3 border-bottom-0" data-order="@assignment.ServiceOrder.StatusId">
                                                 <span class="badge bg-secondary">@assignment.ServiceOrder.OrderStatus?.StatusName</span>
                                             </td>
-                                            <td class="pe-4 py-3 border-bottom-0">@assignment.HoursWorked</td>
-                                        </tr>
-                                    }
-                                    @if (!Model.OrderTechnicians.Any(ot => ot.ServiceOrder.StatusId != 5 && ot.ServiceOrder.StatusId != 6 && ot.ServiceOrder.StatusId != 7))
-                                    {
-                                        <tr>
-                                            <td colspan="4" class="text-center py-4 text-muted">Нет активных задач</td>
+                                            <td class="pe-4 py-3 border-bottom-0" data-order="@assignment.HoursWorked">@assignment.HoursWorked</td>
                                         </tr>
                                     }
                                 </tbody>

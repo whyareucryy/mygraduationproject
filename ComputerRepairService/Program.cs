@@ -3,6 +3,7 @@ using ComputerRepairService.Models.Entities;
 using ComputerRepairService.Services;
 using ComputerRepairService.Services.Interfaces;
 using ComputerRepairService.Services.Identity;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +13,12 @@ var builder = WebApplication.CreateBuilder(args);
 // ��������� ������� � ��������� ������������
 builder.Services.AddControllersWithViews();
 
-// ��������� ��������� ���� ������
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 10 * 1024 * 1024;
+});
+
+//     ��������� ��������� ���� ������
 builder.Services.AddDbContext<RepairDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -72,6 +78,10 @@ builder.Services.AddMemoryCache();
 
 // ����������� ��������
 builder.Services.AddScoped<IOrderManagementService, OrderManagementService>();
+builder.Services.AddScoped<IClientProvisioningService, ClientProvisioningService>();
+builder.Services.AddScoped<IOrderPartsService, OrderPartsService>();
+builder.Services.AddScoped<IAdminAccountProvisioningService, AdminAccountProvisioningService>();
+builder.Services.AddScoped<IProfileImageService, ProfileImageService>();
 
 // ����������� ������ �������� (���� ���� � �������)
 // builder.Services.AddScoped<IService, Service>();

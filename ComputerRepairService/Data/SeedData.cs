@@ -19,6 +19,7 @@ namespace ComputerRepairService.Data
                 var logger = serviceProvider.GetRequiredService<ILogger<Program>>(); // Изменили на ILogger<Program>
                 var context = serviceProvider.GetRequiredService<RepairDbContext>();
 
+                await EnsureUserProfileColumnsAsync(context, logger);
                 await EnsureOrderStatusesAsync(context, logger);
 
                 logger.LogInformation("=== ИНИЦИАЛИЗАЦИЯ IDENTITY ===");
@@ -413,6 +414,24 @@ namespace ComputerRepairService.Data
                 await context.SaveChangesAsync();
                 logger.LogInformation("Синхронизированы unlinked Technicians: {Count}", unlinkedTechnicians.Count);
             }
+        }
+
+        private static async Task EnsureUserProfileColumnsAsync(RepairDbContext context, ILogger logger)
+        {
+            await context.Database.ExecuteSqlRawAsync(@"
+                IF NOT EXISTS (
+                    SELECT 1 FROM sys.columns
+                    WHERE object_id = OBJECT_ID(N'AspNetUsers') AND name = N'ProfileImagePath'
+                )
+                    ALTER TABLE AspNetUsers ADD ProfileImagePath NVARCHAR(500) NULL;
+
+                IF NOT EXISTS (
+                    SELECT 1 FROM sys.columns
+                    WHERE object_id = OBJECT_ID(N'AspNetUsers') AND name = N'Bio'
+                )
+                    ALTER TABLE AspNetUsers ADD Bio NVARCHAR(1000) NULL;");
+
+            logger.LogInformation("Колонки ProfileImagePath и Bio проверены в AspNetUsers");
         }
 
         private static async Task EnsureOrderStatusesAsync(RepairDbContext context, ILogger logger)

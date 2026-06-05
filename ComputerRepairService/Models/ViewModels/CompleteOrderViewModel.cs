@@ -18,10 +18,15 @@ namespace ComputerRepairService.Models.ViewModels
         [Display(Name = "Текущий статус")]
         public string CurrentStatusName { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Укажите итоговую стоимость работ")]
-        [Range(0.01, 999999.99, ErrorMessage = "Стоимость должна быть от 0,01 до 999 999,99")]
-        [Display(Name = "Стоимость работ, ₽")]
-        public decimal TotalCost { get; set; }
+        [Display(Name = "Запчасти (автоматически)")]
+        public decimal PartsTotal { get; set; }
+
+        [Range(0, 999999.99, ErrorMessage = "Стоимость работ должна быть от 0 до 999 999,99")]
+        [Display(Name = "Стоимость работ (без запчастей), ₽")]
+        public decimal LaborCost { get; set; }
+
+        [Display(Name = "Итого к оплате, ₽")]
+        public decimal TotalCost => PartsTotal + LaborCost;
 
         [StringLength(1000)]
         [Display(Name = "Комментарий мастера")]

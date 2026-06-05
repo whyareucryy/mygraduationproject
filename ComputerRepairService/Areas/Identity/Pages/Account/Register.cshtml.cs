@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using ComputerRepairService.Models.Entities;
+using ComputerRepairService.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -30,13 +31,15 @@ namespace ComputerRepairService.Areas.Identity.Pages.Account
         private readonly IUserEmailStore<ApplicationUser> _emailStore;
         private readonly ILogger<RegisterModel> _logger;
         private readonly IEmailSender _emailSender;
+        private readonly IClientProvisioningService _clientProvisioningService;
 
         public RegisterModel(
             UserManager<ApplicationUser> userManager,
             IUserStore<ApplicationUser> userStore,
             SignInManager<ApplicationUser> signInManager,
             ILogger<RegisterModel> logger,
-            IEmailSender emailSender)
+            IEmailSender emailSender,
+            IClientProvisioningService clientProvisioningService)
         {
             _userManager = userManager;
             _userStore = userStore;
@@ -44,6 +47,7 @@ namespace ComputerRepairService.Areas.Identity.Pages.Account
             _signInManager = signInManager;
             _logger = logger;
             _emailSender = emailSender;
+            _clientProvisioningService = clientProvisioningService;
         }
 
         /// <summary>
@@ -122,6 +126,14 @@ namespace ComputerRepairService.Areas.Identity.Pages.Account
                 if (result.Succeeded)
                 {
                     _logger.LogInformation("User created a new account with password.");
+
+                    var provisionResult = await _clientProvisioningService.ProvisionAsync(user);
+                    if (!provisionResult.Success)
+                    {
+                        await _userManager.DeleteAsync(user);
+                        ModelState.AddModelError(string.Empty, provisionResult.ErrorMessage ?? "Не удалось оформить аккаунт клиента. Попробуйте ещё раз.");
+                        return Page();
+                    }
 
                     var userId = await _userManager.GetUserIdAsync(user);
                     var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);

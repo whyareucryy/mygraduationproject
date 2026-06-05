@@ -1,5 +1,6 @@
 ﻿@using Microsoft.AspNetCore.Identity
 @using ComputerRepairService.Models.Entities
+@using ComputerRepairService.Helpers
 @inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
 
@@ -41,6 +42,14 @@
 
     var displayController = controllerNames.ContainsKey(controllerName) ? controllerNames[controllerName] : controllerName;
     var displayAction = actionNames.ContainsKey(actionName) ? actionNames[actionName] : actionName;
+
+    ApplicationUser? layoutCurrentUser = null;
+    if (SignInManager.IsSignedIn(User))
+    {
+        layoutCurrentUser = await UserManager.GetUserAsync(User);
+    }
+
+    var layoutDisplayName = ProfileDisplayHelper.GetDisplayName(layoutCurrentUser);
 }
 
 <!DOCTYPE html>
@@ -117,33 +126,25 @@
                     <!-- Пользователь (всегда виден на мобильных) -->
                     <div class="dropdown">
                         <button class="btn btn-link nav-link dropdown-toggle d-flex align-items-center px-1 px-md-2" type="button" data-bs-toggle="dropdown" aria-label="Меню пользователя">
-                            <div class="user-avatar me-md-2">
-                                @if (User.Identity.Name != null)
-                                {
-                                    @User.Identity.Name.Substring(0, 1).ToUpper()
-                                }
-                            </div>
+                            @{
+                                ViewData["AvatarSizeClass"] = "user-avatar";
+                                ViewData["AvatarExtraClass"] = "me-md-2";
+                            }
+                            <partial name="_UserAvatar" model="layoutCurrentUser" />
                             <div class="d-none d-md-block text-start">
-                                <div class="fw-bold">@User.Identity.Name</div>
+                                <div class="fw-bold">@layoutDisplayName</div>
                                 <small class="text-muted mt-1 d-block">
-                                    @{
-                                        var user = await UserManager.GetUserAsync(User);
-                                        if (user != null)
-                                        {
-                                            var roles = await UserManager.GetRolesAsync(user);
-                                            if (roles.Contains("Admin"))
-                                            {
-                                                <span class="badge bg-danger badge-role">Админ</span>
-                                            }
-                                            else if (roles.Contains("Employee"))
-                                            {
-                                                <span class="badge bg-warning text-dark badge-role">Сотрудник</span>
-                                            }
-                                            else if (roles.Contains("Client"))
-                                            {
-                                                <span class="badge bg-info badge-role">Клиент</span>
-                                            }
-                                        }
+                                    @if (User.IsInRole("Admin"))
+                                    {
+                                        <span class="badge bg-danger badge-role">Админ</span>
+                                    }
+                                    else if (User.IsInRole("Employee"))
+                                    {
+                                        <span class="badge bg-warning text-dark badge-role">Сотрудник</span>
+                                    }
+                                    else if (User.IsInRole("Client"))
+                                    {
+                                        <span class="badge bg-info badge-role">Клиент</span>
                                     }
                                 </small>
                             </div>
@@ -151,14 +152,13 @@
                         <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3" style="min-width: 260px; padding: 0.5rem 0;">
                                 <li class="px-3 py-3 border-bottom custom-border mb-2 rounded-top-3" style="background-color: var(--bg-color);">
                                     <div class="d-flex align-items-center">
-                                        <div class="user-avatar bg-primary text-white rounded-circle d-flex justify-content-center align-items-center me-3 shadow-sm" style="width: 48px; height: 48px; font-size: 1.5rem; flex-shrink: 0;">
-                                            @if (User.Identity.Name != null)
-                                            {
-                                                @User.Identity.Name.Substring(0, 1).ToUpper()
-                                            }
-                                        </div>
+                                        @{
+                                            ViewData["AvatarSizeClass"] = "user-avatar-md";
+                                            ViewData["AvatarExtraClass"] = "me-3 shadow-sm flex-shrink-0";
+                                        }
+                                        <partial name="_UserAvatar" model="layoutCurrentUser" />
                                         <div class="overflow-hidden">
-                                            <div class="fw-bold text-truncate" style="font-size: 1.05rem;">@User.Identity.Name</div>
+                                            <div class="fw-bold text-truncate" style="font-size: 1.05rem;">@layoutDisplayName</div>
                                             <div class="text-muted small">
                                                 @if (User.IsInRole("Admin")) { <span class="text-danger fw-semibold"><i class="fas fa-crown me-1"></i>Администратор</span> }
                                                 else if (User.IsInRole("Employee")) { <span class="text-warning fw-semibold"><i class="fas fa-briefcase me-1"></i>Сотрудник</span> }
@@ -257,8 +257,9 @@
         }
     </nav>
 
+    <div class="app-body" id="appBody">
     <!-- Боковое меню -->
-    <div class="sidebar" id="sidebar" aria-hidden="true">
+    <div class="sidebar" id="sidebar" aria-hidden="false">
         <div class="sidebar-nav">
         <ul class="sidebar-menu">
             <li class="menu-header mb-3 px-3">
@@ -390,7 +391,7 @@
         </div>
 
         <!-- Версия приложения -->
-        <div class="sidebar-footer position-absolute bottom-0 w-100 p-3" style="background: var(--card-bg); border-top: 1px solid var(--border-color);">
+        <div class="sidebar-footer w-100 p-3">
             <small class="text-muted">
                 <i class="fas fa-code-branch me-1"></i> Версия 1.0.0
             </small>
@@ -454,6 +455,7 @@
             </main>
         </div>
     </div>
+    </div>
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
@@ -482,18 +484,67 @@
     <script>
         // Инициализация DataTables
         $(document).ready(function() {
-            $('.data-table').each(function() {
-                var isDesc = $(this).find('th:first').text().includes('Дата') || $(this).find('th:first').text().includes('Заказ');
-                $(this).DataTable({
+            function getDefaultOrder($table) {
+                var $firstSortableTh = $table.find('thead th').not('.no-sort').first();
+                if (!$firstSortableTh.length) {
+                    return [[0, 'asc']];
+                }
+                var headerText = $firstSortableTh.text().trim().toLowerCase();
+                var colIndex = $firstSortableTh.index();
+                var isDesc = headerText.includes('дата')
+                    || headerText.includes('заказ')
+                    || headerText.includes('id')
+                    || headerText.includes('регистрация')
+                    || headerText.includes('артикул');
+                return [[colIndex, isDesc ? 'desc' : 'asc']];
+            }
+
+            function initDataTable($table, compact) {
+                if ($.fn.DataTable.isDataTable($table[0])) {
+                    return;
+                }
+
+                var options = {
                     language: {
                         url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/ru.json'
                     },
                     responsive: true,
-                    pageLength: 25,
-                    order: [[ 0, isDesc ? "desc" : "asc" ]],
-                    dom: "<'row mb-3'<'col-sm-12 col-md-6 d-flex align-items-center justify-content-start'l><'col-sm-12 col-md-6 d-flex align-items-center justify-content-end'f>>" +
-                         "<'row'<'col-sm-12'tr>>" +
-                         "<'row mt-3'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>"
+                    pageLength: 10,
+                    order: getDefaultOrder($table),
+                    columnDefs: [
+                        { orderable: false, targets: 'no-sort' }
+                    ]
+                };
+
+                if (compact) {
+                    options.paging = false;
+                    options.searching = false;
+                    options.info = false;
+                    options.lengthChange = false;
+                    options.dom = 't';
+                } else {
+                    options.dom = "<'row mb-3'<'col-sm-12 col-md-6 d-flex align-items-center justify-content-start'l><'col-sm-12 col-md-6 d-flex align-items-center justify-content-end'f>>" +
+                                  "<'row'<'col-sm-12'tr>>" +
+                                  "<'row mt-3'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>";
+                }
+
+                $table.DataTable(options);
+            }
+
+            $('.data-table').each(function() {
+                initDataTable($(this), false);
+            });
+
+            $('.data-table-compact').each(function() {
+                initDataTable($(this), true);
+            });
+
+            document.querySelectorAll('[data-bs-toggle="tab"]').forEach(function(tab) {
+                tab.addEventListener('shown.bs.tab', function() {
+                    $.fn.dataTable.tables({ visible: true, api: true }).columns.adjust();
+                    if ($.fn.dataTable.Responsive) {
+                        $.fn.dataTable.tables({ visible: true, api: true }).responsive.recalc();
+                    }
                 });
             });
 
@@ -523,10 +574,10 @@
 
         // Управление боковым меню
         document.addEventListener('DOMContentLoaded', function() {
+            const appBody = document.getElementById('appBody');
             const sidebar = document.getElementById('sidebar');
             const sidebarToggle = document.getElementById('sidebarToggle');
             const sidebarOverlay = document.getElementById('sidebarOverlay');
-            const mainContent = document.getElementById('mainContent');
             const themeToggle = document.getElementById('themeToggle');
             const submenuToggles = document.querySelectorAll('.has-submenu');
             const mobileBreakpoint = 992;
@@ -559,7 +610,7 @@
                     }
                 } else {
                     sidebar.classList.toggle('collapsed');
-                    mainContent.classList.toggle('expanded');
+                    appBody.classList.toggle('sidebar-collapsed');
                 }
             });
 
@@ -588,7 +639,7 @@
                     closeSidebar();
                 } else {
                     sidebar.classList.remove('collapsed');
-                    mainContent.classList.remove('expanded');
+                    appBody.classList.remove('sidebar-collapsed');
                 }
             });
 

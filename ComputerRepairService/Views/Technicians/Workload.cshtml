@@ -164,7 +164,7 @@
                                         }
 
                                         <tr>
-                                            <td class="ps-4 border-bottom-0" data-order="@technician.FirstName @technician.LastName">
+                                            <td class="ps-4 border-bottom-0" data-order="@($"{technician.FirstName} {technician.LastName}".Trim())">
                                                 <div class="d-flex align-items-center">
                                                     <div class="avatar bg-light text-primary rounded-circle d-flex align-items-center justify-content-center me-3 shadow-sm" style="width: 40px; height: 40px;">
                                                         <i class="fas fa-user-tie"></i>
@@ -183,7 +183,7 @@
                                             <td class="border-bottom-0" data-order="@techTotalHours">
                                                 <div class="fw-medium text-dark">@techTotalHours.ToString("F1") ч</div>
                                             </td>
-                                            <td class="border-bottom-0" data-order="@activeOrders">
+                                            <td class="border-bottom-0" data-order="@(workloadStatus switch { "Низкая" => 1, "Средняя" => 2, "Высокая" => 3, _ => 4 })">
                                                 <span class="badge bg-@statusClass bg-opacity-10 text-@statusClass border border-@statusClass border-opacity-25 rounded-pill">@workloadStatus</span>
                                             </td>
                                             <td class="pe-4 border-bottom-0 text-end" data-order="@estimatedCost">

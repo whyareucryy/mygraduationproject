@@ -1,226 +1,427 @@
--- Создание базы данных
+﻿-- =============================================================================
+-- ComputerRepairService — полный скрипт развёртывания БД с нуля
+-- Сгенерировано: 2026-06-05
+--
+-- ИНСТРУКЦИЯ ДЛЯ ДРУГА:
+-- 1. Откройте этот файл в SQL Server Management Studio (SSMS)
+-- 2. Выполните весь скрипт (F5)
+-- 3. Скрипт удалит БД ComputerRepairService (если есть) и создаст заново
+-- 4. После выполнения подключите приложение к этой БД
+--
+-- ТЕСТОВЫЕ УЧЁТНЫЕ ЗАПИСИ (пароли из SeedData / синхронизации):
+--   admin@admin.com          / admin1234
+--   employee@service.com     / Employee123!
+--   client@example.com       / Client123!
+--   Остальные клиенты/мастера из дампа: TempClient123! / TempEmployee123!
+--
+-- ВАЖНО: файлы аватаров (ProfileImagePath) лежат в wwwroot/uploads/avatars/
+--         их нужно скопировать отдельно вместе с проектом.
+-- =============================================================================
+
+USE master;
+GO
+
+IF DB_ID(N'ComputerRepairService') IS NOT NULL
+BEGIN
+    ALTER DATABASE ComputerRepairService SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE ComputerRepairService;
+    PRINT N'База ComputerRepairService удалена.';
+END
+GO
+
 CREATE DATABASE ComputerRepairService;
 GO
 
 USE ComputerRepairService;
 GO
 
--- Таблица статусов заказов
+-- =============================================================================
+-- СПРАВОЧНИКИ И БИЗНЕС-ТАБЛИЦЫ
+-- =============================================================================
+
 CREATE TABLE OrderStatuses (
-    StatusId INT IDENTITY(1,1) PRIMARY KEY,
+    StatusId INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
     StatusName NVARCHAR(50) NOT NULL,
-    Description NVARCHAR(200)
+    Description NVARCHAR(200) NULL
 );
 GO
 
--- Таблица типов устройств
 CREATE TABLE DeviceTypes (
-    DeviceTypeId INT IDENTITY(1,1) PRIMARY KEY,
+    DeviceTypeId INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
     TypeName NVARCHAR(50) NOT NULL,
-    Description NVARCHAR(200)
+    Description NVARCHAR(200) NULL
 );
 GO
 
--- Таблица клиентов
-CREATE TABLE Customers (
-    CustomerId INT IDENTITY(1,1) PRIMARY KEY,
-    FirstName NVARCHAR(50) NOT NULL,
-    LastName NVARCHAR(50) NOT NULL,
-    Email NVARCHAR(100) UNIQUE NOT NULL,
-    Phone NVARCHAR(20) NOT NULL,
-    Address NVARCHAR(200),
-    RegistrationDate DATETIME2 DEFAULT GETDATE(),
-    IsActive BIT DEFAULT 1
-);
-GO
-
--- Таблица сотрудников (мастера)
-CREATE TABLE Technicians (
-    TechnicianId INT IDENTITY(1,1) PRIMARY KEY,
-    FirstName NVARCHAR(50) NOT NULL,
-    LastName NVARCHAR(50) NOT NULL,
-    Email NVARCHAR(100) UNIQUE NOT NULL,
-    Phone NVARCHAR(20),
-    Specialization NVARCHAR(100),
-    HireDate DATETIME2 DEFAULT GETDATE(),
-    HourlyRate DECIMAL(10,2),
-    IsActive BIT DEFAULT 1
-);
-GO
-
--- Таблица услуг
-CREATE TABLE Services (
-    ServiceId INT IDENTITY(1,1) PRIMARY KEY,
-    ServiceName NVARCHAR(100) NOT NULL,
-    Description NVARCHAR(500),
-    BasePrice DECIMAL(10,2) NOT NULL,
-    EstimatedDuration INT, -- в минутах
-    IsActive BIT DEFAULT 1
-);
-GO
-
--- Таблица категорий запчастей
 CREATE TABLE PartCategories (
-    CategoryId INT IDENTITY(1,1) PRIMARY KEY,
+    CategoryId INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
     CategoryName NVARCHAR(50) NOT NULL,
-    Description NVARCHAR(200)
+    Description NVARCHAR(200) NULL
 );
 GO
 
--- Таблица запчастей на складе
+CREATE TABLE Services (
+    ServiceId INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    ServiceName NVARCHAR(100) NOT NULL,
+    Description NVARCHAR(500) NULL,
+    BasePrice DECIMAL(10,2) NOT NULL,
+    EstimatedDuration INT NULL,
+    IsActive BIT NOT NULL CONSTRAINT DF_Services_IsActive DEFAULT (1)
+);
+GO
+
+-- =============================================================================
+-- ASP.NET CORE IDENTITY
+-- =============================================================================
+
+CREATE TABLE AspNetRoles (
+    Id NVARCHAR(450) NOT NULL PRIMARY KEY,
+    Name NVARCHAR(256) NULL,
+    NormalizedName NVARCHAR(256) NULL,
+    ConcurrencyStamp NVARCHAR(MAX) NULL
+);
+GO
+
+CREATE TABLE AspNetUsers (
+    Id NVARCHAR(450) NOT NULL PRIMARY KEY,
+    FirstName NVARCHAR(100) NULL,
+    LastName NVARCHAR(100) NULL,
+    Address NVARCHAR(500) NULL,
+    Bio NVARCHAR(1000) NULL,
+    ProfileImagePath NVARCHAR(500) NULL,
+    RegistrationDate DATETIME2 NOT NULL CONSTRAINT DF_AspNetUsers_RegistrationDate DEFAULT (GETDATE()),
+    CustomerId INT NULL,
+    TechnicianId INT NULL,
+    UserName NVARCHAR(256) NULL,
+    NormalizedUserName NVARCHAR(256) NULL,
+    Email NVARCHAR(256) NULL,
+    NormalizedEmail NVARCHAR(256) NULL,
+    EmailConfirmed BIT NOT NULL CONSTRAINT DF_AspNetUsers_EmailConfirmed DEFAULT (0),
+    PasswordHash NVARCHAR(MAX) NULL,
+    SecurityStamp NVARCHAR(MAX) NULL,
+    ConcurrencyStamp NVARCHAR(MAX) NULL,
+    PhoneNumber NVARCHAR(MAX) NULL,
+    PhoneNumberConfirmed BIT NOT NULL CONSTRAINT DF_AspNetUsers_PhoneConfirmed DEFAULT (0),
+    TwoFactorEnabled BIT NOT NULL CONSTRAINT DF_AspNetUsers_TwoFactor DEFAULT (0),
+    LockoutEnd DATETIMEOFFSET NULL,
+    LockoutEnabled BIT NOT NULL CONSTRAINT DF_AspNetUsers_LockoutEnabled DEFAULT (1),
+    AccessFailedCount INT NOT NULL CONSTRAINT DF_AspNetUsers_AccessFailed DEFAULT (0)
+);
+GO
+
+CREATE TABLE Customers (
+    CustomerId INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    FirstName NVARCHAR(50) NOT NULL,
+    LastName NVARCHAR(50) NOT NULL,
+    Email NVARCHAR(100) NOT NULL,
+    Phone NVARCHAR(20) NOT NULL,
+    Address NVARCHAR(200) NULL,
+    RegistrationDate DATETIME2 NOT NULL CONSTRAINT DF_Customers_RegistrationDate DEFAULT (GETDATE()),
+    IsActive BIT NOT NULL CONSTRAINT DF_Customers_IsActive DEFAULT (1),
+    UserId NVARCHAR(450) NULL,
+    CONSTRAINT UQ_Customers_Email UNIQUE (Email)
+);
+GO
+
+CREATE TABLE Technicians (
+    TechnicianId INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    FirstName NVARCHAR(50) NOT NULL,
+    LastName NVARCHAR(50) NOT NULL,
+    Email NVARCHAR(100) NOT NULL,
+    Phone NVARCHAR(20) NULL,
+    Specialization NVARCHAR(100) NULL,
+    HireDate DATETIME2 NOT NULL CONSTRAINT DF_Technicians_HireDate DEFAULT (GETDATE()),
+    HourlyRate DECIMAL(10,2) NULL,
+    IsActive BIT NOT NULL CONSTRAINT DF_Technicians_IsActive DEFAULT (1),
+    UserId NVARCHAR(450) NULL,
+    CONSTRAINT UQ_Technicians_Email UNIQUE (Email)
+);
+GO
+
+CREATE TABLE AspNetRoleClaims (
+    Id INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    RoleId NVARCHAR(450) NOT NULL,
+    ClaimType NVARCHAR(MAX) NULL,
+    ClaimValue NVARCHAR(MAX) NULL
+);
+GO
+
+CREATE TABLE AspNetUserClaims (
+    Id INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    UserId NVARCHAR(450) NOT NULL,
+    ClaimType NVARCHAR(MAX) NULL,
+    ClaimValue NVARCHAR(MAX) NULL
+);
+GO
+
+CREATE TABLE AspNetUserLogins (
+    LoginProvider NVARCHAR(450) NOT NULL,
+    ProviderKey NVARCHAR(450) NOT NULL,
+    ProviderDisplayName NVARCHAR(MAX) NULL,
+    UserId NVARCHAR(450) NOT NULL,
+    CONSTRAINT PK_AspNetUserLogins PRIMARY KEY (LoginProvider, ProviderKey)
+);
+GO
+
+CREATE TABLE AspNetUserRoles (
+    UserId NVARCHAR(450) NOT NULL,
+    RoleId NVARCHAR(450) NOT NULL,
+    CONSTRAINT PK_AspNetUserRoles PRIMARY KEY (UserId, RoleId)
+);
+GO
+
+CREATE TABLE AspNetUserTokens (
+    UserId NVARCHAR(450) NOT NULL,
+    LoginProvider NVARCHAR(450) NOT NULL,
+    Name NVARCHAR(450) NOT NULL,
+    Value NVARCHAR(MAX) NULL,
+    CONSTRAINT PK_AspNetUserTokens PRIMARY KEY (UserId, LoginProvider, Name)
+);
+GO
+
 CREATE TABLE Inventory (
-    PartId INT IDENTITY(1,1) PRIMARY KEY,
+    PartId INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
     PartName NVARCHAR(100) NOT NULL,
-    Description NVARCHAR(500),
-    CategoryId INT FOREIGN KEY REFERENCES PartCategories(CategoryId),
-    QuantityInStock INT NOT NULL DEFAULT 0,
+    Description NVARCHAR(500) NULL,
+    CategoryId INT NULL,
+    QuantityInStock INT NOT NULL CONSTRAINT DF_Inventory_Quantity DEFAULT (0),
     UnitPrice DECIMAL(10,2) NOT NULL,
-    ReorderLevel INT DEFAULT 5,
-    SupplierInfo NVARCHAR(200),
-    IsActive BIT DEFAULT 1
+    ReorderLevel INT NOT NULL CONSTRAINT DF_Inventory_ReorderLevel DEFAULT (5),
+    SupplierInfo NVARCHAR(200) NULL,
+    IsActive BIT NOT NULL CONSTRAINT DF_Inventory_IsActive DEFAULT (1)
 );
 GO
 
--- Таблица заказов на обслуживание
 CREATE TABLE ServiceOrders (
-    OrderId INT IDENTITY(1,1) PRIMARY KEY,
-    CustomerId INT NOT NULL FOREIGN KEY REFERENCES Customers(CustomerId),
-    DeviceTypeId INT NOT NULL FOREIGN KEY REFERENCES DeviceTypes(DeviceTypeId),
-    DeviceBrand NVARCHAR(50),
-    DeviceModel NVARCHAR(50),
-    SerialNumber NVARCHAR(100),
+    OrderId INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    CustomerId INT NOT NULL,
+    DeviceTypeId INT NOT NULL,
+    DeviceBrand NVARCHAR(50) NULL,
+    DeviceModel NVARCHAR(50) NULL,
+    SerialNumber NVARCHAR(100) NULL,
     ProblemDescription NVARCHAR(1000) NOT NULL,
-    DiagnosticNotes NVARCHAR(1000),
-    StatusId INT NOT NULL FOREIGN KEY REFERENCES OrderStatuses(StatusId) DEFAULT 1,
-    Priority INT DEFAULT 1, -- 1: Низкий, 2: Средний, 3: Высокий
-    CreatedDate DATETIME2 DEFAULT GETDATE(),
-    EstimatedCompletionDate DATETIME2,
-    ActualCompletionDate DATETIME2,
-    TotalCost DECIMAL(10,2) DEFAULT 0,
-    TechnicianNotes NVARCHAR(1000)
+    DiagnosticNotes NVARCHAR(1000) NULL,
+    StatusId INT NOT NULL CONSTRAINT DF_ServiceOrders_StatusId DEFAULT (1),
+    Priority INT NOT NULL CONSTRAINT DF_ServiceOrders_Priority DEFAULT (1),
+    CreatedDate DATETIME2 NOT NULL CONSTRAINT DF_ServiceOrders_CreatedDate DEFAULT (GETDATE()),
+    EstimatedCompletionDate DATETIME2 NULL,
+    ActualCompletionDate DATETIME2 NULL,
+    TotalCost DECIMAL(10,2) NOT NULL CONSTRAINT DF_ServiceOrders_TotalCost DEFAULT (0),
+    TechnicianNotes NVARCHAR(1000) NULL
 );
 GO
 
--- Таблица назначений мастеров к заказам
 CREATE TABLE OrderTechnicians (
-    OrderTechnicianId INT IDENTITY(1,1) PRIMARY KEY,
-    OrderId INT NOT NULL FOREIGN KEY REFERENCES ServiceOrders(OrderId),
-    TechnicianId INT NOT NULL FOREIGN KEY REFERENCES Technicians(TechnicianId),
-    AssignedDate DATETIME2 DEFAULT GETDATE(),
-    HoursWorked DECIMAL(5,2) DEFAULT 0,
-    IsPrimary BIT DEFAULT 1
+    OrderTechnicianId INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    OrderId INT NOT NULL,
+    TechnicianId INT NOT NULL,
+    AssignedDate DATETIME2 NOT NULL CONSTRAINT DF_OrderTechnicians_AssignedDate DEFAULT (GETDATE()),
+    HoursWorked DECIMAL(5,2) NOT NULL CONSTRAINT DF_OrderTechnicians_HoursWorked DEFAULT (0),
+    IsPrimary BIT NOT NULL CONSTRAINT DF_OrderTechnicians_IsPrimary DEFAULT (1)
 );
 GO
 
--- Таблица выполненных услуг в заказе
 CREATE TABLE OrderServices (
-    OrderServiceId INT IDENTITY(1,1) PRIMARY KEY,
-    OrderId INT NOT NULL FOREIGN KEY REFERENCES ServiceOrders(OrderId),
-    ServiceId INT NOT NULL FOREIGN KEY REFERENCES Services(ServiceId),
-    TechnicianId INT NOT NULL FOREIGN KEY REFERENCES Technicians(TechnicianId),
-    Quantity INT DEFAULT 1,
+    OrderServiceId INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    OrderId INT NOT NULL,
+    ServiceId INT NOT NULL,
+    TechnicianId INT NOT NULL,
+    Quantity INT NOT NULL CONSTRAINT DF_OrderServices_Quantity DEFAULT (1),
     UnitPrice DECIMAL(10,2) NOT NULL,
     TotalPrice AS (Quantity * UnitPrice),
-    ServiceDate DATETIME2 DEFAULT GETDATE(),
-    Notes NVARCHAR(500)
+    ServiceDate DATETIME2 NOT NULL CONSTRAINT DF_OrderServices_ServiceDate DEFAULT (GETDATE()),
+    Notes NVARCHAR(500) NULL
 );
 GO
 
--- Таблица использованных запчастей в заказе
 CREATE TABLE OrderParts (
-    OrderPartId INT IDENTITY(1,1) PRIMARY KEY,
-    OrderId INT NOT NULL FOREIGN KEY REFERENCES ServiceOrders(OrderId),
-    PartId INT NOT NULL FOREIGN KEY REFERENCES Inventory(PartId),
+    OrderPartId INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    OrderId INT NOT NULL,
+    PartId INT NOT NULL,
     QuantityUsed INT NOT NULL,
     UnitPriceAtTime DECIMAL(10,2) NOT NULL,
     TotalPrice AS (QuantityUsed * UnitPriceAtTime),
-    UsageDate DATETIME2 DEFAULT GETDATE()
+    UsageDate DATETIME2 NOT NULL CONSTRAINT DF_OrderParts_UsageDate DEFAULT (GETDATE())
 );
 GO
 
--- Таблица истории статусов заказа
 CREATE TABLE OrderStatusHistory (
-    HistoryId INT IDENTITY(1,1) PRIMARY KEY,
-    OrderId INT NOT NULL FOREIGN KEY REFERENCES ServiceOrders(OrderId),
-    StatusId INT NOT NULL FOREIGN KEY REFERENCES OrderStatuses(StatusId),
-    ChangedDate DATETIME2 DEFAULT GETDATE(),
-    ChangedBy NVARCHAR(100),
-    Notes NVARCHAR(500)
+    HistoryId INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    OrderId INT NOT NULL,
+    StatusId INT NOT NULL,
+    ChangedDate DATETIME2 NOT NULL CONSTRAINT DF_OrderStatusHistory_ChangedDate DEFAULT (GETDATE()),
+    ChangedBy NVARCHAR(100) NULL,
+    Notes NVARCHAR(500) NULL
 );
 GO
 
--- Таблица платежей
 CREATE TABLE Payments (
-    PaymentId INT IDENTITY(1,1) PRIMARY KEY,
-    OrderId INT NOT NULL FOREIGN KEY REFERENCES ServiceOrders(OrderId),
+    PaymentId INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    OrderId INT NOT NULL,
     Amount DECIMAL(10,2) NOT NULL,
-    PaymentDate DATETIME2 DEFAULT GETDATE(),
-    PaymentMethod NVARCHAR(50), -- 'Cash', 'Card', 'Bank Transfer'
-    Status NVARCHAR(50) DEFAULT 'Completed', -- 'Pending', 'Completed', 'Failed'
-    TransactionId NVARCHAR(100),
-    Notes NVARCHAR(500)
+    PaymentDate DATETIME2 NOT NULL CONSTRAINT DF_Payments_PaymentDate DEFAULT (GETDATE()),
+    PaymentMethod NVARCHAR(50) NULL,
+    Status NVARCHAR(50) NOT NULL CONSTRAINT DF_Payments_Status DEFAULT (N'Completed'),
+    TransactionId NVARCHAR(100) NULL,
+    Notes NVARCHAR(500) NULL
 );
 GO
 
--- Вставляем начальные данные
-INSERT INTO OrderStatuses (StatusName, Description) VALUES
-('Новая', 'Заявка только создана'),
-('Диагностика', 'Устройство на диагностике'),
-('Ожидание запчастей', 'Ожидаем поставки запчастей'),
-('В ремонте', 'Устройство в процессе ремонта'),
-('Готово к получению', 'Оплачен, устройство можно забрать'),
-('Выдано', 'Устройство возвращено клиенту'),
-('Отменено', 'Заявка отменена'),
-('Ожидание оплаты', 'Ремонт завершён, ожидается оплата');
+-- =============================================================================
+-- ВНЕШНИЕ КЛЮЧИ
+-- =============================================================================
+
+ALTER TABLE AspNetRoleClaims ADD CONSTRAINT FK_AspNetRoleClaims_AspNetRoles_RoleId
+    FOREIGN KEY (RoleId) REFERENCES AspNetRoles(Id) ON DELETE CASCADE;
 GO
 
-INSERT INTO DeviceTypes (TypeName, Description) VALUES
-('Ноутбук', 'Портативные компьютеры'),
-('Стационарный ПК', 'Настольные компьютеры'),
-('Моноблок', 'Компьютеры-моноблоки'),
-('Сервер', 'Серверное оборудование'),
-('Планшет', 'Планшетные компьютеры'),
-('Принтер/МФУ', 'Печатающее оборудование');
+ALTER TABLE AspNetUserClaims ADD CONSTRAINT FK_AspNetUserClaims_AspNetUsers_UserId
+    FOREIGN KEY (UserId) REFERENCES AspNetUsers(Id) ON DELETE CASCADE;
 GO
 
-INSERT INTO PartCategories (CategoryName, Description) VALUES
-('Жесткие диски', 'HDD, SSD накопители'),
-('Оперативная память', 'Модули RAM'),
-('Процессоры', 'Центральные процессоры'),
-('Материнские платы', 'Основные платы'),
-('Блоки питания', 'Источники питания'),
-('Системы охлаждения', 'Кулеры, радиаторы'),
-('Батареи', 'Аккумуляторы для ноутбуков'),
-('Экранные модули', 'Дисплеи и матрицы'),
-('Клавиатуры', 'Клавиатуры для ноутбуков');
+ALTER TABLE AspNetUserLogins ADD CONSTRAINT FK_AspNetUserLogins_AspNetUsers_UserId
+    FOREIGN KEY (UserId) REFERENCES AspNetUsers(Id) ON DELETE CASCADE;
 GO
 
-INSERT INTO Services (ServiceName, Description, BasePrice, EstimatedDuration) VALUES
-('Диагностика', 'Полная диагностика оборудования', 500.00, 60),
-('Чистка от пыли', 'Чистка системы охлаждения и корпуса', 800.00, 45),
-('Замена термопасты', 'Замена термоинтерфейса процессора/видеокарты', 400.00, 30),
-('Установка ОС', 'Установка операционной системы', 1000.00, 90),
-('Восстановление данных', 'Восстановление данных с носителей', 1500.00, 120),
-('Замена матрицы', 'Замена экрана ноутбука', 1200.00, 60),
-('Ремонт материнской платы', 'Диагностика и ремонт материнской платы', 2000.00, 180);
+ALTER TABLE AspNetUserRoles ADD CONSTRAINT FK_AspNetUserRoles_AspNetUsers_UserId
+    FOREIGN KEY (UserId) REFERENCES AspNetUsers(Id) ON DELETE CASCADE;
 GO
 
--- Создаем индексы для улучшения производительности
+ALTER TABLE AspNetUserRoles ADD CONSTRAINT FK_AspNetUserRoles_AspNetRoles_RoleId
+    FOREIGN KEY (RoleId) REFERENCES AspNetRoles(Id) ON DELETE CASCADE;
+GO
+
+ALTER TABLE AspNetUserTokens ADD CONSTRAINT FK_AspNetUserTokens_AspNetUsers_UserId
+    FOREIGN KEY (UserId) REFERENCES AspNetUsers(Id) ON DELETE CASCADE;
+GO
+
+ALTER TABLE Customers ADD CONSTRAINT FK_Customers_AspNetUsers_UserId
+    FOREIGN KEY (UserId) REFERENCES AspNetUsers(Id) ON DELETE NO ACTION;
+GO
+
+ALTER TABLE Technicians ADD CONSTRAINT FK_Technicians_AspNetUsers_UserId
+    FOREIGN KEY (UserId) REFERENCES AspNetUsers(Id) ON DELETE NO ACTION;
+GO
+
+ALTER TABLE Inventory ADD CONSTRAINT FK_Inventory_PartCategories_CategoryId
+    FOREIGN KEY (CategoryId) REFERENCES PartCategories(CategoryId);
+GO
+
+ALTER TABLE ServiceOrders ADD CONSTRAINT FK_ServiceOrders_Customers_CustomerId
+    FOREIGN KEY (CustomerId) REFERENCES Customers(CustomerId);
+GO
+
+ALTER TABLE ServiceOrders ADD CONSTRAINT FK_ServiceOrders_DeviceTypes_DeviceTypeId
+    FOREIGN KEY (DeviceTypeId) REFERENCES DeviceTypes(DeviceTypeId);
+GO
+
+ALTER TABLE ServiceOrders ADD CONSTRAINT FK_ServiceOrders_OrderStatuses_StatusId
+    FOREIGN KEY (StatusId) REFERENCES OrderStatuses(StatusId);
+GO
+
+ALTER TABLE OrderTechnicians ADD CONSTRAINT FK_OrderTechnicians_ServiceOrders_OrderId
+    FOREIGN KEY (OrderId) REFERENCES ServiceOrders(OrderId);
+GO
+
+ALTER TABLE OrderTechnicians ADD CONSTRAINT FK_OrderTechnicians_Technicians_TechnicianId
+    FOREIGN KEY (TechnicianId) REFERENCES Technicians(TechnicianId);
+GO
+
+ALTER TABLE OrderServices ADD CONSTRAINT FK_OrderServices_ServiceOrders_OrderId
+    FOREIGN KEY (OrderId) REFERENCES ServiceOrders(OrderId);
+GO
+
+ALTER TABLE OrderServices ADD CONSTRAINT FK_OrderServices_Services_ServiceId
+    FOREIGN KEY (ServiceId) REFERENCES Services(ServiceId);
+GO
+
+ALTER TABLE OrderServices ADD CONSTRAINT FK_OrderServices_Technicians_TechnicianId
+    FOREIGN KEY (TechnicianId) REFERENCES Technicians(TechnicianId);
+GO
+
+ALTER TABLE OrderParts ADD CONSTRAINT FK_OrderParts_ServiceOrders_OrderId
+    FOREIGN KEY (OrderId) REFERENCES ServiceOrders(OrderId);
+GO
+
+ALTER TABLE OrderParts ADD CONSTRAINT FK_OrderParts_Inventory_PartId
+    FOREIGN KEY (PartId) REFERENCES Inventory(PartId);
+GO
+
+ALTER TABLE OrderStatusHistory ADD CONSTRAINT FK_OrderStatusHistory_ServiceOrders_OrderId
+    FOREIGN KEY (OrderId) REFERENCES ServiceOrders(OrderId);
+GO
+
+ALTER TABLE OrderStatusHistory ADD CONSTRAINT FK_OrderStatusHistory_OrderStatuses_StatusId
+    FOREIGN KEY (StatusId) REFERENCES OrderStatuses(StatusId);
+GO
+
+ALTER TABLE Payments ADD CONSTRAINT FK_Payments_ServiceOrders_OrderId
+    FOREIGN KEY (OrderId) REFERENCES ServiceOrders(OrderId);
+GO
+
+-- =============================================================================
+-- ИНДЕКСЫ
+-- =============================================================================
+
+CREATE INDEX EmailIndex ON AspNetUsers(NormalizedEmail);
+GO
+
+CREATE UNIQUE INDEX UserNameIndex ON AspNetUsers(NormalizedUserName) WHERE NormalizedUserName IS NOT NULL;
+GO
+
+CREATE UNIQUE INDEX RoleNameIndex ON AspNetRoles(NormalizedName) WHERE NormalizedName IS NOT NULL;
+GO
+
+CREATE INDEX IX_AspNetRoleClaims_RoleId ON AspNetRoleClaims(RoleId);
+GO
+
+CREATE INDEX IX_AspNetUserClaims_UserId ON AspNetUserClaims(UserId);
+GO
+
+CREATE INDEX IX_AspNetUserLogins_UserId ON AspNetUserLogins(UserId);
+GO
+
+CREATE INDEX IX_AspNetUserRoles_RoleId ON AspNetUserRoles(RoleId);
+GO
+
+CREATE UNIQUE INDEX IX_Customers_UserId ON Customers(UserId) WHERE UserId IS NOT NULL;
+GO
+
+CREATE UNIQUE INDEX IX_Technicians_UserId ON Technicians(UserId) WHERE UserId IS NOT NULL;
+GO
+
 CREATE INDEX IX_ServiceOrders_CustomerId ON ServiceOrders(CustomerId);
+GO
+
 CREATE INDEX IX_ServiceOrders_StatusId ON ServiceOrders(StatusId);
+GO
+
 CREATE INDEX IX_ServiceOrders_CreatedDate ON ServiceOrders(CreatedDate);
+GO
+
 CREATE INDEX IX_OrderParts_OrderId ON OrderParts(OrderId);
+GO
+
 CREATE INDEX IX_OrderParts_PartId ON OrderParts(PartId);
+GO
+
 CREATE INDEX IX_OrderServices_OrderId ON OrderServices(OrderId);
+GO
+
 CREATE INDEX IX_OrderStatusHistory_OrderId ON OrderStatusHistory(OrderId);
+GO
+
 CREATE INDEX IX_Inventory_CategoryId ON Inventory(CategoryId);
 GO
 
--- Создаем представления (каждое в отдельном пакете)
+-- =============================================================================
+-- ПРЕДСТАВЛЕНИЯ (VIEWS)
+-- =============================================================================
+
 CREATE VIEW ActiveOrders AS
-SELECT 
+SELECT
     so.OrderId,
-    c.FirstName + ' ' + c.LastName AS CustomerName,
+    c.FirstName + N' ' + c.LastName AS CustomerName,
     dt.TypeName AS DeviceType,
     os.StatusName,
     so.CreatedDate,
@@ -229,13 +430,13 @@ FROM ServiceOrders so
     INNER JOIN Customers c ON so.CustomerId = c.CustomerId
     INNER JOIN DeviceTypes dt ON so.DeviceTypeId = dt.DeviceTypeId
     INNER JOIN OrderStatuses os ON so.StatusId = os.StatusId
-WHERE so.StatusId NOT IN (5, 6, 7); -- Не готовые, выданные или отмененные
+WHERE so.StatusId NOT IN (5, 6, 7);
 GO
 
 CREATE VIEW TechnicianWorkload AS
-SELECT 
+SELECT
     t.TechnicianId,
-    t.FirstName + ' ' + t.LastName AS TechnicianName,
+    t.FirstName + N' ' + t.LastName AS TechnicianName,
     COUNT(ot.OrderId) AS ActiveOrdersCount,
     SUM(ot.HoursWorked) AS TotalHoursWorked
 FROM Technicians t
@@ -246,7 +447,7 @@ GROUP BY t.TechnicianId, t.FirstName, t.LastName;
 GO
 
 CREATE VIEW LowStockAlert AS
-SELECT 
+SELECT
     PartId,
     PartName,
     QuantityInStock,
@@ -255,274 +456,532 @@ FROM Inventory
 WHERE QuantityInStock <= ReorderLevel AND IsActive = 1;
 GO
 
--- Проверочный запрос для тестирования базы
-SELECT 
-    'Database created successfully' AS Result,
-    (SELECT COUNT(*) FROM OrderStatuses) AS StatusCount,
-    (SELECT COUNT(*) FROM DeviceTypes) AS DeviceTypesCount,
-    (SELECT COUNT(*) FROM Services) AS ServicesCount;
+PRINT N'Структура БД создана. Загрузка данных...';
 GO
 
--- ИЗМЕНЕНИЕ И ДОБАВЛЕНИЕ РОЛЕЙ
+-- =============================================================================
+-- ДАННЫЕ (дамп с сервера MAY, 2026-06-05)
+-- =============================================================================
 
-USE ComputerRepairService;
+-- OrderStatuses (8 rows)
+SET IDENTITY_INSERT [OrderStatuses] ON;
+INSERT INTO [OrderStatuses] ([StatusId], [StatusName], [Description]) VALUES
+(1, N'Новая', N'Заявка только создана'),
+(2, N'Диагностика', N'Устройство на диагностике'),
+(3, N'Ожидание запчастей', N'Ожидаем поставки запчастей'),
+(4, N'В ремонте', N'Устройство в процессе ремонта'),
+(5, N'Готово к выдаче', N'Ремонт завершён, устройство ожидает выдачи и/или оплаты'),
+(6, N'Выдано', N'Устройство возвращено клиенту'),
+(7, N'Отменено', N'Заявка отменена'),
+(8, N'Требует согласования', N'Требуется согласие клиента на стоимость ремонта')
+;
+SET IDENTITY_INSERT [OrderStatuses] OFF;
 GO
 
--- 1. Создаем таблицы Identity (если еще не существуют)
+-- DeviceTypes (7 rows)
+SET IDENTITY_INSERT [DeviceTypes] ON;
+INSERT INTO [DeviceTypes] ([DeviceTypeId], [TypeName], [Description]) VALUES
+(1, N'Ноутбук', N'Портативные компьютеры'),
+(2, N'Стационарный ПК', N'Настольные компьютеры'),
+(3, N'Моноблок', N'Компьютеры-моноблоки'),
+(4, N'Сервер', N'Серверное оборудование'),
+(5, N'Планшет', N'Планшетные компьютеры'),
+(6, N'Принтер/МФУ', N'Печатающее оборудование'),
+(7, N'IPHONEEE', N'ну типа айфон для нищих')
+;
+SET IDENTITY_INSERT [DeviceTypes] OFF;
+GO
 
--- Таблица AspNetUsers (уже есть в вашем скрипте, но проверим структуру)
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AspNetUsers')
-BEGIN
-    CREATE TABLE [AspNetUsers] (
-        [Id] NVARCHAR(450) PRIMARY KEY,
-        [FirstName] NVARCHAR(100) NULL,
-        [LastName] NVARCHAR(100) NULL,
-        [Address] NVARCHAR(500) NULL,
-        [RegistrationDate] DATETIME2 NOT NULL DEFAULT GETDATE(),
-        [CustomerId] INT NULL,
-        [TechnicianId] INT NULL,
-        [UserName] NVARCHAR(256) NULL,
-        [NormalizedUserName] NVARCHAR(256) NULL,
-        [Email] NVARCHAR(256) NULL,
-        [NormalizedEmail] NVARCHAR(256) NULL,
-        [EmailConfirmed] BIT NOT NULL DEFAULT 0,
-        [PasswordHash] NVARCHAR(MAX) NULL,
-        [SecurityStamp] NVARCHAR(MAX) NULL,
-        [ConcurrencyStamp] NVARCHAR(MAX) NULL,
-        [PhoneNumber] NVARCHAR(MAX) NULL,
-        [PhoneNumberConfirmed] BIT NOT NULL DEFAULT 0,
-        [TwoFactorEnabled] BIT NOT NULL DEFAULT 0,
-        [LockoutEnd] DATETIMEOFFSET NULL,
-        [LockoutEnabled] BIT NOT NULL DEFAULT 1,
-        [AccessFailedCount] INT NOT NULL DEFAULT 0
-    );
-    PRINT 'Таблица AspNetUsers создана';
-END
-ELSE PRINT 'Таблица AspNetUsers уже существует';
+-- PartCategories (9 rows)
+SET IDENTITY_INSERT [PartCategories] ON;
+INSERT INTO [PartCategories] ([CategoryId], [CategoryName], [Description]) VALUES
+(1, N'Жесткие диски', N'HDD, SSD накопители'),
+(2, N'Оперативная память', N'Модули RAM'),
+(3, N'Процессоры', N'Центральные процессоры'),
+(4, N'Материнские платы', N'Основные платы'),
+(5, N'Блоки питания', N'Источники питания'),
+(6, N'Системы охлаждения', N'Кулеры, радиаторы'),
+(7, N'Батареи', N'Аккумуляторы для ноутбуков'),
+(8, N'Экранные модули', N'Дисплеи и матрицы'),
+(9, N'Клавиатуры', N'Клавиатуры для ноутбуков')
+;
+SET IDENTITY_INSERT [PartCategories] OFF;
+GO
 
--- Таблица AspNetRoles
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AspNetRoles')
-BEGIN
-    CREATE TABLE [AspNetRoles] (
-        [Id] NVARCHAR(450) PRIMARY KEY,
-        [Name] NVARCHAR(256) NULL,
-        [NormalizedName] NVARCHAR(256) NULL,
-        [ConcurrencyStamp] NVARCHAR(MAX) NULL
-    );
-    PRINT 'Таблица AspNetRoles создана';
-END
-ELSE PRINT 'Таблица AspNetRoles уже существует';
+-- Services (7 rows)
+SET IDENTITY_INSERT [Services] ON;
+INSERT INTO [Services] ([ServiceId], [ServiceName], [Description], [BasePrice], [EstimatedDuration], [IsActive]) VALUES
+(1, N'Диагностика', N'Полная диагностика оборудования', 500.00, 60, 1),
+(2, N'Чистка от пыли', N'Чистка системы охлаждения и корпуса', 800.00, 45, 1),
+(3, N'Замена термопасты', N'Замена термоинтерфейса процессора/видеокарты', 400.00, 30, 1),
+(4, N'Установка ОС', N'Установка операционной системы', 1000.00, 90, 1),
+(5, N'Восстановление данных', N'Восстановление данных с носителей', 1500.00, 120, 1),
+(6, N'Замена матрицы', N'Замена экрана ноутбука', 1200.00, 60, 1),
+(7, N'Ремонт материнской платы', N'Диагностика и ремонт материнской платы', 2000.00, 180, 1)
+;
+SET IDENTITY_INSERT [Services] OFF;
+GO
 
--- Таблица AspNetRoleClaims
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AspNetRoleClaims')
-BEGIN
-    CREATE TABLE [AspNetRoleClaims] (
-        [Id] INT IDENTITY(1,1) PRIMARY KEY,
-        [RoleId] NVARCHAR(450) NOT NULL,
-        [ClaimType] NVARCHAR(MAX) NULL,
-        [ClaimValue] NVARCHAR(MAX) NULL,
-        CONSTRAINT [FK_AspNetRoleClaims_AspNetRoles_RoleId] FOREIGN KEY ([RoleId]) 
-        REFERENCES [AspNetRoles] ([Id]) ON DELETE CASCADE
-    );
-    PRINT 'Таблица AspNetRoleClaims создана';
-END
-ELSE PRINT 'Таблица AspNetRoleClaims уже существует';
+-- AspNetRoles (3 rows)
+INSERT INTO [AspNetRoles] ([Id], [Name], [NormalizedName], [ConcurrencyStamp]) VALUES
+(N'0c51e3ba-36e5-4c4e-9650-2b31be877f4c', N'Admin', N'ADMIN', NULL),
+(N'64e6702b-6867-4d2e-90a2-7974543f39f6', N'Employee', N'EMPLOYEE', NULL),
+(N'a15fd578-8410-4a20-ab78-35155cab71b2', N'Client', N'CLIENT', NULL)
+;
+GO
 
--- Таблица AspNetUserClaims
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AspNetUserClaims')
-BEGIN
-    CREATE TABLE [AspNetUserClaims] (
-        [Id] INT IDENTITY(1,1) PRIMARY KEY,
-        [UserId] NVARCHAR(450) NOT NULL,
-        [ClaimType] NVARCHAR(MAX) NULL,
-        [ClaimValue] NVARCHAR(MAX) NULL,
-        CONSTRAINT [FK_AspNetUserClaims_AspNetUsers_UserId] FOREIGN KEY ([UserId]) 
-        REFERENCES [AspNetUsers] ([Id]) ON DELETE CASCADE
-    );
-    PRINT 'Таблица AspNetUserClaims создана';
-END
-ELSE PRINT 'Таблица AspNetUserClaims уже существует';
+-- AspNetUsers (48 rows)
+INSERT INTO [AspNetUsers] ([Id], [FirstName], [LastName], [Address], [RegistrationDate], [CustomerId], [TechnicianId], [UserName], [NormalizedUserName], [Email], [NormalizedEmail], [EmailConfirmed], [PasswordHash], [SecurityStamp], [ConcurrencyStamp], [PhoneNumber], [PhoneNumberConfirmed], [TwoFactorEnabled], [LockoutEnd], [LockoutEnabled], [AccessFailedCount], [ProfileImagePath], [Bio]) VALUES
+(N'0e80b61e-c33f-46d7-8539-5fbbfb627a38', N'Ольга', N'Павлова', N'ул. Молодежная, д. 12, кв. 8', '2026-04-09 10:16:19.4858578', NULL, NULL, N'olga.pavlova@yandex.ru', N'OLGA.PAVLOVA@YANDEX.RU', N'olga.pavlova@yandex.ru', N'OLGA.PAVLOVA@YANDEX.RU', 1, N'AQAAAAIAAYagAAAAELXjAhxcdgqaUYTFytz9PNnDj+onWH+IByYKYlOf/deoHihAb/Mt02dFeQhT9YjLJQ==', N'UGHZBP7J6SB4QNOICGQMLF4XBAK5DQCZ', N'c8cd39c8-c3ad-447f-8eee-e04283424051', N'+79166789012', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'0fadec6d-c61d-4f7f-98df-a98e9f66824d', N'Владимир', N'Антонов', N'ул. Солнечная, д. 9, кв. 2', '2026-04-09 10:16:21.3929953', NULL, NULL, N'vladimir.antonov@yandex.ru', N'VLADIMIR.ANTONOV@YANDEX.RU', N'vladimir.antonov@yandex.ru', N'VLADIMIR.ANTONOV@YANDEX.RU', 1, N'AQAAAAIAAYagAAAAEHrozaatqPBhDUQYBe+TkVdC+jzh0rlTmRrZ6TlqCllxxIHepGR+1ib4oP3VjjHWBA==', N'EIUUKKAZSVEBFTIBCNC2JXOCARABJION', N'6cf82e41-279f-4e91-b485-b732bc8bfdb7', N'+79165678901', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'107540e7-4249-43fe-b16f-cebd236f0488', N'Алексей', N'Клиентов', NULL, '2025-12-16 03:41:46.1578185', NULL, NULL, N'client@example.com', N'CLIENT@EXAMPLE.COM', N'client@example.com', N'CLIENT@EXAMPLE.COM', 1, N'AQAAAAIAAYagAAAAEPxE4LwL3wMq42AsbDiRfv5J0/zUF/12xkzoAXqVTYg7l97ezANRqevBDCtkp7fpDg==', N'33C7HC4LJCEGJPF6HF6UYNMGNMHQIQ74', N'8cae36fd-3041-4bbb-a4f8-8256aee015bc', NULL, 0, 0, NULL, 1, 0, NULL, NULL),
+(N'1a53225d-f759-47cf-9e30-8d4f0ebc77e9', N'Роман', N'Степанов', NULL, '2026-04-09 10:16:23.3254108', NULL, NULL, N'roman.stepanov@service.ru', N'ROMAN.STEPANOV@SERVICE.RU', N'roman.stepanov@service.ru', N'ROMAN.STEPANOV@SERVICE.RU', 1, N'AQAAAAIAAYagAAAAEA2g1/cLfCRzRxgLzCGFRIZUhBLKxqEoncpqdzhjqLEbD95QCnSFgp+EHvKq3tg/fw==', N'IBWCPG2ZLVAQUGFX2IRGUVPWA2QHHZSC', N'853d16c7-89bb-4ecf-9c54-ec4524998f7c', N'+79163333333', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'1d0a9c37-279e-4ff5-b12d-f4a08395b5c0', N'Ирина', N'Орлова', N'пр. Комсомольский, д. 28, кв. 16', '2026-04-09 10:16:21.1385887', NULL, NULL, N'irina.orlova@gmail.com', N'IRINA.ORLOVA@GMAIL.COM', N'irina.orlova@gmail.com', N'IRINA.ORLOVA@GMAIL.COM', 1, N'AQAAAAIAAYagAAAAEAoERN83TjnZMerFHpJyiP3GoiIAFMYGlMiFYHHXBg1afyHUzu9k3+q5HQyVypLXVg==', N'G2JANJGMCI52UBRHQNN66NYMTA7OJUNC', N'af21ae2c-0eba-4121-8e60-a7f16b4ef259', N'+79164567890', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'27784144-9a04-4b93-8e24-d4c8fba71233', N'Никита', N'Афанасьев', NULL, '2026-04-09 10:16:26.9115470', NULL, NULL, N'nikita.afanasev@service.ru', N'NIKITA.AFANASEV@SERVICE.RU', N'nikita.afanasev@service.ru', N'NIKITA.AFANASEV@SERVICE.RU', 1, N'AQAAAAIAAYagAAAAEBfXVKWlXy1DSk1upiAqTD1vDnPxu9BYTGTojBug8Zo0fyCtUSzIGXy2e+OJycrM3Q==', N'A5RDLQYKRE7LUIFUKWJ77OWISWJWEUI6', N'bb0a6796-5ebf-43f1-ab4f-6f05ba089739', N'+79169898989', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'3061bb52-a549-4039-ae98-c4da110c2b5d', N'Максим', N'Медведев', NULL, '2026-04-09 10:16:23.5641390', NULL, NULL, N'maxim.medvedev@service.ru', N'MAXIM.MEDVEDEV@SERVICE.RU', N'maxim.medvedev@service.ru', N'MAXIM.MEDVEDEV@SERVICE.RU', 1, N'AQAAAAIAAYagAAAAEL16SoR2AvSAuFn0QX14jKvxAGs3tiJNjlFv4dXw6XH+qdBQKVz56K7XPcjqClf/UA==', N'QVFALJK47ONR2IMMGOYX6UQLMUENGDG7', N'588d13c0-790e-4cd9-9625-bf1e8cdcffb4', N'+79164444444', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'3261f5b1-ad1f-47cf-a65b-9bd16ce2a336', N'Главный', N'Администратор', NULL, '2025-12-17 12:34:52.3501333', NULL, NULL, N'admin@admin.com', N'ADMIN@ADMIN.COM', N'admin@admin.com', N'ADMIN@ADMIN.COM', 1, N'AQAAAAIAAYagAAAAEP1QDwtmzkUXskeISk6oik0+uZA68L1oOLB6YmDJ44aKn+6t69KgQk2YZByXYHUtgA==', N'KD4HQYSJOG3QGKD3X2MBWAZUA6RJHFHG', N'ab00d473-d061-4366-b422-7e126dd2f0ea', NULL, 0, 0, NULL, 1, 0, N'/uploads/avatars/3261f5b1-ad1f-47cf-a65b-9bd16ce2a336.jpg', NULL),
+(N'335a1b7c-7b7e-4b2a-a472-ddec0ba4ed62', N'Алексей', N'Козлов', N'ул. Садовая, д. 8, кв. 3', '2026-04-09 10:16:18.7154115', NULL, NULL, N'alex.kozlov@yandex.ru', N'ALEX.KOZLOV@YANDEX.RU', N'alex.kozlov@yandex.ru', N'ALEX.KOZLOV@YANDEX.RU', 1, N'AQAAAAIAAYagAAAAEJ2DRcVw3NGDZi2Slx9G7DLEe6UR9UooLopzipnZM6KDZ86IT9Oqcfq/VOGb3e0Nvg==', N'N77L5AV3RXGLKBRXKUABSFSULSXZAYIQ', N'58e262b2-599d-4981-b546-1d81a57ae3c6', N'+79163456789', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'35530f38-8f44-4177-b9d3-6e8a00634eef', N'Атнот', N'Шоркин', NULL, '2026-06-05 17:21:14.0060717', NULL, NULL, N'antonShorkin@gmail.com', N'ANTONSHORKIN@GMAIL.COM', N'antonShorkin@gmail.com', N'ANTONSHORKIN@GMAIL.COM', 1, N'AQAAAAIAAYagAAAAEKG0SsmdwCm5bHl5i0H1KGTu3bnBXQ222K7exGxQZpcWVIScARfe/INKikdBCKxq9A==', N'2E4HT7WWZDNCJVRI65GIY36AZ4TI3W5N', N'aa6ce993-e909-483d-8ca7-01ebdf5b3df3', N'+19821299983', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'36b42297-4d32-4a11-a325-8c89313cffc7', N'Дмитрий', N'Васильев', N'пр. Победы, д. 30, кв. 21', '2026-04-09 10:16:19.2582403', NULL, NULL, N'dmitry.vasiliev@gmail.com', N'DMITRY.VASILIEV@GMAIL.COM', N'dmitry.vasiliev@gmail.com', N'DMITRY.VASILIEV@GMAIL.COM', 1, N'AQAAAAIAAYagAAAAEBfPmxbrfA39iLXijSuYro+vKtCsLC6NBD8kYharRC+gH64/JRejV5C8JvXniL80uA==', N'ZGV6ASG7O3TWK73DRZ2PWO4INC6XPURX', N'070135bb-af99-4870-9151-43260fa13372', N'+79165678901', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'39ab1c63-fd5c-457d-9c62-7774d6a0a0b1', N'Аркадий', N'Титов', NULL, '2026-04-09 10:16:24.8351190', NULL, NULL, N'arkady.titov@service.ru', N'ARKADY.TITOV@SERVICE.RU', N'arkady.titov@service.ru', N'ARKADY.TITOV@SERVICE.RU', 1, N'AQAAAAIAAYagAAAAECAYPwL/OEP2SPK9lDAFRg3XONbEUO9Y+yMnkV6xMbKHx2Z8oSAyF2aUPFcUqoVKzA==', N'RV5C5NJSLUHAK5N4MNTOXIHURBYQDYNA', N'1148f631-769b-4eb6-9e9c-d43630e34f99', N'+79169999999', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'42d13ab4-88e5-40d3-b3e8-e037a9b9c637', N'Михаил', N'Лебедев', N'пр. Ленинградский, д. 45, кв. 33', '2026-04-09 10:16:20.5196025', NULL, NULL, N'mikhail.lebedev@gmail.com', N'MIKHAIL.LEBEDEV@GMAIL.COM', N'mikhail.lebedev@gmail.com', N'MIKHAIL.LEBEDEV@GMAIL.COM', 1, N'AQAAAAIAAYagAAAAEDqv3d55KpbmmOpvNoRjDitGM6CrIVqBExkDxUQtIG/5k7QuzCZw0v6KEscbVxGRLA==', N'I4R4VLTTBHVY72TMRIFVTFTSWOFDSBIJ', N'ddfcf9be-87ee-4757-b1b7-2c002ac7ccbc', N'+79161234567', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'4dda2484-d8e7-43e3-a316-4fa879a9f342', N'Станислав', N'Жуков', NULL, '2026-04-09 10:16:24.3247933', NULL, NULL, N'stanislav.zhukov@service.ru', N'STANISLAV.ZHUKOV@SERVICE.RU', N'stanislav.zhukov@service.ru', N'STANISLAV.ZHUKOV@SERVICE.RU', 1, N'AQAAAAIAAYagAAAAEJZvfg6LRv3GZcm2AJnil8Jp8/4eYaMyFKR6uClSdWRwtMnEmvULb+zPh/SjXNG/oQ==', N'23R4D2D4ME2IKBFHZ64QT52XHNWRGEFP', N'ec0965dd-70f6-4758-828e-af56a735094d', N'+79167777777', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'50053432-fa97-442f-8b07-d63b3171352f', N'Главный', N'Администратор', NULL, '2025-12-16 03:41:45.2496580', NULL, NULL, N'admin@service.com', N'ADMIN@SERVICE.COM', N'admin@service.com', N'ADMIN@SERVICE.COM', 1, N'AQAAAAIAAYagAAAAEB8vP2C/6MopPZMArl8N2Pqapo8dKfn10yCrKcyUjjPWN6UzFQgcJdKDNGIcDbW2vA==', N'VLDX7QD5E2KLBELJM4TMQGN5EA4HCJLD', N'085cc007-4ac6-489b-a260-366a3250b217', NULL, 0, 0, NULL, 1, 0, NULL, NULL),
+(N'5552d568-9457-423e-9ec9-217199a90818', N'Анна', N'Морозова', N'пр. Строителей, д. 18, кв. 9', '2026-04-09 10:16:19.9236738', NULL, NULL, N'anna.morozova@gmail.com', N'ANNA.MOROZOVA@GMAIL.COM', N'anna.morozova@gmail.com', N'ANNA.MOROZOVA@GMAIL.COM', 1, N'AQAAAAIAAYagAAAAEE4Lnj1DhZ8IQXA0QwBmTv//ipmySyNKEAZplyRzNNZiNXnYHkFknSObmZy2Fe//pQ==', N'DUNKPJE5JK7XW6ARFTRTQMQFABWTBAET', N'c18880ff-ad1c-4806-a444-be3a306d4847', N'+79168901234', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'65513314-427f-4782-80ac-6902cf3c90d7', N'Екатерина', N'Новикова', N'пр. Октябрьский, д. 19, кв. 14', '2026-04-09 10:16:22.5572407', NULL, NULL, N'ekaterina.novikova@gmail.com', N'EKATERINA.NOVIKOVA@GMAIL.COM', N'ekaterina.novikova@gmail.com', N'EKATERINA.NOVIKOVA@GMAIL.COM', 1, N'AQAAAAIAAYagAAAAEFjkykUKgaQY8FV8wIVK4OBNdTJe0Bz/zBJLbflPhQ0/q9POhi0ZdbOCsTJmrJ+1nQ==', N'KVHISAW5TPCGC2UDYSX54VNGNAIP6VCJ', N'cff3496d-b071-4cd7-8263-7a4538065bd5', N'+79160123456', 0, 0, NULL, 1, 0, N'/uploads/avatars/65513314-427f-4782-80ac-6902cf3c90d7.jpg', NULL),
+(N'68c458ee-fd83-4bfb-b4da-16893acc98b6', N'Gornostaevtest111111', N'Клиент', NULL, '2026-06-05 16:04:59.3425927', 22, NULL, N'gornostaevTest111111@yandex.ru', N'GORNOSTAEVTEST111111@YANDEX.RU', N'gornostaevTest111111@yandex.ru', N'GORNOSTAEVTEST111111@YANDEX.RU', 0, N'AQAAAAIAAYagAAAAEHRBi08fsRFr1HRnDfxRGqXyuLOHSxVJlLr4IA0UyyiQYf1G7/Y25koyjHbdNLkZwA==', N'TN72AFDIESHXDSTGECMJ442P7NTW5ADR', N'99e6cb0b-d00c-43ed-b3ca-51e334bb80b9', NULL, 0, 0, NULL, 1, 0, NULL, NULL),
+(N'6b0e284b-2f53-4d13-86f2-dd174048db6b', N'Сергей', N'Федоров', N'ул. Школьная, д. 5, кв. 15', '2026-04-09 10:16:19.7120547', NULL, NULL, N'sergey.fedorov@mail.ru', N'SERGEY.FEDOROV@MAIL.RU', N'sergey.fedorov@mail.ru', N'SERGEY.FEDOROV@MAIL.RU', 1, N'AQAAAAIAAYagAAAAECds3cMdacLwECNDc2Q+eZqhiXuw9bPK2lQcW90lnnKDh5+moUJc+LINVIOCZ87bMg==', N'W6JIS443CFCH6CDA7J27E7GIPDJKTUPZ', N'34d5aa52-7a2f-45be-ba33-89f38c9e8cef', N'+79167890123', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'78a32d64-827b-470e-bfe7-190ef9d861c1', N'Александр', N'Попов', NULL, '2026-04-09 10:16:22.8400913', NULL, NULL, N'alex.popov@service.ru', N'ALEX.POPOV@SERVICE.RU', N'alex.popov@service.ru', N'ALEX.POPOV@SERVICE.RU', 1, N'AQAAAAIAAYagAAAAEMXrP0wh68IBsVL1Z/xqji0mncEVH5MYJrTldL0pL7sHPb7j7aZtO/IJHmZhW9/GUg==', N'VV7DLP2CV6ZHBLQMKJFQW77FTYLX2XRQ', N'01360a51-71cd-44cc-bad8-03871006ec5c', N'+79161111111', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'7a041459-66a2-46bf-91ac-56fba522ec8c', N'Светлана', N'Иванова', N'ул. Пушкина, д. 16, кв. 10', '2026-04-09 10:16:21.6375975', NULL, NULL, N'svetlana.ivanova@mail.ru', N'SVETLANA.IVANOVA@MAIL.RU', N'svetlana.ivanova@mail.ru', N'SVETLANA.IVANOVA@MAIL.RU', 1, N'AQAAAAIAAYagAAAAEFOvBa/NxP6lw3Pt4+MOy7XpgZPoeEVMSr/joDfmdNmDwczFv8RYERd2JRGpnVyc/g==', N'HFMLILOQYAM6PSS3GB3UL7K6Y3VVNXMR', N'5cd09033-9028-43a2-9b67-cd2c385778d1', N'+79166789012', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'7e78146e-36c7-4de0-9516-9e103f64a955', N'Петр', N'Маслов', NULL, '2026-04-09 10:16:27.3505587', NULL, NULL, N'petr.maslov@service.ru', N'PETR.MASLOV@SERVICE.RU', N'petr.maslov@service.ru', N'PETR.MASLOV@SERVICE.RU', 1, N'AQAAAAIAAYagAAAAENWfPeEw906QyxOMJrRz2hbNvUHhNaFTjJ7H5CaWZgZk0hwy3ws2O+TIrS9DlbPvog==', N'MY6ZGPBJSXYAGFELNMSCKKZSNXWV74WW', N'264e7762-90a4-48b5-8579-3e6791d34a65', N'+79162020202', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'7f072be5-2413-487b-965e-ec9c0b34e564', N'Андрей', N'Егоров', N'ул. Заречная, д. 14, кв. 18', '2026-04-09 10:16:20.9494909', NULL, NULL, N'andrey.egorov@mail.ru', N'ANDREY.EGOROV@MAIL.RU', N'andrey.egorov@mail.ru', N'ANDREY.EGOROV@MAIL.RU', 1, N'AQAAAAIAAYagAAAAEGOuMiEBR1j7tofcEzVk30ABPTslFW7oMEGaTY31ZuXu8iav/NfDi03Y+dm0vJswHQ==', N'7QAKCBYCES2QJUGH23KZRQXWK56L37IX', N'ad081697-4a4a-4774-af9a-6295a7065f43', N'+79163456789', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'8244b7c4-5fe8-4519-9c83-9daa01d24a85', N'Леонид', N'Карпов', NULL, '2026-04-09 10:16:26.6989164', NULL, NULL, N'leonid.karpov@service.ru', N'LEONID.KARPOV@SERVICE.RU', N'leonid.karpov@service.ru', N'LEONID.KARPOV@SERVICE.RU', 1, N'AQAAAAIAAYagAAAAEOULPxfHPggFN9oCKwYq90eB1P5SaeZhFZB0jThzfyxD7aVx3TpEJmfW/EOGeBa1jg==', N'CDCVUI2XVVNBMGJOJG3P7TBJJLQLFELC', N'2bc3977d-5048-4031-b18f-60ad6781fe45', N'+79168787878', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'826e3acd-bedb-4263-a291-6697a57e49e5', N'Татьяна', N'Семенова', N'ул. Новая, д. 7, кв. 4', '2026-04-09 10:16:20.7386214', NULL, NULL, N'tatyana.semenova@yandex.ru', N'TATYANA.SEMENOVA@YANDEX.RU', N'tatyana.semenova@yandex.ru', N'TATYANA.SEMENOVA@YANDEX.RU', 1, N'AQAAAAIAAYagAAAAEDjlKMhpKlvXrspVl0bLkmwEdDaFWqc9pUBd3fKI2gWkEcLFSjaTleDpYf8UipsF0A==', N'7KMNDOLFDXJ2O2TMI5UMQTW6LY2SDBR7', N'06d2ef41-5561-4136-838c-41f51a0e5b08', N'+79162345678', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'8ca84e01-24ca-46d0-ba55-c6c36235978f', N'Игорь', N'Горбунов', NULL, '2026-04-09 10:16:26.3227726', NULL, NULL, N'igor.gorbunov@service.ru', N'IGOR.GORBUNOV@SERVICE.RU', N'igor.gorbunov@service.ru', N'IGOR.GORBUNOV@SERVICE.RU', 1, N'AQAAAAIAAYagAAAAEPJZpcbHlwzR6gIURln89cG9o22wGDqqK0Sc3JSAW6Ys2vzZyoNh7g177q4iqRDsOg==', N'PZ6VN5SL3UMYGJR6ZDWN7ZLPNK4MF6YF', N'15f157f0-6ac7-4985-85f4-d1109c77454c', N'+79166565656', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'9a072b60-9ad9-46ab-9e1a-8f2b3cc7b24d', N'Мария', N'Сидорова', N'пр. Мира, д. 25, кв. 12', '2026-04-09 10:16:18.4665959', NULL, NULL, N'maria.sidorova@gmail.com', N'MARIA.SIDOROVA@GMAIL.COM', N'maria.sidorova@gmail.com', N'MARIA.SIDOROVA@GMAIL.COM', 1, N'AQAAAAIAAYagAAAAEFnqzEQOb5p04SXJIjAIfHbImbC/Pvek60JkUUETNc+J1TT1Oe5aY1gFrt59DQzS7w==', N'JQVTZA74I5TPHWAQICPDVOO7HTM6VONB', N'7bc416fd-77e3-492a-8b65-0af5de261eda', N'+79162345678', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'9bbf7558-2025-4b51-a29c-0309eaa8010c', N'Григорий', N'Павлов', NULL, '2026-04-09 10:16:24.0788924', NULL, NULL, N'grigory.pavlov@service.ru', N'GRIGORY.PAVLOV@SERVICE.RU', N'grigory.pavlov@service.ru', N'GRIGORY.PAVLOV@SERVICE.RU', 1, N'AQAAAAIAAYagAAAAEObA735OOl4CSqSe2vN8CrtBuQJPP8/otcia2lrXPd4KsoGgy6FZzqK/U2bvsbR3ZA==', N'UMA22S3F4PMZ7YI6EWUVYUDP5JOIHXE3', N'b3217a60-ae23-4b1b-b370-ea3faf5fdb84', N'+79166666666', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'a080b6f8-596d-43fb-b5a5-15415f6c8712', N'Геннадий', N'Баранов', NULL, '2026-04-09 10:16:25.5896714', NULL, NULL, N'gennady.baranov@service.ru', N'GENNADY.BARANOV@SERVICE.RU', N'gennady.baranov@service.ru', N'GENNADY.BARANOV@SERVICE.RU', 1, N'AQAAAAIAAYagAAAAEPHa3nhj4YUIJdn5fZDR7HDVlJAUufpeK5Xo9AP7qemTXb3rZwbX9WH5f4YkAgnwwQ==', N'R3QKGAY4KU44U65Z3VX3QDH3YFKOHZNG', N'fe3fb68e-1b7f-4576-bc83-1b297b0b55cb', N'+79163232323', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'a8ffd425-f55f-4f58-868f-f14cf014de88', N'Юлия', N'Крылова', N'ул. Гагарина, д. 11, кв. 7', '2026-04-09 10:16:22.0781600', NULL, NULL, N'yulia.krylova@yandex.ru', N'YULIA.KRYLOVA@YANDEX.RU', N'yulia.krylova@yandex.ru', N'YULIA.KRYLOVA@YANDEX.RU', 1, N'AQAAAAIAAYagAAAAENz8fCBPE2GGhinBSDe0i3HgJvuMb9n3jv0PuSHStoWCepLUBlkiBIjsx40Ivj80Bw==', N'MDCMWRKUEBS4S5TUDBMMNJLUW5J3YKIL', N'25db817a-e0f1-4bdd-ac3f-4e28d1f1bb5a', N'+79168901234', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'adf82177-30b2-4b11-84e2-573ace3d7da5', N'Константин', N'Соколов', N'ул. Мира, д. 6, кв. 13', '2026-04-09 10:16:22.3120064', NULL, NULL, N'konstantin.sokolov@mail.ru', N'KONSTANTIN.SOKOLOV@MAIL.RU', N'konstantin.sokolov@mail.ru', N'KONSTANTIN.SOKOLOV@MAIL.RU', 1, N'AQAAAAIAAYagAAAAEGkPNEw9z0q+49doRpM+gBZ6j/hkW0+r/kEj09m2IsDkCSW6r9oQZAMrDHDTWlL5KA==', N'6FQD3BQFGRUYDJNR5464CJRLOU52J63G', N'fe5911d3-489d-4516-b634-4e372793b3d4', N'+79169012345', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'b2995b6a-9196-4570-8229-27f32e66a7d5', N'Кирилл', N'Колесников', NULL, '2026-04-09 10:16:26.5139958', NULL, NULL, N'kirill.kolesnikov@service.ru', N'KIRILL.KOLESNIKOV@SERVICE.RU', N'kirill.kolesnikov@service.ru', N'KIRILL.KOLESNIKOV@SERVICE.RU', 1, N'AQAAAAIAAYagAAAAEFC2Go96KLTBjaR5/gVsg07JKMIpfMhbQqsCa/EYUmGz5wqBneM7wZsBwhy4p4uyDA==', N'DSUIIXECM6DU5FKBZSB7UWL6X6VAGZC6', N'dad7edc2-e7b3-4f76-ada3-b56bae7e947a', N'+79167676767', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'b4754004-0125-4c67-8920-e5c5ecb68b24', N'Павел', N'Волков', N'ул. Лесная, д. 3, кв. 6', '2026-04-09 10:16:20.1276651', NULL, NULL, N'pavel.volkov@yandex.ru', N'PAVEL.VOLKOV@YANDEX.RU', N'pavel.volkov@yandex.ru', N'PAVEL.VOLKOV@YANDEX.RU', 1, N'AQAAAAIAAYagAAAAEO/pjUqEQh0/hBGwinq5v4txdBrLwOgRd50Ty7/5hayLmFy8mpK9TXgcExTzB6Nnfg==', N'FWGOGYUNZQ47CFEAROF4QIHRIJXZBCYX', N'cf7e73d6-88f0-43d5-a902-866e4d904464', N'+79169012345', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'b520c2bb-fbd3-4cb4-a47c-a6d2ff2c60dd', N'Елена', N'Николаева', N'ул. Центральная, д. 15, кв. 7', '2026-04-09 10:16:19.0079094', NULL, NULL, N'elena.nikolaeva@mail.ru', N'ELENA.NIKOLAEVA@MAIL.RU', N'elena.nikolaeva@mail.ru', N'ELENA.NIKOLAEVA@MAIL.RU', 1, N'AQAAAAIAAYagAAAAEJqp/0sqsW2J2GmLMOcbMM1b9Av221XsI5Hy2uiSc8h0a/M7uQCtGblNcxQ1Zx8Qtw==', N'C4B7CP3AR2ZZW4P37YNDOWULJFVVQKUM', N'671988f5-d0ea-43b8-8373-e95ff3c0a110', N'+79164567890', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'b7589066-fbe4-4187-8e4e-9723c41b662f', N'Евгений', N'Ефимов', NULL, '2026-04-09 10:16:25.8376188', NULL, NULL, N'evgeny.efimov@service.ru', N'EVGENY.EFIMOV@SERVICE.RU', N'evgeny.efimov@service.ru', N'EVGENY.EFIMOV@SERVICE.RU', 1, N'AQAAAAIAAYagAAAAEEOLTo+p5+NcvCDIpvi1RQtJit7MPtb1uskjcPPJPoORWcXGuHpFF/A4aPodoOH/rg==', N'WLKVGYQERBA6BX4SEGZRAZ7B5XQ6SAOD', N'95b88096-f692-44a5-9045-38c28665147c', N'+79164343434', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'ba4cce5c-8eb6-4de7-9621-71b2e17cac5b', N'Иван', N'Петров', N'ул. Ленина, д. 10, кв. 5', '2026-04-09 10:16:18.0132562', NULL, NULL, N'ivan.petrov@mail.ru', N'IVAN.PETROV@MAIL.RU', N'ivan.petrov@mail.ru', N'IVAN.PETROV@MAIL.RU', 1, N'AQAAAAIAAYagAAAAEBHmSIzqgnGbyyLDSsIdK3pjBN2aNRjMZ7sZ9tgwwUbAZa7F1T6bmVJU24b8bnWXAw==', N'IUSXONSNQQDVTF2ULB6LB474HMX2Y3CJ', N'219e12a4-a309-4ecf-96cb-ba07c651cc0a', N'+79161234567', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'bd5af294-b70a-4d5f-b15e-2f3b95c43cc7', N'Денис', N'Кузнецов', NULL, '2026-04-09 10:16:23.0768929', NULL, NULL, N'denis.kuznetsov@service.ru', N'DENIS.KUZNETSOV@SERVICE.RU', N'denis.kuznetsov@service.ru', N'DENIS.KUZNETSOV@SERVICE.RU', 1, N'AQAAAAIAAYagAAAAEM8fgNAzduchoJZaRK/DNykuL8G4P0bVP/FYRfP+xH6760MCB7labcwoJSZ29rVZaw==', N'M4CURHQG3RJFKYNAIWNRKUCXVHGRYVOA', N'1c8c168f-6153-4e9e-aed8-2cd68d67f4d1', N'+79162222222', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'c26cb72e-e11a-466e-9664-42f10c1b2d8c', N'Виктор', N'Новиков', NULL, '2026-04-09 10:16:23.8235409', NULL, NULL, N'viktor.novikov@service.ru', N'VIKTOR.NOVIKOV@SERVICE.RU', N'viktor.novikov@service.ru', N'VIKTOR.NOVIKOV@SERVICE.RU', 1, N'AQAAAAIAAYagAAAAEOePfPIkGrFsyx8OEqU3UQwUXUpq9fFz7o1eN+CM2lb6WBJ1yKGHRGr6vzfcbN6Ofg==', N'ESZZ2RHJ2CCMZQGMD42EYPFPL4IUBBHP', N'6d0fd02c-19e7-462f-9e4a-740cdafd27b5', N'+79165555555', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'c50071e7-b2c7-47e8-bd9a-f3c959723bc5', NULL, NULL, NULL, '2026-06-04 14:03:23.5094415', NULL, NULL, N'gornostaevPoelGovna@yahoo.com', N'GORNOSTAEVPOELGOVNA@YAHOO.COM', N'gornostaevPoelGovna@yahoo.com', N'GORNOSTAEVPOELGOVNA@YAHOO.COM', 0, N'AQAAAAIAAYagAAAAEG6smEecF3YHpZ7/TShF8G4Gyd+hbl63JstXpDCGl+kjhSmHQztcRL8x3Ml/JlhtSQ==', N'BUPI4OVIAGIYO2L5JJDTYD5ZTS3PB4HC', N'5523a7d5-b5da-4d8a-bd35-821035fd188a', NULL, 0, 0, NULL, 1, 0, NULL, NULL),
+(N'c90401fa-357f-4cc2-9869-0eb3b5e53c77', N'Атнот', N'Тест2', NULL, '2026-06-05 17:39:17.7490150', NULL, 23, N'atnottest2@mail.ru', N'ATNOTTEST2@MAIL.RU', N'atnottest2@mail.ru', N'ATNOTTEST2@MAIL.RU', 1, N'AQAAAAIAAYagAAAAEMZl+bs3hPPBpWfB/eYC8YIUXsP6GSjl/Zq1UYzmYh69r8oKaCF/inEzCqPZgViADg==', N'IUID4EABRUZGDJDUJQJCJ2JXLIVSDJ6B', N'0151d843-10c9-44a9-938a-45083f77c21f', N'8991111', 0, 0, NULL, 1, 0, NULL, NULL)
+;
+INSERT INTO [AspNetUsers] ([Id], [FirstName], [LastName], [Address], [RegistrationDate], [CustomerId], [TechnicianId], [UserName], [NormalizedUserName], [Email], [NormalizedEmail], [EmailConfirmed], [PasswordHash], [SecurityStamp], [ConcurrencyStamp], [PhoneNumber], [PhoneNumberConfirmed], [TwoFactorEnabled], [LockoutEnd], [LockoutEnabled], [AccessFailedCount], [ProfileImagePath], [Bio]) VALUES
+(N'cf47aabe-00bb-4c4f-b143-fa2ba17409de', N'Захар', N'Щербаков', NULL, '2026-04-09 10:16:26.0885079', NULL, NULL, N'zakhar.shcherbakov@service.ru', N'ZAKHAR.SHCHERBAKOV@SERVICE.RU', N'zakhar.shcherbakov@service.ru', N'ZAKHAR.SHCHERBAKOV@SERVICE.RU', 1, N'AQAAAAIAAYagAAAAEOniO1AWUqxu7Yjh8e5M84fHl/TNuovw564oKi6/3hZ3/HQ4mr8VCa3pG2Zy0Sq1UA==', N'W6MDVHHTQ2M7GV6OYL336SJ6AMTP3GIE', N'a3360fa4-50af-4001-b8a2-641eb25c411e', N'+79165454545', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'd50ca8b4-9431-4fa4-a458-f0564c591fbf', N'Юрий', N'Воробьев', NULL, '2026-04-09 10:16:24.5797834', NULL, NULL, N'yuri.vorobiev@service.ru', N'YURI.VOROBIEV@SERVICE.RU', N'yuri.vorobiev@service.ru', N'YURI.VOROBIEV@SERVICE.RU', 1, N'AQAAAAIAAYagAAAAEMmCuDm4j28UborNJfvqGgXOBZXu8hwB4NyuMBXt08PLE2gVhmZYrzNUzonzdb8wug==', N'WVCONFQLGNO2DQTFWARSK4DLD6CI2VXA', N'de2a11d7-d0db-4717-a223-f6f942a9c668', N'+79168888888', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'da22b3e4-bca7-494c-bc99-58e6cf31b1ec', N'Вадим', N'Давыдов', NULL, '2026-04-09 10:16:25.3304554', NULL, NULL, N'vadim.davydov@service.ru', N'VADIM.DAVYDOV@SERVICE.RU', N'vadim.davydov@service.ru', N'VADIM.DAVYDOV@SERVICE.RU', 1, N'AQAAAAIAAYagAAAAENQHhuZNhAuLGcPqFqNLQjGrk4gly6Rb6vLmEkcHf3Dvw0486kfZ/gPHYhrtC3XwFg==', N'BUGR6NM75QPPOLOETVHPA5TT4KKTDYQG', N'3972b9b0-7410-4f7d-9e6e-6028ad89eddb', N'+79162121212', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'dc70638a-33a5-440f-9d7f-5df9549ae2bd', N'Артем', N'Белов', N'пр. Кирова, д. 33, кв. 25', '2026-04-09 10:16:21.8681464', NULL, NULL, N'artem.belov@gmail.com', N'ARTEM.BELOV@GMAIL.COM', N'artem.belov@gmail.com', N'ARTEM.BELOV@GMAIL.COM', 1, N'AQAAAAIAAYagAAAAEMoqGaTd0+xMc9F+GC7iLCXaOqfy+5/TM5QvoAGarOyC1YH8RQ4yVgJ6g4pRu7ytaA==', N'ZYGXXZQRWTHUOF34KSBSUS43SJGDJ6M5', N'351e7e8c-a815-4692-838d-648f136bb318', N'+79167890123', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'df0dcd13-0ff6-4b39-a502-058d9749d541', N'Борис', N'Фомин', NULL, '2026-04-09 10:16:25.0847928', NULL, NULL, N'boris.fomin@service.ru', N'BORIS.FOMIN@SERVICE.RU', N'boris.fomin@service.ru', N'BORIS.FOMIN@SERVICE.RU', 1, N'AQAAAAIAAYagAAAAEDOp9C1xM2t2EsqKrIsLmT+svsdbAJOp8RRe/ohY0R3bAWQfHDl/30SiiD6hkz64lg==', N'DZFK5CF66SVYRK3ZULRRM4EYG23DUPXN', N'719bf61b-1896-4b8f-a6ac-a0a626ee07d6', N'+79161010101', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'e2fb03c7-44a7-4a7e-a637-d8c89057150e', N'Иван', N'Сервисный', NULL, '2025-12-16 03:41:45.8309295', NULL, NULL, N'employee@service.com', N'EMPLOYEE@SERVICE.COM', N'employee@service.com', N'EMPLOYEE@SERVICE.COM', 1, N'AQAAAAIAAYagAAAAEHdanrKBgR7ceSghghTmhFG8SIAPAtobhk7QXMAc4x1MEokRDkYX1uy1IoayHdplrA==', N'ZGFGXXYU3QE7ZYXUV4BKJRN7B65EUI5A', N'ae41dbe6-0c03-4318-b8f0-8d19c729fe35', NULL, 0, 0, NULL, 1, 0, NULL, NULL),
+(N'f879903a-17b2-42a0-a2a1-3d470b2e6c31', N'Наталья', N'Алексеева', N'ул. Парковая, д. 22, кв. 11', '2026-04-09 10:16:20.3089409', NULL, NULL, N'natalia.alexeeva@mail.ru', N'NATALIA.ALEXEEVA@MAIL.RU', N'natalia.alexeeva@mail.ru', N'NATALIA.ALEXEEVA@MAIL.RU', 1, N'AQAAAAIAAYagAAAAEHXHnNJTB6QJJwQyGP1PP/yPIE3EsQkK+uWOeyv02NjaSCDQaBQFE1dLj81eEoi6zA==', N'MH2JRIVGDWXDCMUDGV7EHODDLEBDJ5WZ', N'47cff835-f431-4539-9f53-ea9dcf93ea38', N'+79160123456', 0, 0, NULL, 1, 0, NULL, NULL),
+(N'ff892e2e-b07b-4508-965c-7dffcedd5a96', N'Олег', N'Власов', NULL, '2026-04-09 10:16:27.1399384', NULL, NULL, N'oleg.vlasov@service.ru', N'OLEG.VLASOV@SERVICE.RU', N'oleg.vlasov@service.ru', N'OLEG.VLASOV@SERVICE.RU', 1, N'AQAAAAIAAYagAAAAELM+ePrdQl+7a5A1r/V5jvZrYUQXypf/jXazeFMnZvNOm4OeizBqc0Gw1FQ1fucKXA==', N'BDNTZ744MSZMJ37V75YUSVU7W2AJ3LAQ', N'b00e9451-542b-48db-aa6c-03043ccfb9cc', N'+79160909090', 0, 0, NULL, 1, 0, NULL, NULL)
+;
+GO
 
--- Таблица AspNetUserLogins
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AspNetUserLogins')
-BEGIN
-    CREATE TABLE [AspNetUserLogins] (
-        [LoginProvider] NVARCHAR(450) NOT NULL,
-        [ProviderKey] NVARCHAR(450) NOT NULL,
-        [ProviderDisplayName] NVARCHAR(MAX) NULL,
-        [UserId] NVARCHAR(450) NOT NULL,
-        CONSTRAINT [PK_AspNetUserLogins] PRIMARY KEY ([LoginProvider], [ProviderKey]),
-        CONSTRAINT [FK_AspNetUserLogins_AspNetUsers_UserId] FOREIGN KEY ([UserId]) 
-        REFERENCES [AspNetUsers] ([Id]) ON DELETE CASCADE
-    );
-    PRINT 'Таблица AspNetUserLogins создана';
-END
-ELSE PRINT 'Таблица AspNetUserLogins уже существует';
+-- Customers (22 rows)
+SET IDENTITY_INSERT [Customers] ON;
+INSERT INTO [Customers] ([CustomerId], [FirstName], [LastName], [Email], [Phone], [Address], [RegistrationDate], [IsActive], [UserId]) VALUES
+(1, N'Иван', N'Петров', N'ivan.petrov@mail.ru', N'+79161234567', N'ул. Ленина, д. 10, кв. 5', '2024-01-15 00:00:00.0000000', 1, N'ba4cce5c-8eb6-4de7-9621-71b2e17cac5b'),
+(2, N'Мария', N'Сидорова', N'maria.sidorova@gmail.com', N'+79162345678', N'пр. Мира, д. 25, кв. 12', '2024-01-20 00:00:00.0000000', 1, N'9a072b60-9ad9-46ab-9e1a-8f2b3cc7b24d'),
+(3, N'Алексей', N'Козлов', N'alex.kozlov@yandex.ru', N'+79163456789', N'ул. Садовая, д. 8, кв. 3', '2024-02-05 00:00:00.0000000', 1, N'335a1b7c-7b7e-4b2a-a472-ddec0ba4ed62'),
+(4, N'Елена', N'Николаева', N'elena.nikolaeva@mail.ru', N'+79164567890', N'ул. Центральная, д. 15, кв. 7', '2024-02-10 00:00:00.0000000', 1, N'b520c2bb-fbd3-4cb4-a47c-a6d2ff2c60dd'),
+(5, N'Дмитрий', N'Васильев', N'dmitry.vasiliev@gmail.com', N'+79165678901', N'пр. Победы, д. 30, кв. 21', '2024-02-15 00:00:00.0000000', 1, N'36b42297-4d32-4a11-a325-8c89313cffc7'),
+(6, N'Ольга', N'Павлова', N'olga.pavlova@yandex.ru', N'+79166789012', N'ул. Молодежная, д. 12, кв. 8', '2024-02-20 00:00:00.0000000', 1, N'0e80b61e-c33f-46d7-8539-5fbbfb627a38'),
+(7, N'Сергей', N'Федоров', N'sergey.fedorov@mail.ru', N'+79167890123', N'ул. Школьная, д. 5, кв. 15', '2024-03-01 00:00:00.0000000', 1, N'6b0e284b-2f53-4d13-86f2-dd174048db6b'),
+(8, N'Анна', N'Морозова', N'anna.morozova@gmail.com', N'+79168901234', N'пр. Строителей, д. 18, кв. 9', '2024-03-05 00:00:00.0000000', 1, N'5552d568-9457-423e-9ec9-217199a90818'),
+(9, N'Павел', N'Волков', N'pavel.volkov@yandex.ru', N'+79169012345', N'ул. Лесная, д. 3, кв. 6', '2024-03-10 00:00:00.0000000', 1, N'b4754004-0125-4c67-8920-e5c5ecb68b24'),
+(10, N'Наталья', N'Алексеева', N'natalia.alexeeva@mail.ru', N'+79160123456', N'ул. Парковая, д. 22, кв. 11', '2024-03-15 00:00:00.0000000', 1, N'f879903a-17b2-42a0-a2a1-3d470b2e6c31'),
+(11, N'Михаил', N'Лебедев', N'mikhail.lebedev@gmail.com', N'+79161234567', N'пр. Ленинградский, д. 45, кв. 33', '2024-03-20 00:00:00.0000000', 1, N'42d13ab4-88e5-40d3-b3e8-e037a9b9c637'),
+(12, N'Татьяна', N'Семенова', N'tatyana.semenova@yandex.ru', N'+79162345678', N'ул. Новая, д. 7, кв. 4', '2024-03-25 00:00:00.0000000', 1, N'826e3acd-bedb-4263-a291-6697a57e49e5'),
+(13, N'Андрей', N'Егоров', N'andrey.egorov@mail.ru', N'+79163456789', N'ул. Заречная, д. 14, кв. 18', '2024-04-01 00:00:00.0000000', 1, N'7f072be5-2413-487b-965e-ec9c0b34e564'),
+(14, N'Ирина', N'Орлова', N'irina.orlova@gmail.com', N'+79164567890', N'пр. Комсомольский, д. 28, кв. 16', '2024-04-05 00:00:00.0000000', 1, N'1d0a9c37-279e-4ff5-b12d-f4a08395b5c0'),
+(15, N'Владимир', N'Антонов', N'vladimir.antonov@yandex.ru', N'+79165678901', N'ул. Солнечная, д. 9, кв. 2', '2024-04-10 00:00:00.0000000', 1, N'0fadec6d-c61d-4f7f-98df-a98e9f66824d'),
+(16, N'Светлана', N'Иванова', N'svetlana.ivanova@mail.ru', N'+79166789012', N'ул. Пушкина, д. 16, кв. 10', '2024-04-15 00:00:00.0000000', 1, N'7a041459-66a2-46bf-91ac-56fba522ec8c'),
+(17, N'Артем', N'Белов', N'artem.belov@gmail.com', N'+79167890123', N'пр. Кирова, д. 33, кв. 25', '2024-04-20 00:00:00.0000000', 1, N'dc70638a-33a5-440f-9d7f-5df9549ae2bd'),
+(18, N'Юлия', N'Крылова', N'yulia.krylova@yandex.ru', N'+79168901234', N'ул. Гагарина, д. 11, кв. 7', '2024-04-25 00:00:00.0000000', 1, N'a8ffd425-f55f-4f58-868f-f14cf014de88'),
+(19, N'Константин', N'Соколов', N'konstantin.sokolov@mail.ru', N'+79169012345', N'ул. Мира, д. 6, кв. 13', '2024-05-01 00:00:00.0000000', 1, N'adf82177-30b2-4b11-84e2-573ace3d7da5'),
+(20, N'Екатерина', N'Новикова', N'ekaterina.novikova@gmail.com', N'+79160123456', N'пр. Октябрьский, д. 19, кв. 14', '2024-05-05 00:00:00.0000000', 1, N'65513314-427f-4782-80ac-6902cf3c90d7'),
+(21, N'Алексей', N'Клиентов', N'client@example.com', N'+79991234567', N'ул. Тестовая, д. 1', '2025-11-16 03:41:46.3325197', 1, N'107540e7-4249-43fe-b16f-cebd236f0488'),
+(22, N'Gornostaevtest111111', N'Клиент', N'gornostaevTest111111@yandex.ru', N'Не указан', N'', '2026-06-05 16:04:59.7545399', 1, N'68c458ee-fd83-4bfb-b4da-16893acc98b6')
+;
+SET IDENTITY_INSERT [Customers] OFF;
+GO
 
--- Таблица AspNetUserRoles
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AspNetUserRoles')
-BEGIN
-    CREATE TABLE [AspNetUserRoles] (
-        [UserId] NVARCHAR(450) NOT NULL,
-        [RoleId] NVARCHAR(450) NOT NULL,
-        CONSTRAINT [PK_AspNetUserRoles] PRIMARY KEY ([UserId], [RoleId]),
-        CONSTRAINT [FK_AspNetUserRoles_AspNetUsers_UserId] FOREIGN KEY ([UserId]) 
-        REFERENCES [AspNetUsers] ([Id]) ON DELETE CASCADE,
-        CONSTRAINT [FK_AspNetUserRoles_AspNetRoles_RoleId] FOREIGN KEY ([RoleId]) 
-        REFERENCES [AspNetRoles] ([Id]) ON DELETE CASCADE
-    );
-    PRINT 'Таблица AspNetUserRoles создана';
-END
-ELSE PRINT 'Таблица AspNetUserRoles уже существует';
+-- Technicians (23 rows)
+SET IDENTITY_INSERT [Technicians] ON;
+INSERT INTO [Technicians] ([TechnicianId], [FirstName], [LastName], [Email], [Phone], [Specialization], [HireDate], [HourlyRate], [IsActive], [UserId]) VALUES
+(1, N'Александр', N'Попов', N'alex.popov@service.ru', N'+79161111111', N'Ремонт ноутбуков', '2023-01-10 00:00:00.0000000', 800.00, 1, N'78a32d64-827b-470e-bfe7-190ef9d861c1'),
+(2, N'Денис', N'Кузнецов', N'denis.kuznetsov@service.ru', N'+79162222222', N'Замена матриц', '2023-02-15 00:00:00.0000000', 750.00, 1, N'bd5af294-b70a-4d5f-b15e-2f3b95c43cc7'),
+(3, N'Роман', N'Степанов', N'roman.stepanov@service.ru', N'+79163333333', N'Диагностика ПК', '2023-03-20 00:00:00.0000000', 700.00, 1, N'1a53225d-f759-47cf-9e30-8d4f0ebc77e9'),
+(4, N'Максим', N'Медведев', N'maxim.medvedev@service.ru', N'+79164444444', N'Ремонт материнских плат', '2023-04-25 00:00:00.0000000', 900.00, 1, N'3061bb52-a549-4039-ae98-c4da110c2b5d'),
+(5, N'Виктор', N'Новиков', N'viktor.novikov@service.ru', N'+79165555555', N'Восстановление данных', '2023-05-30 00:00:00.0000000', 850.00, 1, N'c26cb72e-e11a-466e-9664-42f10c1b2d8c'),
+(6, N'Григорий', N'Павлов', N'grigory.pavlov@service.ru', N'+79166666666', N'Чистка и замена термопасты', '2023-06-10 00:00:00.0000000', 600.00, 1, N'9bbf7558-2025-4b51-a29c-0309eaa8010c'),
+(7, N'Станислав', N'Жуков', N'stanislav.zhukov@service.ru', N'+79167777777', N'Установка ОС', '2023-07-15 00:00:00.0000000', 550.00, 1, N'4dda2484-d8e7-43e3-a316-4fa879a9f342'),
+(8, N'Юрий', N'Воробьев', N'yuri.vorobiev@service.ru', N'+79168888888', N'Ремонт блоков питания', '2023-08-20 00:00:00.0000000', 750.00, 1, N'd50ca8b4-9431-4fa4-a458-f0564c591fbf'),
+(9, N'Аркадий', N'Титов', N'arkady.titov@service.ru', N'+79169999999', N'Замена процессоров', '2023-09-25 00:00:00.0000000', 800.00, 1, N'39ab1c63-fd5c-457d-9c62-7774d6a0a0b1'),
+(10, N'Борис', N'Фомин', N'boris.fomin@service.ru', N'+79161010101', N'Ремонт видеокарт', '2023-10-30 00:00:00.0000000', 850.00, 1, N'df0dcd13-0ff6-4b39-a502-058d9749d541'),
+(11, N'Вадим', N'Давыдов', N'vadim.davydov@service.ru', N'+79162121212', N'Замена оперативной памяти', '2023-11-05 00:00:00.0000000', 650.00, 1, N'da22b3e4-bca7-494c-bc99-58e6cf31b1ec'),
+(12, N'Геннадий', N'Баранов', N'gennady.baranov@service.ru', N'+79163232323', N'Ремонт систем охлаждения', '2023-12-10 00:00:00.0000000', 700.00, 1, N'a080b6f8-596d-43fb-b5a5-15415f6c8712'),
+(13, N'Евгений', N'Ефимов', N'evgeny.efimov@service.ru', N'+79164343434', N'Замена жестких дисков', '2024-01-15 00:00:00.0000000', 720.00, 1, N'b7589066-fbe4-4187-8e4e-9723c41b662f'),
+(14, N'Захар', N'Щербаков', N'zakhar.shcherbakov@service.ru', N'+79165454545', N'Ремонт клавиатур', '2024-02-20 00:00:00.0000000', 600.00, 1, N'cf47aabe-00bb-4c4f-b143-fa2ba17409de'),
+(15, N'Игорь', N'Горбунов', N'igor.gorbunov@service.ru', N'+79166565656', N'Диагностика принтеров', '2024-03-25 00:00:00.0000000', 680.00, 1, N'8ca84e01-24ca-46d0-ba55-c6c36235978f'),
+(16, N'Кирилл', N'Колесников', N'kirill.kolesnikov@service.ru', N'+79167676767', N'Замена батарей', '2024-04-01 00:00:00.0000000', 620.00, 1, N'b2995b6a-9196-4570-8229-27f32e66a7d5'),
+(17, N'Леонид', N'Карпов', N'leonid.karpov@service.ru', N'+79168787878', N'Ремонт разъемов', '2024-05-05 00:00:00.0000000', 740.00, 1, N'8244b7c4-5fe8-4519-9c83-9daa01d24a85'),
+(18, N'Никита', N'Афанасьев', N'nikita.afanasev@service.ru', N'+79169898989', N'Чистка от пыли', '2024-06-10 00:00:00.0000000', 580.00, 1, N'27784144-9a04-4b93-8e24-d4c8fba71233'),
+(19, N'Олег', N'Власов', N'oleg.vlasov@service.ru', N'+79160909090', N'Замена кулеров', '2024-07-15 00:00:00.0000000', 630.00, 1, N'ff892e2e-b07b-4508-965c-7dffcedd5a96'),
+(20, N'Петр', N'Маслов', N'petr.maslov@service.ru', N'+79162020202', N'Обслуживание серверов', '2024-08-20 00:00:00.0000000', 950.00, 1, N'7e78146e-36c7-4de0-9516-9e103f64a955'),
+(21, N'Иван', N'Сервисный', N'employee@service.com', N'+79991112233', N'Ремонт ноутбуков', '2024-12-16 03:41:46.0157600', 500.00, 1, N'e2fb03c7-44a7-4a7e-a637-d8c89057150e'),
+(22, N'Атнот', N'Шоркин', N'antonShorkin@gmail.com', N'+19821299983', N'Вайб-кодер', '2026-06-05 22:04:43.7699045', 1000.00, 1, N'35530f38-8f44-4177-b9d3-6e8a00634eef'),
+(23, N'Атнот', N'Тест2', N'atnottest2@mail.ru', N'8991111', N'Таксую для души', '2026-06-05 17:39:17.9240663', 8900.00, 1, N'c90401fa-357f-4cc2-9869-0eb3b5e53c77')
+;
+SET IDENTITY_INSERT [Technicians] OFF;
+GO
 
--- Таблица AspNetUserTokens
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AspNetUserTokens')
-BEGIN
-    CREATE TABLE [AspNetUserTokens] (
-        [UserId] NVARCHAR(450) NOT NULL,
-        [LoginProvider] NVARCHAR(450) NOT NULL,
-        [Name] NVARCHAR(450) NOT NULL,
-        [Value] NVARCHAR(MAX) NULL,
-        CONSTRAINT [PK_AspNetUserTokens] PRIMARY KEY ([UserId], [LoginProvider], [Name]),
-        CONSTRAINT [FK_AspNetUserTokens_AspNetUsers_UserId] FOREIGN KEY ([UserId]) 
-        REFERENCES [AspNetUsers] ([Id]) ON DELETE CASCADE
-    );
-    PRINT 'Таблица AspNetUserTokens создана';
-END
-ELSE PRINT 'Таблица AspNetUserTokens уже существует';
+-- AspNetUserRoles (47 rows)
+INSERT INTO [AspNetUserRoles] ([UserId], [RoleId]) VALUES
+(N'3261f5b1-ad1f-47cf-a65b-9bd16ce2a336', N'0c51e3ba-36e5-4c4e-9650-2b31be877f4c'),
+(N'50053432-fa97-442f-8b07-d63b3171352f', N'0c51e3ba-36e5-4c4e-9650-2b31be877f4c'),
+(N'1a53225d-f759-47cf-9e30-8d4f0ebc77e9', N'64e6702b-6867-4d2e-90a2-7974543f39f6'),
+(N'27784144-9a04-4b93-8e24-d4c8fba71233', N'64e6702b-6867-4d2e-90a2-7974543f39f6'),
+(N'3061bb52-a549-4039-ae98-c4da110c2b5d', N'64e6702b-6867-4d2e-90a2-7974543f39f6'),
+(N'35530f38-8f44-4177-b9d3-6e8a00634eef', N'64e6702b-6867-4d2e-90a2-7974543f39f6'),
+(N'39ab1c63-fd5c-457d-9c62-7774d6a0a0b1', N'64e6702b-6867-4d2e-90a2-7974543f39f6'),
+(N'4dda2484-d8e7-43e3-a316-4fa879a9f342', N'64e6702b-6867-4d2e-90a2-7974543f39f6'),
+(N'78a32d64-827b-470e-bfe7-190ef9d861c1', N'64e6702b-6867-4d2e-90a2-7974543f39f6'),
+(N'7e78146e-36c7-4de0-9516-9e103f64a955', N'64e6702b-6867-4d2e-90a2-7974543f39f6'),
+(N'8244b7c4-5fe8-4519-9c83-9daa01d24a85', N'64e6702b-6867-4d2e-90a2-7974543f39f6'),
+(N'8ca84e01-24ca-46d0-ba55-c6c36235978f', N'64e6702b-6867-4d2e-90a2-7974543f39f6'),
+(N'9bbf7558-2025-4b51-a29c-0309eaa8010c', N'64e6702b-6867-4d2e-90a2-7974543f39f6'),
+(N'a080b6f8-596d-43fb-b5a5-15415f6c8712', N'64e6702b-6867-4d2e-90a2-7974543f39f6'),
+(N'b2995b6a-9196-4570-8229-27f32e66a7d5', N'64e6702b-6867-4d2e-90a2-7974543f39f6'),
+(N'b7589066-fbe4-4187-8e4e-9723c41b662f', N'64e6702b-6867-4d2e-90a2-7974543f39f6'),
+(N'bd5af294-b70a-4d5f-b15e-2f3b95c43cc7', N'64e6702b-6867-4d2e-90a2-7974543f39f6'),
+(N'c26cb72e-e11a-466e-9664-42f10c1b2d8c', N'64e6702b-6867-4d2e-90a2-7974543f39f6'),
+(N'c90401fa-357f-4cc2-9869-0eb3b5e53c77', N'64e6702b-6867-4d2e-90a2-7974543f39f6'),
+(N'cf47aabe-00bb-4c4f-b143-fa2ba17409de', N'64e6702b-6867-4d2e-90a2-7974543f39f6'),
+(N'd50ca8b4-9431-4fa4-a458-f0564c591fbf', N'64e6702b-6867-4d2e-90a2-7974543f39f6'),
+(N'da22b3e4-bca7-494c-bc99-58e6cf31b1ec', N'64e6702b-6867-4d2e-90a2-7974543f39f6'),
+(N'df0dcd13-0ff6-4b39-a502-058d9749d541', N'64e6702b-6867-4d2e-90a2-7974543f39f6'),
+(N'e2fb03c7-44a7-4a7e-a637-d8c89057150e', N'64e6702b-6867-4d2e-90a2-7974543f39f6'),
+(N'ff892e2e-b07b-4508-965c-7dffcedd5a96', N'64e6702b-6867-4d2e-90a2-7974543f39f6'),
+(N'0e80b61e-c33f-46d7-8539-5fbbfb627a38', N'a15fd578-8410-4a20-ab78-35155cab71b2'),
+(N'0fadec6d-c61d-4f7f-98df-a98e9f66824d', N'a15fd578-8410-4a20-ab78-35155cab71b2'),
+(N'107540e7-4249-43fe-b16f-cebd236f0488', N'a15fd578-8410-4a20-ab78-35155cab71b2'),
+(N'1d0a9c37-279e-4ff5-b12d-f4a08395b5c0', N'a15fd578-8410-4a20-ab78-35155cab71b2'),
+(N'335a1b7c-7b7e-4b2a-a472-ddec0ba4ed62', N'a15fd578-8410-4a20-ab78-35155cab71b2'),
+(N'36b42297-4d32-4a11-a325-8c89313cffc7', N'a15fd578-8410-4a20-ab78-35155cab71b2'),
+(N'42d13ab4-88e5-40d3-b3e8-e037a9b9c637', N'a15fd578-8410-4a20-ab78-35155cab71b2'),
+(N'5552d568-9457-423e-9ec9-217199a90818', N'a15fd578-8410-4a20-ab78-35155cab71b2'),
+(N'65513314-427f-4782-80ac-6902cf3c90d7', N'a15fd578-8410-4a20-ab78-35155cab71b2'),
+(N'68c458ee-fd83-4bfb-b4da-16893acc98b6', N'a15fd578-8410-4a20-ab78-35155cab71b2'),
+(N'6b0e284b-2f53-4d13-86f2-dd174048db6b', N'a15fd578-8410-4a20-ab78-35155cab71b2'),
+(N'7a041459-66a2-46bf-91ac-56fba522ec8c', N'a15fd578-8410-4a20-ab78-35155cab71b2'),
+(N'7f072be5-2413-487b-965e-ec9c0b34e564', N'a15fd578-8410-4a20-ab78-35155cab71b2'),
+(N'826e3acd-bedb-4263-a291-6697a57e49e5', N'a15fd578-8410-4a20-ab78-35155cab71b2'),
+(N'9a072b60-9ad9-46ab-9e1a-8f2b3cc7b24d', N'a15fd578-8410-4a20-ab78-35155cab71b2')
+;
+INSERT INTO [AspNetUserRoles] ([UserId], [RoleId]) VALUES
+(N'a8ffd425-f55f-4f58-868f-f14cf014de88', N'a15fd578-8410-4a20-ab78-35155cab71b2'),
+(N'adf82177-30b2-4b11-84e2-573ace3d7da5', N'a15fd578-8410-4a20-ab78-35155cab71b2'),
+(N'b4754004-0125-4c67-8920-e5c5ecb68b24', N'a15fd578-8410-4a20-ab78-35155cab71b2'),
+(N'b520c2bb-fbd3-4cb4-a47c-a6d2ff2c60dd', N'a15fd578-8410-4a20-ab78-35155cab71b2'),
+(N'ba4cce5c-8eb6-4de7-9621-71b2e17cac5b', N'a15fd578-8410-4a20-ab78-35155cab71b2'),
+(N'dc70638a-33a5-440f-9d7f-5df9549ae2bd', N'a15fd578-8410-4a20-ab78-35155cab71b2'),
+(N'f879903a-17b2-42a0-a2a1-3d470b2e6c31', N'a15fd578-8410-4a20-ab78-35155cab71b2')
+;
+GO
 
--- 2. Создаем индексы для таблиц Identity
+-- Inventory (21 rows)
+SET IDENTITY_INSERT [Inventory] ON;
+INSERT INTO [Inventory] ([PartId], [PartName], [Description], [CategoryId], [QuantityInStock], [UnitPrice], [ReorderLevel], [SupplierInfo], [IsActive]) VALUES
+(1, N'SSD Samsung 870 Evo 500GB', N'2.5" SATA SSD накопитель', 1, 15, 4500.00, 3, N'ООО "Комплектующие+"', 1),
+(2, N'HDD Seagate Barracuda 1TB', N'Жесткий диск 3.5" 7200 RPM', 1, 8, 3500.00, 2, N'ООО "Комплектующие+"', 1),
+(3, N'Оперативная память Kingston 8GB DDR4', N'Модуль RAM 2666MHz', 2, 25, 2500.00, 5, N'ООО "ТехноПартнер"', 1),
+(4, N'Оперативная память Corsair 16GB DDR4', N'Модуль RAM 3200MHz', 2, 12, 4800.00, 3, N'ООО "ТехноПартнер"', 1),
+(5, N'Процессор Intel Core i5-12400', N'CPU LGA 1700', 3, 6, 18500.00, 2, N'ООО "Процессоры РФ"', 1),
+(6, N'Процессор AMD Ryzen 5 5600X', N'CPU AM4', 3, 4, 16800.00, 1, N'ООО "Процессоры РФ"', 1),
+(7, N'Материнская плата ASUS PRIME B660', N'LGA 1700, DDR4', 4, 7, 8900.00, 2, N'ООО "Материнки.ру"', 1),
+(8, N'Материнская плата Gigabyte B550', N'AM4, DDR4', 4, 5, 10200.00, 2, N'ООО "Материнки.ру"', 1),
+(9, N'Блок питания DeepCool 750W', N'ATX 80 Plus Bronze', 5, 10, 5200.00, 3, N'ООО "ЭнергоСистемы"', 1),
+(10, N'Блок питания Cooler Master 650W', N'ATX 80 Plus Gold', 5, 6, 7800.00, 2, N'ООО "ЭнергоСистемы"', 1),
+(11, N'Кулер для процессора DeepCool GAMMAXX', N'Башенный кулер 120mm', 6, 18, 1800.00, 5, N'ООО "Охлаждение+"', 1),
+(12, N'Термопаста Arctic MX-4', N'Термоинтерфейс 4г', 6, 30, 450.00, 10, N'ООО "Охлаждение+"', 1),
+(13, N'Батарея для ноутбука Dell 45Wh', N'Аккумулятор для серии Latitude', 7, 11, 3200.00, 3, N'ООО "Аккумуляторы Сервис"', 0),
+(14, N'Батарея для ноутбука HP 42Wh', N'Аккумулятор для серии ProBook', 7, 7, 2901.00, 4, N'ООО "Аккумуляторы Сервис"', 1),
+(15, N'Матрица для ноутбука 15.6" FullHD', N'Экран IPS для большинства моделей', 8, 11, 6500.00, 4, N'ООО "ДисплейСервис"', 1),
+(16, N'Матрица для ноутбука 14" HD', N'Экран TN для бюджетных моделей', 8, 8, 4200.00, 3, N'ООО "ДисплейСервис"', 1),
+(17, N'Клавиатура для ноутбука Lenovo', N'Клавиатура для серии ThinkPad', 9, 14, 1800.00, 5, N'ООО "Клавиатуры Экспресс"', 1),
+(18, N'Клавиатура для ноутбука ASUS', N'Клавиатура для серии VivoBook', 9, 12, 1600.00, 4, N'ООО "Клавиатуры Экспресс"', 1),
+(19, N'Вентилятор кулера 120mm', N'Вентилятор для системного блока', 6, 22, 600.00, 8, N'ООО "Охлаждение+"', 1),
+(20, N'Кабель SATA III', N'Кабель для подключения дисков', 5, 35, 150.00, 15, N'ООО "Комплектующие+"', 1),
+(21, N'SSD Samsung 870 Evo 5TB', N'круто', 5, 5, 1.00, 3, N'ООО "Рай"', 1)
+;
+SET IDENTITY_INSERT [Inventory] OFF;
+GO
 
--- Индекс для Email в AspNetUsers
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'EmailIndex' AND object_id = OBJECT_ID('AspNetUsers'))
-BEGIN
-    CREATE INDEX [EmailIndex] ON [AspNetUsers]([NormalizedEmail]);
-    PRINT 'Индекс EmailIndex создан';
-END
+-- ServiceOrders (33 rows)
+SET IDENTITY_INSERT [ServiceOrders] ON;
+INSERT INTO [ServiceOrders] ([OrderId], [CustomerId], [DeviceTypeId], [DeviceBrand], [DeviceModel], [SerialNumber], [ProblemDescription], [DiagnosticNotes], [StatusId], [Priority], [CreatedDate], [EstimatedCompletionDate], [ActualCompletionDate], [TotalCost], [TechnicianNotes]) VALUES
+(2, 2, 2, N'HP', N'Pavilion 15', N'SN23456789', N'Перегревается и выключается во время работы', N'Забит пылью кулер, требуется замена термопасты', 3, 2, '2024-11-19 00:00:00.0000000', '2024-11-24 00:00:00.0000000', NULL, 2100.00, N'Чистка + термопаста'),
+(3, 3, 1, N'Dell', N'Latitude 5420', N'SN34567890', N'Не работает клавиатура, некоторые клавиши западают', N'Пролита жидкость, требуется замена клавиатуры', 2, 3, '2024-11-18 00:00:00.0000000', '2024-11-23 00:00:00.0000000', NULL, 2300.00, N'Замена клавиатуры'),
+(4, 4, 3, N'Apple', N'iMac 27"', N'SN45678901', N'Полосы на экране, мерцание', N'Проблема с матрицей или видеокартой', 1, 2, '2024-11-17 00:00:00.0000000', '2024-11-22 00:00:00.0000000', NULL, 500.00, N'Диагностика дисплея'),
+(5, 5, 1, N'ASUS', N'ZenBook 14', N'SN56789012', N'Медленно работает, долго загружается', N'Старый HDD, рекомендуется замена на SSD', 4, 1, '2024-11-16 00:00:00.0000000', '2024-11-21 00:00:00.0000000', NULL, 5000.00, N'Замена HDD на SSD'),
+(6, 6, 4, N'HP', N'ProLiant DL380', N'SN67890123', N'Шумит вентилятор, перегрев процессора', N'Требуется чистка и замена кулера', 3, 2, '2024-11-15 00:00:00.0000000', '2024-11-20 00:00:00.0000000', NULL, 2600.00, N'Обслуживание системы охлаждения'),
+(7, 7, 2, N'Lenovo', N'IdeaCentre 5', N'SN78901234', N'Не запускается Windows, синий экран', N'Поврежден системный раздел, требуется переустановка ОС', 4, 2, '2024-11-14 00:00:00.0000000', '2024-11-19 00:00:00.0000000', NULL, 5500.00, N'Переустановка Windows'),
+(8, 8, 5, N'Samsung', N'Galaxy Tab S7', N'SN89012345', N'Не заряжается, разряжается быстро', N'Проблема с разъемом заряда или батареей', 2, 3, '2024-11-13 00:00:00.0000000', '2024-11-18 00:00:00.0000000', NULL, 3700.00, N'Диагностика цепи заряда'),
+(9, 9, 6, N'Canon', N'PIXMA MG3640', N'SN90123456', N'Не печатает, зажевывает бумагу', N'Загрязнены ролики подачи бумаги', 1, 2, '2024-11-12 00:00:00.0000000', '2024-11-17 00:00:00.0000000', NULL, 800.00, N'Чистка механизма подачи'),
+(10, 10, 1, N'Acer', N'Aspire 5', N'SN01234567', N'Треснул экран после падения', N'Требуется замена матрицы', 3, 3, '2024-11-11 00:00:00.0000000', '2024-11-16 00:00:00.0000000', NULL, 7000.00, N'Замена дисплея'),
+(11, 11, 2, N'DNS', N'Gaming PC', N'SN12345098', N'Нет изображения при запуске', N'Проблема с видеокартой или монитором', 1, 2, '2024-11-10 00:00:00.0000000', '2024-11-15 00:00:00.0000000', NULL, 500.00, N'Диагностика видеосистемы'),
+(12, 12, 1, N'MSI', N'Modern 15', N'SN23450987', N'Не работает Wi-Fi, нет подключения', N'Вышел из строя Wi-Fi модуль', 4, 2, '2024-11-09 00:00:00.0000000', '2024-11-14 00:00:00.0000000', NULL, 3000.00, N'Замена Wi-Fi адаптера'),
+(13, 13, 3, N'Apple', N'MacBook Pro 16', N'SN34509876', N'Сильно шумит вентилятор при нагрузке', N'Забит пылью радиатор системы охлаждения', 2, 1, '2024-11-08 00:00:00.0000000', '2024-11-13 00:00:00.0000000', NULL, 1250.00, N'Чистка системы охлаждения'),
+(14, 14, 2, N'Intel', N'NUC 11', N'SN45098765', N'Не определяет оперативную память', N'Проблема со слотом RAM или памятью', 1, 3, '2024-11-07 00:00:00.0000000', '2024-11-12 00:00:00.0000000', NULL, 500.00, N'Диагностика памяти'),
+(15, 15, 1, N'Huawei', N'MateBook D15', N'SN50987654', N'Не работает тачпад', N'Отсоединился шлейф тачпада', 4, 2, '2024-11-06 00:00:00.0000000', '2024-11-11 00:00:00.0000000', NULL, 500.00, N'Ремонт шлейфа тачпада'),
+(16, 16, 5, N'Apple', N'iPad Air 4', N'SN09876543', N'Не реагирует на касания в некоторых областях', N'Поврежден дигитайзер', 3, 2, '2024-11-05 00:00:00.0000000', '2024-11-10 00:00:00.0000000', NULL, 7000.00, N'Замена дигитайзера'),
+(17, 17, 6, N'Epson', N'L805', N'SN98765432', N'Полосы при печати, плохое качество', N'Требуется прочистка головок', 2, 1, '2024-11-04 00:00:00.0000000', '2024-11-09 00:00:00.0000000', NULL, 800.00, N'Чистка печатающих головок'),
+(18, 18, 2, N'MSI', N'Trident 3', N'SN87654321', N'Синий экран при запуске игр', N'Перегрев видеокарты, требуется замена термопасты', 4, 3, '2024-11-03 00:00:00.0000000', '2024-11-08 00:00:00.0000000', NULL, 850.00, N'Обслуживание видеокарты'),
+(19, 19, 1, N'Dell', N'XPS 13', N'SN76543210', N'Не держит заряд, работает только от сети', N'Износ батареи, требуется замена', 3, 2, '2024-11-02 00:00:00.0000000', '2024-11-07 00:00:00.0000000', NULL, 3700.00, N'Замена аккумулятора'),
+(20, 20, 3, N'Apple', N'Mac minii', N'SN65432109', N'Не выводит звук через HDMI', N'Проблема с аудиодрайвером или настройками', 7, 1, '2024-11-01 00:00:00.0000000', '2024-11-06 00:00:00.0000000', NULL, 500.00, N'Настройка аудиосистемы'),
+(21, 1, 6, N'hren', N'hren9000', N'1488091106', N's', N's', 6, 5, '2025-12-16 08:44:35.3208325', '2026-01-01 00:00:00.0000000', NULL, 0.00, N's'),
+(22, 20, 2, N'Самый крутой ПК от ХАЙПЕРПССС', N'POS "OSIOsisosi" X3', N'12312323', N'не работает', NULL, 6, 5, '2026-04-10 17:21:06.2338502', NULL, '2026-05-17 00:46:28.9694235', 1000.00, N'выполнено'),
+(23, 20, 7, N'Самый крутой ПК от ХАЙПЕРПССС', N'PO "OS" X101', N'12312324', N'Не робiт', NULL, 6, 4, '2026-05-16 21:16:33.1814991', NULL, '2026-05-17 00:46:37.9609474', 11111.00, N'1111'),
+(24, 20, 3, N'JUSTPC', N'101Series', N'11111115', N'не работает', NULL, 6, 1, '2026-05-16 21:19:32.9606110', NULL, '2026-05-16 21:48:53.5635687', 555.00, N'555'),
+(25, 20, 1, N'ХиомиБук 7к', N'777кккк', N'12321321', N'-', NULL, 6, 4, '2026-05-16 21:47:12.0417792', NULL, '2026-05-16 21:48:22.2308764', 5.00, N'Все починино, удачи в использоваиниии'),
+(26, 20, 3, N'XIOMI', N'POKO BOOK X7K ULTRA NEW', N'12312312', N'сломався', NULL, 6, 4, '2026-05-17 00:42:25.7994886', NULL, '2026-05-17 00:46:33.5480608', 6666.00, NULL),
+(27, 20, 4, N'XIOMI', N'POKO BOOK X7K ULTRA NEW2', N'1212331', N'yrt hfjndfs', NULL, 6, 1, '2026-05-17 00:56:50.8562869', NULL, '2026-05-17 01:19:16.3899199', 555.00, N'5'),
+(28, 20, 2, N'Apple', N'MakBook 2014 Pro', N'SN-FC27B052', N'не работает', NULL, 2, 3, '2026-05-17 22:33:15.5817465', NULL, NULL, 0.00, NULL),
+(29, 20, 4, N'XIOMI', N'hren9000', N'SN-DDD0746A', N'не работает опять', NULL, 1, 3, '2026-05-31 08:40:18.1343590', NULL, NULL, 0.00, NULL),
+(30, 20, 1, N'XIOMI', N'534223', N'SN-D56B54B4', N'не', NULL, 1, 1, '2026-06-01 21:05:59.9009469', NULL, NULL, 0.00, NULL),
+(31, 20, 4, N'XIOMI', N'й231232', N'SN-72EE22AD', N'ыфа', NULL, 2, 2, '2026-06-01 21:06:10.7552853', NULL, NULL, 0.00, NULL),
+(32, 20, 6, N'XIOMI', N'йцу121', N'SN-767AA594', N'цуа', NULL, 5, 3, '2026-06-01 21:06:21.3874740', NULL, '2026-06-01 21:12:14.1465087', 1000.00, NULL),
+(33, 1, 2, N'Apple', N'Mac minii8', N'1488526766', N'Не работал', N'Все круто', 1, 3, '2026-06-02 06:34:16.8635393', NULL, NULL, 0.00, N'В процессе'),
+(34, 6, 6, N'JUSTPC', N'Mac minii4', N'1111111341', N'Сломався', N'Работаем', 1, 3, '2026-06-02 06:45:37.0490761', NULL, NULL, 0.00, N'блин')
+;
+SET IDENTITY_INSERT [ServiceOrders] OFF;
+GO
 
--- Уникальный индекс для UserName в AspNetUsers
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'UserNameIndex' AND object_id = OBJECT_ID('AspNetUsers'))
-BEGIN
-    CREATE UNIQUE INDEX [UserNameIndex] ON [AspNetUsers]([NormalizedUserName]) WHERE [NormalizedUserName] IS NOT NULL;
-    PRINT 'Индекс UserNameIndex создан';
-END
+-- OrderTechnicians (31 rows)
+SET IDENTITY_INSERT [OrderTechnicians] ON;
+INSERT INTO [OrderTechnicians] ([OrderTechnicianId], [OrderId], [TechnicianId], [AssignedDate], [HoursWorked], [IsPrimary]) VALUES
+(2, 2, 2, '2024-11-19 00:00:00.0000000', 1.50, 1),
+(3, 3, 3, '2024-11-18 00:00:00.0000000', 0.00, 1),
+(4, 4, 4, '2024-11-17 00:00:00.0000000', 0.00, 1),
+(5, 5, 5, '2024-11-16 00:00:00.0000000', 2.00, 1),
+(6, 6, 6, '2024-11-15 00:00:00.0000000', 0.00, 1),
+(7, 7, 7, '2024-11-14 00:00:00.0000000', 1.00, 1),
+(8, 8, 8, '2024-11-13 00:00:00.0000000', 0.00, 1),
+(9, 9, 9, '2024-11-12 00:00:00.0000000', 0.50, 1),
+(10, 10, 10, '2024-11-11 00:00:00.0000000', 0.00, 1),
+(11, 11, 11, '2024-11-10 00:00:00.0000000', 0.00, 1),
+(12, 12, 12, '2024-11-09 00:00:00.0000000', 1.50, 1),
+(13, 13, 13, '2024-11-08 00:00:00.0000000', 0.00, 1),
+(14, 14, 14, '2024-11-07 00:00:00.0000000', 0.00, 1),
+(15, 15, 15, '2024-11-06 00:00:00.0000000', 0.00, 1),
+(16, 16, 16, '2024-11-05 00:00:00.0000000', 0.00, 1),
+(17, 17, 17, '2024-11-04 00:00:00.0000000', 1.00, 1),
+(18, 18, 18, '2024-11-03 00:00:00.0000000', 0.00, 1),
+(19, 19, 19, '2024-11-02 00:00:00.0000000', 0.00, 1),
+(21, 21, 7, '2025-12-16 08:44:35.3719711', 0.00, 1),
+(22, 20, 20, '2026-04-10 17:23:56.7093248', 0.00, 1),
+(23, 22, 20, '2026-04-10 17:37:22.3189148', 0.00, 1),
+(24, 24, 20, '2026-05-16 21:19:55.5974422', 0.00, 1),
+(25, 25, 20, '2026-05-16 21:47:36.5699598', 0.00, 1),
+(26, 23, 20, '2026-05-17 00:13:54.7878118', 0.00, 1),
+(27, 26, 20, '2026-05-17 00:44:33.1435544', 0.00, 1),
+(28, 27, 20, '2026-05-17 01:10:01.4179724', 0.00, 1),
+(30, 28, 19, '2026-05-31 08:04:56.5681646', 0.00, 1),
+(31, 32, 20, '2026-06-01 21:11:59.7769949', 0.00, 1),
+(32, 31, 20, '2026-06-01 21:12:01.4721621', 0.00, 1),
+(33, 33, 20, '2026-06-02 06:34:17.0424732', 0.00, 1),
+(34, 34, 20, '2026-06-02 06:45:37.0818722', 0.00, 1)
+;
+SET IDENTITY_INSERT [OrderTechnicians] OFF;
+GO
 
--- Уникальный индекс для RoleName в AspNetRoles
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'RoleNameIndex' AND object_id = OBJECT_ID('AspNetRoles'))
-BEGIN
-    CREATE UNIQUE INDEX [RoleNameIndex] ON [AspNetRoles]([NormalizedName]) WHERE [NormalizedName] IS NOT NULL;
-    PRINT 'Индекс RoleNameIndex создан';
-END
+-- OrderServices (20 rows)
+SET IDENTITY_INSERT [OrderServices] ON;
+INSERT INTO [OrderServices] ([OrderServiceId], [OrderId], [ServiceId], [TechnicianId], [Quantity], [UnitPrice], [ServiceDate], [Notes]) VALUES
+(2, 2, 2, 2, 1, 800.00, '2024-11-19 00:00:00.0000000', N'Чистка системы охлаждения'),
+(3, 2, 3, 2, 1, 400.00, '2024-11-19 00:00:00.0000000', N'Замена термопасты'),
+(4, 3, 1, 3, 1, 500.00, '2024-11-18 00:00:00.0000000', N'Диагностика клавиатуры'),
+(5, 4, 1, 4, 1, 500.00, '2024-11-17 00:00:00.0000000', N'Диагностика дисплея'),
+(6, 5, 1, 5, 1, 500.00, '2024-11-16 00:00:00.0000000', N'Диагностика скорости работы'),
+(7, 6, 2, 6, 1, 800.00, '2024-11-15 00:00:00.0000000', N'Чистка серверного оборудования'),
+(8, 7, 4, 7, 1, 1000.00, '2024-11-14 00:00:00.0000000', N'Установка Windows 11'),
+(9, 8, 1, 8, 1, 500.00, '2024-11-13 00:00:00.0000000', N'Диагностика зарядки'),
+(10, 9, 2, 9, 1, 800.00, '2024-11-12 00:00:00.0000000', N'Чистка принтера'),
+(11, 10, 1, 10, 1, 500.00, '2024-11-11 00:00:00.0000000', N'Диагностика экрана'),
+(12, 11, 1, 11, 1, 500.00, '2024-11-10 00:00:00.0000000', N'Диагностика видеосистемы'),
+(13, 12, 1, 12, 1, 500.00, '2024-11-09 00:00:00.0000000', N'Диагностика Wi-Fi'),
+(14, 13, 2, 13, 1, 800.00, '2024-11-08 00:00:00.0000000', N'Чистка MacBook'),
+(15, 14, 1, 14, 1, 500.00, '2024-11-07 00:00:00.0000000', N'Диагностика памяти'),
+(16, 15, 1, 15, 1, 500.00, '2024-11-06 00:00:00.0000000', N'Диагностика тачпада'),
+(17, 16, 1, 16, 1, 500.00, '2024-11-05 00:00:00.0000000', N'Диагностика дигитайзера'),
+(18, 17, 2, 17, 1, 800.00, '2024-11-04 00:00:00.0000000', N'Чистка печатающих головок'),
+(19, 18, 3, 18, 1, 400.00, '2024-11-03 00:00:00.0000000', N'Замена термопасты на видеокарте'),
+(20, 19, 1, 19, 1, 500.00, '2024-11-02 00:00:00.0000000', N'Диагностика батареи'),
+(21, 20, 1, 20, 1, 500.00, '2024-11-01 00:00:00.0000000', N'Диагностика аудиосистемы')
+;
+SET IDENTITY_INSERT [OrderServices] OFF;
+GO
 
--- Индекс для RoleId в AspNetRoleClaims
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_AspNetRoleClaims_RoleId' AND object_id = OBJECT_ID('AspNetRoleClaims'))
-BEGIN
-    CREATE INDEX [IX_AspNetRoleClaims_RoleId] ON [AspNetRoleClaims]([RoleId]);
-    PRINT 'Индекс IX_AspNetRoleClaims_RoleId создан';
-END
+-- OrderParts (12 rows)
+SET IDENTITY_INSERT [OrderParts] ON;
+INSERT INTO [OrderParts] ([OrderPartId], [OrderId], [PartId], [QuantityUsed], [UnitPriceAtTime], [UsageDate]) VALUES
+(1, 2, 12, 1, 450.00, '2024-11-19 00:00:00.0000000'),
+(2, 3, 17, 1, 1800.00, '2024-11-18 00:00:00.0000000'),
+(3, 5, 1, 1, 4500.00, '2024-11-16 00:00:00.0000000'),
+(4, 6, 11, 1, 1800.00, '2024-11-15 00:00:00.0000000'),
+(5, 7, 1, 1, 4500.00, '2024-11-14 00:00:00.0000000'),
+(6, 8, 13, 1, 3200.00, '2024-11-13 00:00:00.0000000'),
+(7, 10, 15, 1, 6500.00, '2024-11-11 00:00:00.0000000'),
+(8, 12, 3, 1, 2500.00, '2024-11-09 00:00:00.0000000'),
+(9, 13, 12, 1, 450.00, '2024-11-08 00:00:00.0000000'),
+(10, 16, 15, 1, 6500.00, '2024-11-05 00:00:00.0000000'),
+(11, 18, 12, 1, 450.00, '2024-11-03 00:00:00.0000000'),
+(12, 19, 13, 1, 3200.00, '2024-11-02 00:00:00.0000000')
+;
+SET IDENTITY_INSERT [OrderParts] OFF;
+GO
 
--- Индекс для UserId в AspNetUserClaims
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_AspNetUserClaims_UserId' AND object_id = OBJECT_ID('AspNetUserClaims'))
-BEGIN
-    CREATE INDEX [IX_AspNetUserClaims_UserId] ON [AspNetUserClaims]([UserId]);
-    PRINT 'Индекс IX_AspNetUserClaims_UserId создан';
-END
+-- OrderStatusHistory (75 rows)
+SET IDENTITY_INSERT [OrderStatusHistory] ON;
+INSERT INTO [OrderStatusHistory] ([HistoryId], [OrderId], [StatusId], [ChangedDate], [ChangedBy], [Notes]) VALUES
+(2, 2, 1, '2024-11-19 00:00:00.0000000', N'System', N'Заказ создан'),
+(3, 2, 3, '2024-11-19 00:00:00.0000000', N'Мастер 2', N'Начата чистка системы охлаждения'),
+(4, 3, 1, '2024-11-18 00:00:00.0000000', N'System', N'Заказ создан'),
+(5, 3, 2, '2024-11-18 00:00:00.0000000', N'Мастер 3', N'Диагностика клавиатуры'),
+(6, 4, 1, '2024-11-17 00:00:00.0000000', N'System', N'Заказ создан'),
+(7, 5, 1, '2024-11-16 00:00:00.0000000', N'System', N'Заказ создан'),
+(8, 5, 4, '2024-11-16 00:00:00.0000000', N'Мастер 5', N'Начата замена HDD на SSD'),
+(9, 6, 1, '2024-11-15 00:00:00.0000000', N'System', N'Заказ создан'),
+(10, 6, 3, '2024-11-15 00:00:00.0000000', N'Мастер 6', N'Ожидание запчастей для сервера'),
+(11, 7, 1, '2024-11-14 00:00:00.0000000', N'System', N'Заказ создан'),
+(12, 7, 4, '2024-11-14 00:00:00.0000000', N'Мастер 7', N'Начата переустановка ОС'),
+(13, 8, 1, '2024-11-13 00:00:00.0000000', N'System', N'Заказ создан'),
+(14, 8, 2, '2024-11-13 00:00:00.0000000', N'Мастер 8', N'Диагностика цепи заряда'),
+(15, 9, 1, '2024-11-12 00:00:00.0000000', N'System', N'Заказ создан'),
+(16, 9, 4, '2024-11-12 00:00:00.0000000', N'Мастер 9', N'Начата чистка принтера'),
+(17, 10, 1, '2024-11-11 00:00:00.0000000', N'System', N'Заказ создан'),
+(18, 10, 3, '2024-11-11 00:00:00.0000000', N'Мастер 10', N'Ожидание матрицы для замены'),
+(19, 21, 6, '2025-12-16 08:44:35.3938565', N'admin@service.com', N'Заказ создан'),
+(20, 22, 1, '2026-04-10 17:21:06.5312906', N'ekaterina.novikova@gmail.com', N'Заказ создан клиентом'),
+(21, 22, 2, '2026-04-10 17:37:22.3671733', N'petr.maslov@service.ru', N'Заявка взята в работу; назначен мастер Петр Маслов'),
+(22, 23, 1, '2026-05-16 21:16:33.3704220', N'ekaterina.novikova@gmail.com', N'Заказ создан клиентом'),
+(23, 24, 1, '2026-05-16 21:19:32.9756923', N'ekaterina.novikova@gmail.com', N'Заказ создан клиентом'),
+(24, 24, 2, '2026-05-16 21:19:55.6062396', N'petr.maslov@service.ru', N'Заявка взята в работу; назначен мастер Петр Маслов'),
+(25, 25, 1, '2026-05-16 21:47:12.1497981', N'ekaterina.novikova@gmail.com', N'Заказ создан клиентом'),
+(26, 25, 2, '2026-05-16 21:47:36.5737780', N'petr.maslov@service.ru', N'Заявка взята в работу; назначен мастер Петр Маслов'),
+(27, 25, 8, '2026-05-16 21:48:22.2310532', N'petr.maslov@service.ru', N'Работы завершены. Стоимость: 5,00 ₽. Ожидается оплата клиентом.'),
+(28, 25, 8, '2026-05-16 21:48:38.0003565', N'petr.maslov@service.ru', N'Получена оплата 5,00 ₽ (Cash)'),
+(29, 25, 5, '2026-05-16 21:48:38.0008268', N'petr.maslov@service.ru', N'Оплата подтверждена. Заказ готов к выдаче клиенту.'),
+(30, 24, 8, '2026-05-16 21:48:53.5635723', N'petr.maslov@service.ru', N'Работы завершены. Стоимость: 555,00 ₽. Ожидается оплата клиентом.'),
+(31, 24, 8, '2026-05-16 21:49:45.3919387', N'ekaterina.novikova@gmail.com', N'Получена оплата 555,00 ₽ (Online)'),
+(32, 24, 5, '2026-05-16 21:49:45.3923941', N'ekaterina.novikova@gmail.com', N'Оплата подтверждена. Заказ готов к выдаче клиенту.'),
+(33, 20, 7, '2026-05-16 21:50:05.3077621', N'ekaterina.novikova@gmail.com', N'Заказ отменен клиентом'),
+(34, 22, 8, '2026-05-17 00:07:38.4136982', N'petr.maslov@service.ru', N'Работы завершены. Стоимость: 1 000,00 ₽. Ожидается оплата клиентом.'),
+(35, 23, 2, '2026-05-17 00:13:54.8473714', N'petr.maslov@service.ru', N'Заявка взята в работу; назначен мастер Петр Маслов'),
+(36, 23, 8, '2026-05-17 00:15:23.2323413', N'petr.maslov@service.ru', N'Работы завершены. Стоимость: 11 111,00 ₽. Ожидается оплата клиентом.'),
+(37, 23, 4, '2026-05-17 00:37:54.4038683', N'ekaterina.novikova@gmail.com', N'Клиент подтвердил ремонт и стоимость (11 111,00 ₽).'),
+(38, 2, 3, '2026-05-17 00:38:49.7452906', N'petr.maslov@service.ru', N'Получена оплата 450,00 ₽ (Cash)'),
+(39, 6, 3, '2026-05-17 00:38:53.6059164', N'petr.maslov@service.ru', N'Получена оплата 2 600,00 ₽ (Cash)'),
+(40, 8, 2, '2026-05-17 00:38:53.9763580', N'petr.maslov@service.ru', N'Получена оплата 3 700,00 ₽ (Cash)'),
+(41, 10, 3, '2026-05-17 00:38:54.3244970', N'petr.maslov@service.ru', N'Получена оплата 7 000,00 ₽ (Cash)')
+;
+INSERT INTO [OrderStatusHistory] ([HistoryId], [OrderId], [StatusId], [ChangedDate], [ChangedBy], [Notes]) VALUES
+(42, 12, 4, '2026-05-17 00:38:54.6362685', N'petr.maslov@service.ru', N'Получена оплата 3 000,00 ₽ (Cash)'),
+(43, 15, 4, '2026-05-17 00:38:55.0220428', N'petr.maslov@service.ru', N'Получена оплата 500,00 ₽ (Cash)'),
+(44, 16, 3, '2026-05-17 00:38:55.3711149', N'petr.maslov@service.ru', N'Получена оплата 7 000,00 ₽ (Cash)'),
+(45, 18, 4, '2026-05-17 00:38:56.1369445', N'petr.maslov@service.ru', N'Получена оплата 850,00 ₽ (Cash)'),
+(46, 19, 3, '2026-05-17 00:38:56.5200769', N'petr.maslov@service.ru', N'Получена оплата 3 700,00 ₽ (Cash)'),
+(47, 26, 1, '2026-05-17 00:42:25.9643359', N'System', N'Заказ создан клиентом'),
+(48, 22, 4, '2026-05-17 00:42:46.6892048', N'ekaterina.novikova@gmail.com', N'Клиент подтвердил ремонт и стоимость (1 000,00 ₽).'),
+(49, 26, 2, '2026-05-17 00:44:33.1509810', N'petr.maslov@service.ru', N'Заявка взята в работу; назначен мастер Петр Маслов'),
+(50, 22, 5, '2026-05-17 00:46:28.9695521', N'petr.maslov@service.ru', N'Работы завершены. Стоимость: 1 000,00 ₽. Ожидается оплата и выдача клиенту.'),
+(51, 26, 5, '2026-05-17 00:46:33.5481018', N'petr.maslov@service.ru', N'Работы завершены. Стоимость: 6 666,00 ₽. Ожидается оплата и выдача клиенту.'),
+(52, 23, 5, '2026-05-17 00:46:37.9609643', N'petr.maslov@service.ru', N'Работы завершены. Стоимость: 11 111,00 ₽. Ожидается оплата и выдача клиенту.'),
+(53, 26, 5, '2026-05-17 00:46:59.6083720', N'petr.maslov@service.ru', N'Получена оплата 6 666,00 ₽ (Cash)'),
+(54, 27, 1, '2026-05-17 00:56:51.0329123', N'System', N'Заказ создан клиентом'),
+(55, 22, 6, '2026-05-17 00:57:40.7158696', N'petr.maslov@service.ru', N'Устройство выдано клиенту. Заказ закрыт.'),
+(56, 26, 6, '2026-05-17 00:59:33.1680025', N'petr.maslov@service.ru', N'Устройство выдано клиенту. Заказ закрыт.'),
+(57, 25, 6, '2026-05-17 01:00:24.0861141', N'petr.maslov@service.ru', N'Устройство выдано клиенту. Заказ закрыт.'),
+(58, 23, 6, '2026-05-17 01:08:06.3463504', N'petr.maslov@service.ru', N'Устройство выдано клиенту. Заказ закрыт.'),
+(59, 23, 6, '2026-05-17 01:08:10.9877199', N'petr.maslov@service.ru', N'Устройство выдано клиенту. Заказ закрыт.'),
+(60, 24, 6, '2026-05-17 01:08:34.7232846', N'petr.maslov@service.ru', N'Устройство выдано клиенту. Заказ закрыт.'),
+(61, 27, 2, '2026-05-17 01:10:01.4204051', N'petr.maslov@service.ru', N'Заявка взята в работу; назначен мастер Петр Маслов'),
+(62, 27, 5, '2026-05-17 01:19:16.3910703', N'petr.maslov@service.ru', N'Работы завершены. Стоимость: 555,00 ₽. Ожидается оплата и выдача клиенту.'),
+(63, 27, 5, '2026-05-17 01:19:48.1767714', N'ekaterina.novikova@gmail.com', N'Получена оплата 555,00 ₽ (Online)'),
+(64, 28, 1, '2026-05-17 22:33:15.8289886', N'System', N'Заказ создан клиентом'),
+(65, 28, 2, '2026-05-17 22:41:16.8048330', N'petr.maslov@service.ru', N'Заявка взята в работу; назначен мастер Петр Маслов'),
+(66, 29, 1, '2026-05-31 08:40:18.4009232', N'System', N'Заказ создан клиентом'),
+(67, 27, 6, '2026-06-01 21:05:03.9635213', N'petr.maslov@service.ru', N'Устройство выдано клиенту. Заказ закрыт.'),
+(68, 30, 1, '2026-06-01 21:05:59.9551969', N'System', N'Заказ создан клиентом'),
+(69, 31, 1, '2026-06-01 21:06:10.7656385', N'System', N'Заказ создан клиентом'),
+(70, 32, 1, '2026-06-01 21:06:21.4043331', N'System', N'Заказ создан клиентом'),
+(71, 32, 2, '2026-06-01 21:11:59.8066816', N'petr.maslov@service.ru', N'Заявка взята в работу; назначен мастер Петр Маслов'),
+(72, 31, 2, '2026-06-01 21:12:01.4729629', N'petr.maslov@service.ru', N'Заявка взята в работу; назначен мастер Петр Маслов'),
+(73, 32, 5, '2026-06-01 21:12:14.1541718', N'petr.maslov@service.ru', N'Работы завершены. Стоимость: 1 000,00 ₽. Ожидается оплата и выдача клиенту.'),
+(74, 33, 1, '2026-06-02 06:34:17.0551454', N'System', N'Заказ создан'),
+(75, 34, 1, '2026-06-02 06:45:37.0826482', N'System', N'Заказ создан'),
+(76, 32, 5, '2026-06-04 19:10:07.7185022', N'ekaterina.novikova@gmail.com', N'Получена оплата 1 000,00 ₽ (Online)')
+;
+SET IDENTITY_INSERT [OrderStatusHistory] OFF;
+GO
 
--- Индекс для UserId в AspNetUserLogins
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_AspNetUserLogins_UserId' AND object_id = OBJECT_ID('AspNetUserLogins'))
-BEGIN
-    CREATE INDEX [IX_AspNetUserLogins_UserId] ON [AspNetUserLogins]([UserId]);
-    PRINT 'Индекс IX_AspNetUserLogins_UserId создан';
-END
+-- Payments (25 rows)
+SET IDENTITY_INSERT [Payments] ON;
+INSERT INTO [Payments] ([PaymentId], [OrderId], [Amount], [PaymentDate], [PaymentMethod], [Status], [TransactionId], [Notes]) VALUES
+(1, 2, 1650.00, '2024-11-19 00:00:00.0000000', N'Card', N'Completed', N'TXN00123456', N'Оплата услуг чистки и термопасты'),
+(2, 3, 2300.00, '2024-11-18 00:00:00.0000000', N'Cash', N'Completed', N'TXN00123457', N'Оплата диагностики и клавиатуры'),
+(3, 5, 5000.00, '2024-11-16 00:00:00.0000000', N'Card', N'Completed', N'TXN00123458', N'Частичная оплата за SSD'),
+(4, 7, 5500.00, '2024-11-14 00:00:00.0000000', N'Bank Transfer', N'Completed', N'BT00123459', N'Оплата установки ОС и SSD'),
+(5, 9, 800.00, '2024-11-12 00:00:00.0000000', N'Cash', N'Completed', N'TXN00123460', N'Оплата чистки принтера'),
+(6, 13, 1250.00, '2024-11-08 00:00:00.0000000', N'Card', N'Completed', N'TXN00123461', N'Оплата чистки и термопасты'),
+(7, 17, 800.00, '2024-11-04 00:00:00.0000000', N'Cash', N'Completed', N'TXN00123462', N'Оплата чистки принтера'),
+(8, 20, 500.00, '2024-11-01 00:00:00.0000000', N'Card', N'Completed', N'TXN00123463', N'Оплата диагностики аудиосистемы'),
+(9, 22, 100000.00, '2026-04-11 17:36:30.0000000', N'Card', N'Completed', N'CARD_061522', NULL),
+(10, 23, 100000.00, '2026-05-16 21:17:57.6160550', N'Card', N'Completed', N'CARD_111699', NULL),
+(11, 24, 1000.00, '2026-05-16 21:31:10.3360845', N'Online', N'Pending', N'ONLINE_878215', NULL),
+(12, 25, 5.00, '2026-05-16 21:48:37.9970992', N'Cash', N'Completed', NULL, N'Оплата подтверждена сотрудником'),
+(13, 24, 555.00, '2026-05-16 21:49:45.3914743', N'Online', N'Completed', N'SIM-928619bee7344d64', N'Онлайн-оплата клиентом (симуляция)'),
+(14, 2, 450.00, '2026-05-17 00:38:49.7427320', N'Cash', N'Completed', NULL, N'Оплата подтверждена сотрудником'),
+(15, 6, 2600.00, '2026-05-17 00:38:53.6057363', N'Cash', N'Completed', NULL, N'Оплата подтверждена сотрудником'),
+(16, 8, 3700.00, '2026-05-17 00:38:53.9757405', N'Cash', N'Completed', NULL, N'Оплата подтверждена сотрудником'),
+(17, 10, 7000.00, '2026-05-17 00:38:54.3242687', N'Cash', N'Completed', NULL, N'Оплата подтверждена сотрудником'),
+(18, 12, 3000.00, '2026-05-17 00:38:54.6360072', N'Cash', N'Completed', NULL, N'Оплата подтверждена сотрудником'),
+(19, 15, 500.00, '2026-05-17 00:38:55.0217544', N'Cash', N'Completed', NULL, N'Оплата подтверждена сотрудником'),
+(20, 16, 7000.00, '2026-05-17 00:38:55.3707546', N'Cash', N'Completed', NULL, N'Оплата подтверждена сотрудником'),
+(21, 18, 850.00, '2026-05-17 00:38:56.1366709', N'Cash', N'Completed', NULL, N'Оплата подтверждена сотрудником'),
+(22, 19, 3700.00, '2026-05-17 00:38:56.5199098', N'Cash', N'Completed', NULL, N'Оплата подтверждена сотрудником'),
+(23, 26, 6666.00, '2026-05-17 00:46:59.6054716', N'Cash', N'Completed', NULL, N'Оплата подтверждена сотрудником'),
+(24, 27, 555.00, '2026-05-17 01:19:48.1645369', N'Online', N'Completed', N'SIM-1d6ecba2c83e4646', N'Онлайн-оплата клиентом (симуляция)'),
+(25, 32, 1000.00, '2026-06-04 19:10:07.6915746', N'Online', N'Completed', N'SIM-1dac8bb1cc2644dd', N'Онлайн-оплата клиентом (симуляция)')
+;
+SET IDENTITY_INSERT [Payments] OFF;
+GO
 
--- Индекс для RoleId в AspNetUserRoles
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_AspNetUserRoles_RoleId' AND object_id = OBJECT_ID('AspNetUserRoles'))
-BEGIN
-    CREATE INDEX [IX_AspNetUserRoles_RoleId] ON [AspNetUserRoles]([RoleId]);
-    PRINT 'Индекс IX_AspNetUserRoles_RoleId создан';
-END
 
--- 3. Проверяем и добавляем столбцы UserId в Customers и Technicians (если еще нет)
+-- =============================================================================
+-- ПРОВЕРКА ПОСЛЕ РАЗВЁРТЫВАНИЯ
+-- =============================================================================
+PRINT N'========================================';
+PRINT N'База ComputerRepairService развёрнута!';
+PRINT N'========================================';
 
-IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS 
-               WHERE TABLE_NAME = 'Customers' AND COLUMN_NAME = 'UserId')
-BEGIN
-    ALTER TABLE Customers 
-    ADD UserId NVARCHAR(450) NULL;
-    PRINT 'Столбец UserId добавлен в таблицу Customers';
-END
-ELSE PRINT 'Столбец UserId уже существует в таблице Customers';
-
-IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS 
-               WHERE TABLE_NAME = 'Technicians' AND COLUMN_NAME = 'UserId')
-BEGIN
-    ALTER TABLE Technicians 
-    ADD UserId NVARCHAR(450) NULL;
-    PRINT 'Столбец UserId добавлен в таблицу Technicians';
-END
-ELSE PRINT 'Столбец UserId уже существует в таблице Technicians';
-
--- 4. Создаем индексы для связи 1:1 (уже есть в вашем скрипте)
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Customers_UserId' AND object_id = OBJECT_ID('Customers'))
-BEGIN
-    CREATE UNIQUE INDEX [IX_Customers_UserId] 
-    ON [Customers]([UserId]) 
-    WHERE [UserId] IS NOT NULL;
-    PRINT 'Индекс IX_Customers_UserId создан';
-END
-ELSE PRINT 'Индекс IX_Customers_UserId уже существует';
-
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Technicians_UserId' AND object_id = OBJECT_ID('Technicians'))
-BEGIN
-    CREATE UNIQUE INDEX [IX_Technicians_UserId] 
-    ON [Technicians]([UserId]) 
-    WHERE [UserId] IS NOT NULL;
-    PRINT 'Индекс IX_Technicians_UserId создан';
-END
-ELSE PRINT 'Индекс IX_Technicians_UserId уже существует';
-
--- 5. Создаем внешние ключи
-
--- Внешний ключ от Customers к AspNetUsers
-IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS 
-               WHERE CONSTRAINT_NAME = 'FK_Customers_AspNetUsers_UserId' AND TABLE_NAME = 'Customers')
-BEGIN
-    ALTER TABLE [Customers] 
-    ADD CONSTRAINT [FK_Customers_AspNetUsers_UserId] 
-    FOREIGN KEY ([UserId]) REFERENCES [AspNetUsers] ([Id]) 
-    ON DELETE NO ACTION;
-    PRINT 'Внешний ключ FK_Customers_AspNetUsers_UserId создан';
-END
-ELSE PRINT 'Внешний ключ FK_Customers_AspNetUsers_UserId уже существует';
-
--- Внешний ключ от Technicians к AspNetUsers
-IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS 
-               WHERE CONSTRAINT_NAME = 'FK_Technicians_AspNetUsers_UserId' AND TABLE_NAME = 'Technicians')
-BEGIN
-    ALTER TABLE [Technicians] 
-    ADD CONSTRAINT [FK_Technicians_AspNetUsers_UserId] 
-    FOREIGN KEY ([UserId]) REFERENCES [AspNetUsers] ([Id]) 
-    ON DELETE NO ACTION;
-    PRINT 'Внешний ключ FK_Technicians_AspNetUsers_UserId создан';
-END
-ELSE PRINT 'Внешний ключ FK_Technicians_AspNetUsers_UserId уже существует';
-
-PRINT '========================================';
-PRINT 'ВСЕ ТАБЛИЦЫ IDENTITY УСПЕШНО СОЗДАНЫ!';
-PRINT '========================================';
-
--- 6. Проверка создания
-PRINT 'Проверка созданных таблиц:';
-SELECT 
-    TABLE_NAME,
-    CASE 
-        WHEN TABLE_NAME IN ('AspNetUsers', 'AspNetRoles', 'AspNetRoleClaims', 
-                           'AspNetUserClaims', 'AspNetUserLogins', 
-                           'AspNetUserRoles', 'AspNetUserTokens') 
-        THEN 'Identity таблица'
-        ELSE 'Бизнес-таблица'
-    END AS Тип_таблицы
-FROM INFORMATION_SCHEMA.TABLES 
-WHERE TABLE_TYPE = 'BASE TABLE' 
-ORDER BY Тип_таблицы, TABLE_NAME;
+SELECT N'OrderStatuses' AS [Table], COUNT(*) AS [Rows] FROM OrderStatuses
+UNION ALL SELECT N'DeviceTypes', COUNT(*) FROM DeviceTypes
+UNION ALL SELECT N'Customers', COUNT(*) FROM Customers
+UNION ALL SELECT N'Technicians', COUNT(*) FROM Technicians
+UNION ALL SELECT N'AspNetUsers', COUNT(*) FROM AspNetUsers
+UNION ALL SELECT N'AspNetUserRoles', COUNT(*) FROM AspNetUserRoles
+UNION ALL SELECT N'Inventory', COUNT(*) FROM Inventory
+UNION ALL SELECT N'ServiceOrders', COUNT(*) FROM ServiceOrders
+UNION ALL SELECT N'Payments', COUNT(*) FROM Payments
+ORDER BY [Table];
 GO

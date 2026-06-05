@@ -1,4 +1,4 @@
-﻿@model ComputerRepairService.Models.Entities.Customer
+﻿@model ComputerRepairService.Models.ViewModels.CustomerCreateViewModel
 
 @{
     ViewData["Title"] = "Добавить клиента";
@@ -12,7 +12,7 @@
             </div>
             <div>
                 <h2 class="mb-1 fw-bold text-dark">Новый клиент</h2>
-                <div class="text-muted small">Регистрация в базе данных сервисного центра</div>
+                <div class="text-muted small">Создание профиля и учётной записи для входа в личный кабинет</div>
             </div>
         </div>
         <div class="d-flex gap-2">
@@ -23,66 +23,84 @@
     </div>
 
     <div class="row justify-content-center">
-        <div class="col-md-8 col-lg-6">
+        <div class="col-md-8 col-lg-7">
+            <div class="alert alert-info border-info bg-info bg-opacity-10 rounded-4 shadow-sm mb-4">
+                <i class="fas fa-info-circle me-2"></i>
+                Клиент сразу получит роль <strong>Client</strong> и сможет войти по email и паролю: создавать заказы, оплачивать и отслеживать ремонт.
+            </div>
+
             <div class="card border-0 shadow-sm rounded-4 mb-4">
                 <div class="card-body p-4 p-md-5">
-                    @if (!ViewData.ModelState.IsValid)
-                    {
-                        <div class="alert alert-danger border-danger border-opacity-25 bg-danger bg-opacity-10 rounded-3 mb-4 shadow-sm">
-                            <h5 class="alert-heading text-danger fw-bold"><i class="fas fa-exclamation-triangle me-2"></i>Ошибки валидации:</h5>
-                            <ul class="mb-0 text-danger">
-                                @foreach (var key in ViewData.ModelState.Keys)
-                                {
-                                    foreach (var error in ViewData.ModelState[key]!.Errors)
-                                    {
-                                        <li><strong>@key:</strong> @error.ErrorMessage</li>
-                                    }
-                                }
-                            </ul>
-                        </div>
-                    }
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger border-danger border-opacity-25 bg-danger bg-opacity-10 rounded-3 mb-4 shadow-sm" role="alert"></div>
 
                     <form asp-action="Create" method="post">
                         @Html.AntiForgeryToken()
+
+                        <h5 class="fw-bold mb-3 text-dark border-bottom pb-2">Личные данные</h5>
 
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
                                 <div class="form-floating">
                                     <input asp-for="FirstName" class="form-control rounded-3" placeholder="Имя" />
-                                    <label asp-for="FirstName">Имя <span class="text-danger">*</span></label>
+                                    <label asp-for="FirstName"></label>
                                     <span asp-validation-for="FirstName" class="text-danger small"></span>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-floating">
                                     <input asp-for="LastName" class="form-control rounded-3" placeholder="Фамилия" />
-                                    <label asp-for="LastName">Фамилия <span class="text-danger">*</span></label>
+                                    <label asp-for="LastName"></label>
                                     <span asp-validation-for="LastName" class="text-danger small"></span>
                                 </div>
                             </div>
                         </div>
 
                         <div class="form-floating mb-3">
-                            <input asp-for="Email" type="email" class="form-control rounded-3" placeholder="Email" />
-                            <label asp-for="Email">Email <span class="text-danger">*</span></label>
+                            <input asp-for="Email" type="email" class="form-control rounded-3" placeholder="Email" autocomplete="off" />
+                            <label asp-for="Email"></label>
                             <span asp-validation-for="Email" class="text-danger small"></span>
                         </div>
 
                         <div class="form-floating mb-3">
                             <input asp-for="Phone" class="form-control rounded-3" placeholder="Телефон" />
-                            <label asp-for="Phone">Телефон <span class="text-danger">*</span></label>
+                            <label asp-for="Phone"></label>
                             <span asp-validation-for="Phone" class="text-danger small"></span>
                         </div>
 
                         <div class="form-floating mb-4">
                             <textarea asp-for="Address" class="form-control rounded-3" rows="3" style="height: 100px" placeholder="Адрес"></textarea>
-                            <label asp-for="Address">Адрес проживания</label>
+                            <label asp-for="Address"></label>
                             <span asp-validation-for="Address" class="text-danger small"></span>
+                        </div>
+
+                        <h5 class="fw-bold mb-3 text-primary border-bottom pb-2"><i class="fas fa-key me-2"></i>Доступ в систему</h5>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <div class="form-floating position-relative">
+                                    <input asp-for="Password" class="form-control rounded-3" placeholder="Пароль" autocomplete="new-password" id="customerPassword" />
+                                    <label asp-for="Password"></label>
+                                    <button type="button" class="btn border-0 position-absolute top-50 end-0 translate-middle-y me-2" id="toggleCustomerPassword" tabindex="-1" aria-label="Показать пароль">
+                                        <i class="fas fa-eye text-muted" id="toggleCustomerPasswordIcon"></i>
+                                    </button>
+                                    <span asp-validation-for="Password" class="text-danger small"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating position-relative">
+                                    <input asp-for="ConfirmPassword" class="form-control rounded-3" placeholder="Подтверждение" autocomplete="new-password" id="customerConfirmPassword" />
+                                    <label asp-for="ConfirmPassword"></label>
+                                    <button type="button" class="btn border-0 position-absolute top-50 end-0 translate-middle-y me-2" id="toggleCustomerConfirmPassword" tabindex="-1" aria-label="Показать подтверждение пароля">
+                                        <i class="fas fa-eye text-muted" id="toggleCustomerConfirmPasswordIcon"></i>
+                                    </button>
+                                    <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="d-flex justify-content-end gap-2 pt-3 border-top">
                             <button type="submit" class="btn btn-success rounded-pill px-5 fw-bold shadow-sm">
-                                <i class="fas fa-save me-2"></i> Сохранить клиента
+                                <i class="fas fa-user-check me-2"></i> Создать клиента и аккаунт
                             </button>
                         </div>
                     </form>
@@ -93,7 +111,26 @@
 </div>
 
 @section Scripts {
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            function setupPasswordToggle(toggleBtnId, inputId, iconId) {
+                const togglePassword = document.getElementById(toggleBtnId);
+                const passwordInput = document.getElementById(inputId);
+                const toggleIcon = document.getElementById(iconId);
+
+                if (togglePassword && passwordInput && toggleIcon) {
+                    togglePassword.addEventListener('click', function () {
+                        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                        passwordInput.setAttribute('type', type);
+                        toggleIcon.classList.toggle('fa-eye');
+                        toggleIcon.classList.toggle('fa-eye-slash');
+                    });
+                }
+            }
+
+            setupPasswordToggle('toggleCustomerPassword', 'customerPassword', 'toggleCustomerPasswordIcon');
+            setupPasswordToggle('toggleCustomerConfirmPassword', 'customerConfirmPassword', 'toggleCustomerConfirmPasswordIcon');
+        });
+    </script>
 }

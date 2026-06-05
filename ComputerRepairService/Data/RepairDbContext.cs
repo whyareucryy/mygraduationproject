@@ -196,6 +196,12 @@ namespace ComputerRepairService.Data
 
                 entity.Property(u => u.Address)
                     .HasMaxLength(500);
+
+                entity.Property(u => u.Bio)
+                    .HasMaxLength(1000);
+
+                entity.Property(u => u.ProfileImagePath)
+                    .HasMaxLength(500);
             });
         }
     }

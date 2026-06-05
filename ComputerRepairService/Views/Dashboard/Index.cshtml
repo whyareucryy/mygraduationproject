@@ -188,7 +188,7 @@
             @if (Model.RecentOrders.Any())
             {
                 <div class="table-responsive">
-                    <table class="table table-striped align-middle mb-0">
+                    <table class="table table-striped align-middle mb-0 data-table-compact w-100">
                         <thead>
                             <tr>
                                 <th>ID</th>
@@ -196,22 +196,22 @@
                                 <th>Проблема</th>
                                 <th>Статус</th>
                                 <th>Дата</th>
-                                <th></th>
+                                <th class="no-sort"></th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var order in Model.RecentOrders)
                             {
                                 <tr>
-                                    <td><strong>#@order.OrderId</strong></td>
-                                    <td>@order.Customer?.FirstName @order.Customer?.LastName</td>
-                                    <td>
+                                    <td data-order="@order.OrderId"><strong>#@order.OrderId</strong></td>
+                                    <td data-order="@($"{order.Customer?.FirstName} {order.Customer?.LastName}".Trim())">@order.Customer?.FirstName @order.Customer?.LastName</td>
+                                    <td data-order="@order.ProblemDescription">
                                         <div class="text-truncate" style="max-width: 360px;" title="@order.ProblemDescription">
                                             @order.ProblemDescription
                                         </div>
                                     </td>
-                                    <td><partial name="_OrderStatusBadge" model="order.OrderStatus?.StatusName" /></td>
-                                    <td>@order.CreatedDate.ToString("dd.MM.yyyy HH:mm")</td>
+                                    <td data-order="@order.StatusId"><partial name="_OrderStatusBadge" model="order.OrderStatus?.StatusName" /></td>
+                                    <td data-order="@order.CreatedDate.Ticks">@order.CreatedDate.ToString("dd.MM.yyyy HH:mm")</td>
                                     <td>
                                         <a asp-controller="ServiceOrders" asp-action="Details" asp-route-id="@order.OrderId" class="btn btn-sm btn-outline-primary">
                                             <i class="fas fa-eye"></i>

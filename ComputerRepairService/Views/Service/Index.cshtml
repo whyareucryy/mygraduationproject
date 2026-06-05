@@ -23,7 +23,7 @@
     else
     {
         <div class="table-responsive">
-            <table class="table table-striped table-hover">
+            <table class="table table-striped table-hover align-middle mb-0 data-table w-100">
                 <thead class="table-dark">
                     <tr>
                         <th>ID</th>
@@ -31,18 +31,18 @@
                         <th>Описание</th>
                         <th>Базовая цена</th>
                         <th>Длительность (мин)</th>
-                        <th>Действия</th>
+                        <th class="no-sort">Действия</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var item in Model)
                     {
                         <tr>
-                            <td>@item.ServiceId</td>
-                            <td>@item.ServiceName</td>
-                            <td>@(item.Description ?? "Нет описания")</td>
-                            <td>@item.BasePrice.ToString("C")</td>
-                            <td>@(item.EstimatedDuration?.ToString() ?? "Не указана")</td>
+                            <td data-order="@item.ServiceId">@item.ServiceId</td>
+                            <td data-order="@item.ServiceName">@item.ServiceName</td>
+                            <td data-order="@(item.Description ?? "")">@(item.Description ?? "Нет описания")</td>
+                            <td data-order="@item.BasePrice">@item.BasePrice.ToString("C")</td>
+                            <td data-order="@(item.EstimatedDuration ?? 0)">@(item.EstimatedDuration?.ToString() ?? "Не указана")</td>
                             <td>
                                 <div class="btn-group" role="group">
                                     <a asp-action="Details" asp-route-id="@item.ServiceId"

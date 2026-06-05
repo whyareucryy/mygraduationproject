@@ -43,14 +43,15 @@
                                             <th class="border-0">Телефон</th>
                                             <th class="border-0">Регистрация</th>
                                             <th class="border-0">Статус</th>
-                                            <th class="pe-4 border-0 text-end">Действия</th>
+                                            <th class="border-0">Аккаунт</th>
+                                            <th class="pe-4 border-0 text-end no-sort">Действия</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var customer in Model)
                             {
                                 <tr>
-                                    <td class="ps-4 border-bottom-0" data-order="@customer.FirstName @customer.LastName">
+                                    <td class="ps-4 border-bottom-0" data-order="@($"{customer.FirstName} {customer.LastName}".Trim())">
                                         <div class="d-flex align-items-center">
                                             <div class="avatar bg-light text-info rounded-circle d-flex align-items-center justify-content-center me-3 shadow-sm" style="width: 40px; height: 40px;">
                                                 <i class="fas fa-user"></i>
@@ -69,6 +70,16 @@
                                         else
                                         {
                                             <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 rounded-pill px-2 py-1">Неактивен</span>
+                                        }
+                                    </td>
+                                    <td class="border-bottom-0" data-order="@(!string.IsNullOrEmpty(customer.UserId))">
+                                        @if (!string.IsNullOrEmpty(customer.UserId))
+                                        {
+                                            <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 rounded-pill px-2 py-1">Client</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">—</span>
                                         }
                                     </td>
                                     <td class="pe-4 border-bottom-0 text-end">

@@ -1,0 +1,19 @@
+@model ComputerRepairService.Models.Entities.ApplicationUser?
+@using ComputerRepairService.Helpers
+
+@{
+    var avatarUrl = ProfileDisplayHelper.GetAvatarUrl(Model);
+    var initials = ProfileDisplayHelper.GetInitials(Model);
+    var sizeClass = ViewData["AvatarSizeClass"] as string ?? "user-avatar";
+    var extraClass = ViewData["AvatarExtraClass"] as string ?? "";
+    var cssClass = $"{sizeClass} {extraClass}".Trim();
+}
+
+@if (!string.IsNullOrEmpty(avatarUrl))
+{
+    <img src="@avatarUrl" alt="Аватар" class="@cssClass profile-avatar-img" />
+}
+else
+{
+    <div class="@cssClass profile-avatar-fallback">@initials</div>
+}

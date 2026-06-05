@@ -46,14 +46,15 @@
                                             <th class="border-0">Специализация</th>
                                             <th class="border-0">Ставка (час)</th>
                                             <th class="border-0">Статус</th>
-                                            <th class="pe-4 border-0 text-end">Действия</th>
+                                            <th class="border-0">Аккаунт</th>
+                                            <th class="pe-4 border-0 text-end no-sort">Действия</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var tech in Model)
                             {
                                 <tr>
-                                    <td class="ps-4 border-bottom-0" data-order="@tech.FirstName @tech.LastName">
+                                    <td class="ps-4 border-bottom-0" data-order="@($"{tech.FirstName} {tech.LastName}".Trim())">
                                         <div class="d-flex align-items-center">
                                             <div class="avatar bg-light text-primary rounded-circle d-flex align-items-center justify-content-center me-3 shadow-sm" style="width: 40px; height: 40px;">
                                                 <i class="fas fa-user-tie"></i>
@@ -82,6 +83,16 @@
                                         else
                                         {
                                             <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 rounded-pill px-2 py-1">Неактивен</span>
+                                        }
+                                    </td>
+                                    <td class="border-bottom-0" data-order="@(!string.IsNullOrEmpty(tech.UserId))">
+                                        @if (!string.IsNullOrEmpty(tech.UserId))
+                                        {
+                                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill px-2 py-1">Employee</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">—</span>
                                         }
                                     </td>
                                     <td class="pe-4 border-bottom-0 text-end">

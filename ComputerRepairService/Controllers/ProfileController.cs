@@ -1,7 +1,7 @@
 ﻿using ComputerRepairService.Data;
 using ComputerRepairService.Models.Entities;
-using ComputerRepairService.Services;
 using ComputerRepairService.Models.Enums;
+using ComputerRepairService.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -16,15 +16,18 @@ namespace ComputerRepairService.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly RepairDbContext _context;
+        private readonly IProfileImageService _profileImageService;
 
         public ProfileController(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            RepairDbContext context)
+            RepairDbContext context,
+            IProfileImageService profileImageService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _context = context;
+            _profileImageService = profileImageService;
         }
 
         // Главная страница - редирект на AccountInfo
@@ -43,50 +46,27 @@ namespace ComputerRepairService.Controllers
         // Редактирование профиля (POST)
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EditProfile(EditProfileViewModel model)
+        [RequestFormLimits(MultipartBodyLengthLimit = 10 * 1024 * 1024)]
+        public async Task<IActionResult> EditProfile(
+            [Bind(Prefix = "EditProfileModel")] EditProfileViewModel model,
+            bool removeAvatar = false)
         {
-            if (!ModelState.IsValid)
-            {
-                var userObj = await _userManager.GetUserAsync(User);
-                if (userObj == null) return NotFound();
-                
-                var roles = await _userManager.GetRolesAsync(userObj);
-                var logins = await _userManager.GetLoginsAsync(userObj);
-                var claims = await _userManager.GetClaimsAsync(userObj);
-                var customer = await _context.Customers.FirstOrDefaultAsync(c => c.UserId == userObj.Id);
-                var technician = await _context.Technicians.FirstOrDefaultAsync(t => t.UserId == userObj.Id);
-
-                var fullModel = new AccountInfoViewModel
-                {
-                    User = userObj,
-                    Roles = roles.ToList(),
-                    Customer = customer,
-                    Technician = technician,
-                    EditProfileModel = model,
-                    ChangePasswordModel = new ChangePasswordViewModel(),
-                    Logins = logins.ToList(),
-                    Claims = claims.ToList(),
-                    EmailConfirmed = userObj.EmailConfirmed,
-                    PhoneNumberConfirmed = userObj.PhoneNumberConfirmed,
-                    TwoFactorEnabled = userObj.TwoFactorEnabled,
-                    LockoutEnd = userObj.LockoutEnd,
-                    AccessFailedCount = userObj.AccessFailedCount,
-                    RegistrationDate = userObj.RegistrationDate
-                };
-
-                return View("AccountInfo", fullModel);
-            }
-
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return NotFound();
 
-            // Обновляем данные пользователя
+            var avatarFile = Request.Form.Files.GetFile("avatarFile");
+
+            if (!ModelState.IsValid)
+            {
+                return View("AccountInfo", await BuildAccountInfoViewModelAsync(user, model));
+            }
+
             user.FirstName = model.FirstName;
             user.LastName = model.LastName;
             user.PhoneNumber = model.PhoneNumber;
             user.Address = model.Address;
+            user.Bio = model.Bio;
 
-            // Если email изменился
             if (user.Email != model.Email)
             {
                 var setEmailResult = await _userManager.SetEmailAsync(user, model.Email);
@@ -96,39 +76,35 @@ namespace ComputerRepairService.Controllers
                     {
                         ModelState.AddModelError(string.Empty, error.Description);
                     }
-                    
-                    var roles = await _userManager.GetRolesAsync(user);
-                    var logins = await _userManager.GetLoginsAsync(user);
-                    var claims = await _userManager.GetClaimsAsync(user);
-                    var customer = await _context.Customers.FirstOrDefaultAsync(c => c.UserId == user.Id);
-                    var technician = await _context.Technicians.FirstOrDefaultAsync(t => t.UserId == user.Id);
 
-                    var fullModel = new AccountInfoViewModel
-                    {
-                        User = user,
-                        Roles = roles.ToList(),
-                        Customer = customer,
-                        Technician = technician,
-                        EditProfileModel = model,
-                        ChangePasswordModel = new ChangePasswordViewModel(),
-                        Logins = logins.ToList(),
-                        Claims = claims.ToList(),
-                        EmailConfirmed = user.EmailConfirmed,
-                        PhoneNumberConfirmed = user.PhoneNumberConfirmed,
-                        TwoFactorEnabled = user.TwoFactorEnabled,
-                        LockoutEnd = user.LockoutEnd,
-                        AccessFailedCount = user.AccessFailedCount,
-                        RegistrationDate = user.RegistrationDate
-                    };
-
-                    return View("AccountInfo", fullModel);
+                    return View("AccountInfo", await BuildAccountInfoViewModelAsync(user, model));
                 }
             }
 
-            // Сохраняем изменения
+            if (removeAvatar)
+            {
+                await _profileImageService.DeleteAvatarFileAsync(user.ProfileImagePath);
+                user.ProfileImagePath = null;
+            }
+            else if (avatarFile != null && avatarFile.Length > 0)
+            {
+                var (avatarSuccess, avatarError, avatarPath) = await _profileImageService.SaveAvatarAsync(
+                    avatarFile, user.Id, user.ProfileImagePath);
+
+                if (!avatarSuccess)
+                {
+                    ModelState.AddModelError(string.Empty, avatarError ?? "Не удалось сохранить изображение.");
+                    return View("AccountInfo", await BuildAccountInfoViewModelAsync(user, model));
+                }
+
+                user.ProfileImagePath = avatarPath;
+            }
+
             var updateResult = await _userManager.UpdateAsync(user);
             if (updateResult.Succeeded)
             {
+                await _context.SaveChangesAsync();
+
                 // Обновляем соответствующие бизнес-сущности
                 var roles = await _userManager.GetRolesAsync(user);
 
@@ -163,7 +139,7 @@ namespace ComputerRepairService.Controllers
                 }
 
                 TempData["SuccessMessage"] = "Профиль успешно обновлен!";
-                return RedirectToAction("AccountInfo");
+                return RedirectToAction("AccountInfo", new { tab = "edit" });
             }
 
             foreach (var error in updateResult.Errors)
@@ -171,31 +147,7 @@ namespace ComputerRepairService.Controllers
                 ModelState.AddModelError(string.Empty, error.Description);
             }
 
-            var rolesErr = await _userManager.GetRolesAsync(user);
-            var loginsErr = await _userManager.GetLoginsAsync(user);
-            var claimsErr = await _userManager.GetClaimsAsync(user);
-            var customerErr = await _context.Customers.FirstOrDefaultAsync(c => c.UserId == user.Id);
-            var technicianErr = await _context.Technicians.FirstOrDefaultAsync(t => t.UserId == user.Id);
-
-            var errModel = new AccountInfoViewModel
-            {
-                User = user,
-                Roles = rolesErr.ToList(),
-                Customer = customerErr,
-                Technician = technicianErr,
-                EditProfileModel = model,
-                ChangePasswordModel = new ChangePasswordViewModel(),
-                Logins = loginsErr.ToList(),
-                Claims = claimsErr.ToList(),
-                EmailConfirmed = user.EmailConfirmed,
-                PhoneNumberConfirmed = user.PhoneNumberConfirmed,
-                TwoFactorEnabled = user.TwoFactorEnabled,
-                LockoutEnd = user.LockoutEnd,
-                AccessFailedCount = user.AccessFailedCount,
-                RegistrationDate = user.RegistrationDate
-            };
-
-            return View("AccountInfo", errModel);
+            return View("AccountInfo", await BuildAccountInfoViewModelAsync(user, model));
         }
 
         // Смена пароля (POST)
@@ -214,22 +166,13 @@ namespace ComputerRepairService.Controllers
                 var customer = await _context.Customers.FirstOrDefaultAsync(c => c.UserId == userObj.Id);
                 var technician = await _context.Technicians.FirstOrDefaultAsync(t => t.UserId == userObj.Id);
                 
-                var editModel = new EditProfileViewModel
-                {
-                    FirstName = userObj.FirstName,
-                    LastName = userObj.LastName,
-                    Email = userObj.Email,
-                    PhoneNumber = userObj.PhoneNumber,
-                    Address = userObj.Address
-                };
-
                 var fullModel = new AccountInfoViewModel
                 {
                     User = userObj,
                     Roles = roles.ToList(),
                     Customer = customer,
                     Technician = technician,
-                    EditProfileModel = editModel,
+                    EditProfileModel = CreateEditProfileModel(userObj),
                     ChangePasswordModel = model,
                     Logins = logins.ToList(),
                     Claims = claims.ToList(),
@@ -268,22 +211,13 @@ namespace ComputerRepairService.Controllers
             var customerErr = await _context.Customers.FirstOrDefaultAsync(c => c.UserId == user.Id);
             var technicianErr = await _context.Technicians.FirstOrDefaultAsync(t => t.UserId == user.Id);
             
-            var editModelErr = new EditProfileViewModel
-            {
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email,
-                PhoneNumber = user.PhoneNumber,
-                Address = user.Address
-            };
-
             var errModel = new AccountInfoViewModel
             {
                 User = user,
                 Roles = rolesErr.ToList(),
                 Customer = customerErr,
                 Technician = technicianErr,
-                EditProfileModel = editModelErr,
+                EditProfileModel = CreateEditProfileModel(user),
                 ChangePasswordModel = model,
                 Logins = loginsErr.ToList(),
                 Claims = claimsErr.ToList(),
@@ -311,22 +245,13 @@ namespace ComputerRepairService.Controllers
             var customer = await _context.Customers.FirstOrDefaultAsync(c => c.UserId == user.Id);
             var technician = await _context.Technicians.FirstOrDefaultAsync(t => t.UserId == user.Id);
 
-            var editModel = new EditProfileViewModel
-            {
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email,
-                PhoneNumber = user.PhoneNumber,
-                Address = user.Address
-            };
-
             var model = new AccountInfoViewModel
             {
                 User = user,
                 Roles = roles.ToList(),
                 Customer = customer,
                 Technician = technician,
-                EditProfileModel = editModel,
+                EditProfileModel = CreateEditProfileModel(user),
                 ChangePasswordModel = new ChangePasswordViewModel(),
                 Logins = logins.ToList(),
                 Claims = claims.ToList(),
@@ -340,6 +265,46 @@ namespace ComputerRepairService.Controllers
 
             return View(model);
         }
+
+        private async Task<AccountInfoViewModel> BuildAccountInfoViewModelAsync(
+            ApplicationUser user,
+            EditProfileViewModel? editModel = null,
+            ChangePasswordViewModel? changePasswordModel = null)
+        {
+            var roles = await _userManager.GetRolesAsync(user);
+            var logins = await _userManager.GetLoginsAsync(user);
+            var claims = await _userManager.GetClaimsAsync(user);
+            var customer = await _context.Customers.FirstOrDefaultAsync(c => c.UserId == user.Id);
+            var technician = await _context.Technicians.FirstOrDefaultAsync(t => t.UserId == user.Id);
+
+            return new AccountInfoViewModel
+            {
+                User = user,
+                Roles = roles.ToList(),
+                Customer = customer,
+                Technician = technician,
+                EditProfileModel = editModel ?? CreateEditProfileModel(user),
+                ChangePasswordModel = changePasswordModel ?? new ChangePasswordViewModel(),
+                Logins = logins.ToList(),
+                Claims = claims.ToList(),
+                EmailConfirmed = user.EmailConfirmed,
+                PhoneNumberConfirmed = user.PhoneNumberConfirmed,
+                TwoFactorEnabled = user.TwoFactorEnabled,
+                LockoutEnd = user.LockoutEnd,
+                AccessFailedCount = user.AccessFailedCount,
+                RegistrationDate = user.RegistrationDate
+            };
+        }
+
+        private static EditProfileViewModel CreateEditProfileModel(ApplicationUser user) => new()
+        {
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            Email = user.Email,
+            PhoneNumber = user.PhoneNumber,
+            Address = user.Address,
+            Bio = user.Bio
+        };
     }
 
     // ViewModels
@@ -406,6 +371,10 @@ namespace ComputerRepairService.Controllers
         [Display(Name = "Адрес")]
         [StringLength(500, ErrorMessage = "Адрес не должен превышать 500 символов")]
         public string Address { get; set; }
+
+        [Display(Name = "О себе")]
+        [StringLength(1000, ErrorMessage = "Описание не должно превышать 1000 символов")]
+        public string? Bio { get; set; }
     }
 
     public class ChangePasswordViewModel

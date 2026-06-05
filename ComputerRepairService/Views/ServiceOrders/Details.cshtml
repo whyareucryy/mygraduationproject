@@ -2,6 +2,10 @@
 
 @{
     ViewData["Title"] = "Детали заказа";
+    var canManageParts = ViewBag.CanManageParts as bool? ?? false;
+    var partsTotal = ViewBag.PartsTotal as decimal? ?? Model.OrderParts.Sum(p => p.TotalPrice);
+    var availableParts = ViewBag.AvailableParts as IEnumerable<ComputerRepairService.Models.ViewModels.AvailablePartOption>
+        ?? Enumerable.Empty<ComputerRepairService.Models.ViewModels.AvailablePartOption>();
 }
 
 <div class="container-fluid mt-4">
@@ -55,6 +59,28 @@
             </a>
         </div>
     </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show rounded-4 shadow-sm mb-4" role="alert">
+            <i class="fas fa-check-circle me-2"></i>@TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["WarningMessage"] != null)
+    {
+        <div class="alert alert-warning alert-dismissible fade show rounded-4 shadow-sm mb-4" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>@TempData["WarningMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show rounded-4 shadow-sm mb-4" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>@TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
 
     <div class="row g-4">
         <!-- Основная информация -->
@@ -181,6 +207,90 @@
                     }
                 </div>
             </div>
+
+            <!-- Запчасти -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4" id="order-parts">
+                <div class="card-header bg-transparent border-bottom pt-4 pb-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <h5 class="fw-bold mb-0 text-dark"><i class="fas fa-microchip text-info me-2"></i> Использованные запчасти</h5>
+                    @if (canManageParts)
+                    {
+                        <button type="button" class="btn btn-info btn-sm rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#addPartModal">
+                            <i class="fas fa-plus me-1"></i> Списать со склада
+                        </button>
+                    }
+                </div>
+                <div class="card-body p-0">
+                    @if (Model.OrderParts != null && Model.OrderParts.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-4">Запчасть</th>
+                                        <th>Кол-во</th>
+                                        <th>Цена</th>
+                                        <th>Сумма</th>
+                                        <th>Дата</th>
+                                        @if (canManageParts) { <th class="pe-4 text-end">Действия</th> }
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var part in Model.OrderParts.OrderByDescending(p => p.UsageDate))
+                                    {
+                                        <tr>
+                                            <td class="ps-4">
+                                                <div class="fw-medium">@part.Inventory?.PartName</div>
+                                                <small class="text-muted">ID #@part.PartId</small>
+                                            </td>
+                                            <td>@part.QuantityUsed шт.</td>
+                                            <td>@part.UnitPriceAtTime.ToString("C0")</td>
+                                            <td class="fw-bold text-success">@part.TotalPrice.ToString("C0")</td>
+                                            <td class="text-muted small">@part.UsageDate.ToString("dd.MM.yy HH:mm")</td>
+                                            @if (canManageParts)
+                                            {
+                                                <td class="pe-4 text-end">
+                                                    <form asp-action="RemoveOrderPart" method="post" class="d-inline"
+                                                          onsubmit="return confirm('Вернуть @part.QuantityUsed шт. «@part.Inventory?.PartName» на склад?');">
+                                                        @Html.AntiForgeryToken()
+                                                        <input type="hidden" name="orderPartId" value="@part.OrderPartId" />
+                                                        <input type="hidden" name="orderId" value="@Model.OrderId" />
+                                                        <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill" title="Вернуть на склад">
+                                                            <i class="fas fa-undo"></i>
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            }
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot class="table-light">
+                                    <tr>
+                                        <td class="ps-4 fw-bold text-muted text-uppercase small" colspan="3">Итого запчасти</td>
+                                        <td class="fw-bold">@partsTotal.ToString("C0")</td>
+                                        <td colspan="@(canManageParts ? 2 : 1)"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="p-4 text-center text-muted">
+                            <i class="fas fa-box-open fa-2x mb-2 opacity-50"></i>
+                            <p class="mb-0 small">
+                                @if (canManageParts)
+                                {
+                                    <span>Запчасти ещё не списаны. Нажмите «Списать со склада», когда начнёте ремонт.</span>
+                                }
+                                else
+                                {
+                                    <span>Запчасти по этому заказу не использовались.</span>
+                                }
+                            </p>
+                        </div>
+                    }
+                </div>
+            </div>
         </div>
 
         <!-- Боковая панель -->
@@ -192,7 +302,20 @@
                 </div>
                 <div class="card-body p-4 position-relative">
                     <h6 class="fw-bold mb-3 opacity-75 text-uppercase" style="letter-spacing: 1px;">Итоговая стоимость</h6>
-                    <h1 class="display-5 fw-bold mb-0">@Model.TotalCost.ToString("C0")</h1>
+                    <h1 class="display-5 fw-bold mb-2">@Model.TotalCost.ToString("C0")</h1>
+                    @if (partsTotal > 0)
+                    {
+                        <div class="small opacity-90">
+                            <div class="d-flex justify-content-between"><span>Запчасти:</span><span>@partsTotal.ToString("C0")</span></div>
+                            @{
+                                var laborPart = Math.Max(0, Model.TotalCost - partsTotal);
+                            }
+                            @if (laborPart > 0 || Model.TotalCost > partsTotal)
+                            {
+                                <div class="d-flex justify-content-between"><span>Работы:</span><span>@laborPart.ToString("C0")</span></div>
+                            }
+                        </div>
+                    }
                 </div>
             </div>
 
@@ -244,8 +367,15 @@
                 </div>
                 <div class="modal-body p-4">
                     <p class="text-muted mb-4">Клиенту будет отправлено уведомление для подтверждения стоимости ремонта.</p>
+                    @if (partsTotal > 0)
+                    {
+                        <div class="alert alert-light border rounded-3 small mb-3">
+                            <i class="fas fa-microchip text-info me-1"></i>
+                            Уже списано запчастей на <strong>@partsTotal.ToString("C0")</strong> — учтите это в смете для клиента.
+                        </div>
+                    }
                     <div class="form-floating mb-3">
-                        <input type="number" class="form-control rounded-3" id="estimatedCost" name="estimatedCost" min="0" step="0.01" required placeholder="Стоимость">
+                        <input type="number" class="form-control rounded-3" id="estimatedCost" name="estimatedCost" min="0" step="0.01" required placeholder="Стоимость" value="@(partsTotal > 0 ? partsTotal.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : "")">
                         <label for="estimatedCost">Предварительная стоимость (₽) <span class="text-danger">*</span></label>
                     </div>
                     <div class="form-floating mb-0">
@@ -260,4 +390,108 @@
             </form>
         </div>
     </div>
+
+    @if (canManageParts)
+    {
+        <div class="modal fade" id="addPartModal" tabindex="-1" aria-labelledby="addPartModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <form asp-action="AddOrderPart" method="post" class="modal-content border-0 shadow rounded-4">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="orderId" value="@Model.OrderId" />
+                    <div class="modal-header bg-info bg-opacity-10 border-info border-opacity-25 py-3 px-4">
+                        <h5 class="modal-title fw-bold text-dark" id="addPartModalLabel">
+                            <i class="fas fa-microchip text-info me-2"></i> Списать запчасть со склада
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <p class="text-muted small mb-4">
+                            Запчасть будет списана со склада и зафиксирована в заказе. Цена сохраняется на момент списания.
+                        </p>
+                        @if (availableParts.Any())
+                        {
+                            <div class="row g-3">
+                                <div class="col-md-8">
+                                    <label for="partId" class="form-label fw-medium">Запчасть</label>
+                                    <select class="form-select rounded-3" id="partId" name="partId" required>
+                                        <option value="">— Выберите запчасть —</option>
+                                        @foreach (var part in availableParts)
+                                        {
+                                            var stockClass = part.QuantityInStock == 0 ? " (нет на складе)" : $" ({part.QuantityInStock} шт.)";
+                                            <option value="@part.PartId"
+                                                    data-stock="@part.QuantityInStock"
+                                                    data-price="@part.UnitPrice"
+                                                    disabled="@(part.QuantityInStock == 0 ? "disabled" : null)">
+                                                @part.PartName@stockClass — @part.UnitPrice.ToString("C0")
+                                            </option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="quantity" class="form-label fw-medium">Количество</label>
+                                    <input type="number" class="form-control rounded-3" id="quantity" name="quantity" min="1" value="1" required />
+                                    <div class="form-text" id="partStockHint"></div>
+                                </div>
+                            </div>
+                            <div class="mt-3 p-3 bg-light rounded-3 d-none" id="partPricePreview">
+                                <span class="text-muted small">Сумма списания:</span>
+                                <strong class="ms-2" id="partPriceTotal">0 ₽</strong>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-warning mb-0 rounded-3">
+                                <i class="fas fa-warehouse me-2"></i>
+                                На складе нет активных запчастей. <a asp-controller="Inventory" asp-action="Index">Перейти на склад</a>
+                            </div>
+                        }
+                    </div>
+                    <div class="modal-footer bg-light border-top-0 py-3 px-4">
+                        <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Отмена</button>
+                        @if (availableParts.Any())
+                        {
+                            <button type="submit" class="btn btn-info rounded-pill px-4 fw-bold shadow-sm text-white">
+                                <i class="fas fa-check me-1"></i> Списать
+                            </button>
+                        }
+                    </div>
+                </form>
+            </div>
+        </div>
+    }
 </div>
+
+@section Scripts {
+    @if (canManageParts && availableParts.Any())
+    {
+        <script>
+            (function () {
+                const partSelect = document.getElementById('partId');
+                const quantityInput = document.getElementById('quantity');
+                const stockHint = document.getElementById('partStockHint');
+                const preview = document.getElementById('partPricePreview');
+                const totalEl = document.getElementById('partPriceTotal');
+
+                function updatePreview() {
+                    const option = partSelect.selectedOptions[0];
+                    if (!option || !option.value) {
+                        stockHint.textContent = '';
+                        preview.classList.add('d-none');
+                        return;
+                    }
+                    const stock = parseInt(option.dataset.stock, 10);
+                    const price = parseFloat(option.dataset.price);
+                    const qty = parseInt(quantityInput.value, 10) || 1;
+                    stockHint.textContent = 'На складе: ' + stock + ' шт.';
+                    stockHint.className = 'form-text ' + (qty > stock ? 'text-danger fw-bold' : 'text-muted');
+                    totalEl.textContent = (price * qty).toLocaleString('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 });
+                    preview.classList.remove('d-none');
+                    quantityInput.max = stock;
+                }
+
+                partSelect?.addEventListener('change', updatePreview);
+                quantityInput?.addEventListener('input', updatePreview);
+            })();
+        </script>
+    }
+}

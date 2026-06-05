@@ -17,12 +17,18 @@ namespace ComputerRepairService.Controllers
         private readonly RepairDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IOrderManagementService _orderService;
+        private readonly IOrderPartsService _orderPartsService;
 
-        public ServiceOrdersController(RepairDbContext context, UserManager<ApplicationUser> userManager, IOrderManagementService orderService)
+        public ServiceOrdersController(
+            RepairDbContext context,
+            UserManager<ApplicationUser> userManager,
+            IOrderManagementService orderService,
+            IOrderPartsService orderPartsService)
         {
             _context = context;
             _userManager = userManager;
             _orderService = orderService;
+            _orderPartsService = orderPartsService;
         }
 
         // GET: ServiceOrders
@@ -232,7 +238,7 @@ namespace ComputerRepairService.Controllers
 
             if (roles.Contains("Admin") || roles.Contains("Employee"))
             {
-                // Админ и сотрудники видят все
+                await LoadPartsManagementViewDataAsync(serviceOrder);
                 return View(serviceOrder);
             }
             else if (roles.Contains("Client"))
@@ -426,6 +432,8 @@ namespace ComputerRepairService.Controllers
 
                 if (serviceOrder != null)
                 {
+                    await _orderPartsService.RestoreStockForOrderAsync(id);
+
                     // Удаляем связанные записи
                     _context.OrderTechnicians.RemoveRange(serviceOrder.OrderTechnicians);
                     _context.OrderServices.RemoveRange(serviceOrder.OrderServices);
@@ -505,6 +513,13 @@ namespace ComputerRepairService.Controllers
                 {
                     TempData["ErrorMessage"] = "Сначала укажите стоимость через «Заказ выполнен» или редактирование заказа.";
                     return RedirectToAction(nameof(Details), new { id });
+                }
+
+                if (statusId == OrderStatusIds.Cancelled && oldStatusId != OrderStatusIds.Cancelled)
+                {
+                    await _orderPartsService.RestoreStockForOrderAsync(id);
+                    _context.OrderParts.RemoveRange(
+                        await _context.OrderParts.Where(op => op.OrderId == id).ToListAsync());
                 }
 
                 serviceOrder.StatusId = statusId;
@@ -667,6 +682,13 @@ namespace ComputerRepairService.Controllers
                 return RedirectToAction(nameof(Details), new { id });
             }
 
+            var orderWithParts = await _context.ServiceOrders
+                .Include(o => o.OrderParts)
+                .FirstAsync(o => o.OrderId == order.OrderId);
+
+            var partsTotal = _orderPartsService.GetPartsTotal(orderWithParts.OrderParts);
+            var laborCost = order.TotalCost > partsTotal ? order.TotalCost - partsTotal : 0;
+
             var model = new CompleteOrderViewModel
             {
                 OrderId = order.OrderId,
@@ -676,7 +698,8 @@ namespace ComputerRepairService.Controllers
                 DeviceDescription = $"{order.DeviceType?.TypeName} {order.DeviceBrand} {order.DeviceModel}".Trim(),
                 ProblemDescription = order.ProblemDescription,
                 CurrentStatusName = order.OrderStatus?.StatusName ?? "—",
-                TotalCost = order.TotalCost > 0 ? order.TotalCost : 0,
+                PartsTotal = partsTotal,
+                LaborCost = laborCost,
                 TechnicianNotes = order.TechnicianNotes
             };
 
@@ -706,6 +729,18 @@ namespace ComputerRepairService.Controllers
                 return RedirectToAction(nameof(Details), new { id });
             }
 
+            var orderWithParts = await _context.ServiceOrders
+                .Include(o => o.OrderParts)
+                .FirstAsync(o => o.OrderId == order.OrderId);
+
+            var partsTotal = _orderPartsService.GetPartsTotal(orderWithParts.OrderParts);
+            model.PartsTotal = partsTotal;
+
+            if (model.LaborCost < 0)
+            {
+                ModelState.AddModelError(nameof(model.LaborCost), "Стоимость работ не может быть отрицательной.");
+            }
+
             if (!ModelState.IsValid)
             {
                 model.CustomerName = order.Customer != null
@@ -717,14 +752,15 @@ namespace ComputerRepairService.Controllers
                 return View(model);
             }
 
-            order.TotalCost = model.TotalCost;
+            order.TotalCost = partsTotal + model.LaborCost;
             order.TechnicianNotes = model.TechnicianNotes;
             order.ActualCompletionDate = DateTime.Now;
 
             order.StatusId = OrderStatusIds.ReadyForPickup;
 
-            string statusNote = model.TotalCost > 0 
-                ? $"Работы завершены. Стоимость: {model.TotalCost:C}. Ожидается оплата и выдача клиенту."
+            var totalCost = order.TotalCost;
+            string statusNote = totalCost > 0
+                ? $"Работы завершены. Итого: {totalCost:C} (запчасти: {partsTotal:C}, работы: {model.LaborCost:C}). Ожидается оплата и выдача клиенту."
                 : "Работы завершены (бесплатно/по гарантии). Заказ готов к выдаче клиенту.";
 
             _context.OrderStatusHistory.Add(new OrderStatusHistory
@@ -827,13 +863,68 @@ namespace ComputerRepairService.Controllers
             return RedirectToAction(nameof(Details), new { id });
         }
 
+        // POST: ServiceOrders/AddOrderPart
+        [Authorize(Roles = "Admin,Employee")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddOrderPart(int orderId, int partId, int quantity)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            var (success, error, warning) = await _orderPartsService.AddPartToOrderAsync(
+                orderId,
+                partId,
+                quantity,
+                User.Identity?.Name ?? "Employee",
+                user?.Id,
+                User.IsInRole("Admin"),
+                User.IsInRole("Employee"));
+
+            if (!success)
+            {
+                TempData["ErrorMessage"] = error;
+            }
+            else
+            {
+                TempData["SuccessMessage"] = "Запчасть списана со склада и добавлена в заказ.";
+                if (!string.IsNullOrEmpty(warning))
+                {
+                    TempData["WarningMessage"] = warning;
+                }
+            }
+
+            return RedirectToAction(nameof(Details), new { id = orderId });
+        }
+
+        // POST: ServiceOrders/RemoveOrderPart
+        [Authorize(Roles = "Admin,Employee")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RemoveOrderPart(int orderPartId, int orderId)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            var (success, error) = await _orderPartsService.RemovePartFromOrderAsync(
+                orderPartId,
+                User.Identity?.Name ?? "Employee",
+                user?.Id,
+                User.IsInRole("Admin"),
+                User.IsInRole("Employee"));
+
+            TempData[success ? "SuccessMessage" : "ErrorMessage"] = success
+                ? "Запчасть возвращена на склад."
+                : error;
+
+            return RedirectToAction(nameof(Details), new { id = orderId });
+        }
+
         // POST: ServiceOrders/RequireApproval/5
         [Authorize(Roles = "Admin,Employee")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RequireApproval(int id, decimal estimatedCost, string notes)
         {
-            var order = await _context.ServiceOrders.FindAsync(id);
+            var order = await _context.ServiceOrders
+                .Include(o => o.OrderParts)
+                .FirstOrDefaultAsync(o => o.OrderId == id);
             if (order == null) return NotFound();
 
             if (!OrderStatusIds.ActiveWorkStatuses.Contains(order.StatusId) && order.StatusId != OrderStatusIds.New)
@@ -926,6 +1017,29 @@ namespace ComputerRepairService.Controllers
         }
 
         // Вспомогательный метод для загрузки данных в формы
+        private async Task LoadPartsManagementViewDataAsync(ServiceOrder order)
+        {
+            ViewBag.CanManageParts = _orderPartsService.CanManageParts(order);
+            ViewBag.PartsTotal = _orderPartsService.GetPartsTotal(order.OrderParts);
+
+            if (ViewBag.CanManageParts)
+            {
+                ViewBag.AvailableParts = await _context.Inventory
+                    .Where(i => i.IsActive)
+                    .OrderBy(i => i.QuantityInStock == 0)
+                    .ThenBy(i => i.PartName)
+                    .Select(i => new AvailablePartOption
+                    {
+                        PartId = i.PartId,
+                        PartName = i.PartName,
+                        QuantityInStock = i.QuantityInStock,
+                        UnitPrice = i.UnitPrice,
+                        ReorderLevel = i.ReorderLevel
+                    })
+                    .ToListAsync();
+            }
+        }
+
         private async Task LoadCreateViewData()
         {
             try

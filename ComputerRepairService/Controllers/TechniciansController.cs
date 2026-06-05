@@ -1,19 +1,23 @@
 ﻿using ComputerRepairService.Data;
 using ComputerRepairService.Models.Entities;
+using ComputerRepairService.Models.ViewModels;
+using ComputerRepairService.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace ComputerRepairService.Controllers
 {
-    [Authorize(Roles = "Admin,Employee")] // Админ и сотрудники
+    [Authorize(Roles = "Admin,Employee")]
     public class TechniciansController : Controller
     {
         private readonly RepairDbContext _context;
+        private readonly IAdminAccountProvisioningService _accountService;
 
-        public TechniciansController(RepairDbContext context)
+        public TechniciansController(RepairDbContext context, IAdminAccountProvisioningService accountService)
         {
             _context = context;
+            _accountService = accountService;
         }
 
         // GET: Technicians
@@ -54,50 +58,39 @@ namespace ComputerRepairService.Controllers
         [Authorize(Roles = "Admin")]
         public IActionResult Create()
         {
-            return View();
+            return View(new TechnicianCreateViewModel());
         }
 
-        // POST: Technicians/Create
         [Authorize(Roles = "Admin")]
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("FirstName,LastName,Email,Phone,Specialization,HourlyRate")] Technician technician)
+        public async Task<IActionResult> Create(TechnicianCreateViewModel model)
         {
-            Console.WriteLine($"=== CREATE TECHNICIAN STARTED ===");
-
-            // Отключаем валидацию навигационных свойств
-            ModelState.Remove("OrderTechnicians");
-            ModelState.Remove("OrderServices");
-
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
-                try
-                {
-                    technician.HireDate = DateTime.Now;
-                    technician.IsActive = true;
-                    _context.Add(technician);
-                    await _context.SaveChangesAsync();
-
-                    Console.WriteLine($"Technician created with ID: {technician.TechnicianId}");
-                    TempData["SuccessMessage"] = "Мастер успешно добавлен!";
-                    return RedirectToAction(nameof(Index));
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"ERROR creating technician: {ex.Message}");
-                    ModelState.AddModelError("", $"Ошибка при создании мастера: {ex.Message}");
-                }
-            }
-            else
-            {
-                Console.WriteLine("ModelState is invalid");
-                foreach (var error in ModelState.Values.SelectMany(v => v.Errors))
-                {
-                    Console.WriteLine($"Validation error: {error.ErrorMessage}");
-                }
+                return View(model);
             }
 
-            return View(technician);
+            var technician = new Technician
+            {
+                FirstName = model.FirstName.Trim(),
+                LastName = model.LastName.Trim(),
+                Email = model.Email.Trim(),
+                Phone = model.Phone?.Trim() ?? string.Empty,
+                Specialization = model.Specialization?.Trim() ?? string.Empty,
+                HourlyRate = model.HourlyRate,
+                IsActive = model.IsActive
+            };
+
+            var (success, error) = await _accountService.CreateTechnicianWithAccountAsync(technician, model.Password);
+            if (!success)
+            {
+                ModelState.AddModelError(string.Empty, error ?? "Не удалось создать мастера.");
+                return View(model);
+            }
+
+            TempData["SuccessMessage"] = $"Мастер {technician.FirstName} {technician.LastName} создан. Вход: {technician.Email}";
+            return RedirectToAction(nameof(Index));
         }
 
 

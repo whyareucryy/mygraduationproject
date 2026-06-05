@@ -37,7 +37,7 @@
         @if (Model.Any())
         {
             <div class="table-responsive">
-                <table class="table table-striped table-hover align-middle">
+                <table class="table table-striped table-hover align-middle mb-0 data-table w-100">
                     <thead class="table-dark">
                         <tr>
                             <th>ID</th>
@@ -45,26 +45,26 @@
                             <th>Клиент</th>
                             <th>Устройство</th>
                             <th>Описание проблемы</th>
-                            <th>Действия</th>
+                            <th class="no-sort">Действия</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var item in Model)
                         {
                             <tr>
-                                <td><strong>#@item.OrderId</strong></td>
-                                <td>@item.CreatedDate.ToString("dd.MM.yyyy HH:mm")</td>
-                                <td>
+                                <td data-order="@item.OrderId"><strong>#@item.OrderId</strong></td>
+                                <td data-order="@item.CreatedDate.Ticks">@item.CreatedDate.ToString("dd.MM.yyyy HH:mm")</td>
+                                <td data-order="@($"{item.Customer?.FirstName} {item.Customer?.LastName}".Trim())">
                                     @item.Customer?.FirstName @item.Customer?.LastName
                                     <br />
                                     <small class="text-muted">@item.Customer?.Phone</small>
                                 </td>
-                                <td>
+                                <td data-order="@($"{item.DeviceBrand} {item.DeviceModel}".Trim())">
                                     <span class="badge bg-secondary">@item.DeviceType?.TypeName</span>
                                     <br />
                                     <small>@item.DeviceBrand @item.DeviceModel</small>
                                 </td>
-                                <td>
+                                <td data-order="@item.ProblemDescription">
                                     <div class="text-truncate" style="max-width: 320px;" title="@item.ProblemDescription">
                                         @item.ProblemDescription
                                     </div>

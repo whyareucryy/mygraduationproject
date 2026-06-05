@@ -190,18 +190,18 @@
                                             <th class="border-0">Статус</th>
                                             <th class="border-0">Приоритет</th>
                                             <th class="border-0">Сумма</th>
-                                            <th class="pe-4 border-0 text-end">Действия</th>
+                                            <th class="pe-4 border-0 text-end no-sort">Действия</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var item in Model.OrderByDescending(o => o.CreatedDate))
                             {
                                 <tr data-status="@item.OrderStatus?.StatusName?.ToLower()" data-priority="@item.Priority" data-date="@item.CreatedDate.ToString("yyyy-MM-dd")">
-                                    <td class="ps-4 border-bottom-0" data-order="@item.OrderId">
+                                    <td class="ps-4 border-bottom-0" data-order="@item.CreatedDate.Ticks">
                                         <div class="fw-bold text-dark">#@item.OrderId</div>
                                         <div class="small text-muted">@item.CreatedDate.ToString("dd.MM.yy HH:mm")</div>
                                     </td>
-                                    <td class="border-bottom-0" data-order="@item.Customer?.FirstName @item.Customer?.LastName">
+                                    <td class="border-bottom-0" data-order="@($"{item.Customer?.FirstName} {item.Customer?.LastName}".Trim())">
                                         @if (item.Customer != null)
                                         {
                                             <div class="fw-medium text-dark">@item.Customer.FirstName @item.Customer.LastName</div>
@@ -212,7 +212,7 @@
                                         <div class="fw-medium text-dark">@item.DeviceBrand @item.DeviceModel</div>
                                         <span class="badge border" style="background-color: var(--bg-color); color: var(--text-main);">@(item.DeviceType?.TypeName ?? "Устройство")</span>
                                     </td>
-                                    <td class="border-bottom-0" data-order="@item.OrderStatus?.StatusName">
+                                    <td class="border-bottom-0" data-order="@item.StatusId">
                                         <partial name="_OrderStatusBadge" model="item.OrderStatus?.StatusName" />
                                     </td>
                                     <td class="border-bottom-0" data-order="@item.Priority">
@@ -287,34 +287,47 @@
 @section Scripts {
     <script>
         $(document).ready(function() {
-            if ($.fn.DataTable.isDataTable('.data-table')) {
-                $('.data-table').DataTable().destroy();
+            var $ordersTable = $('.card .data-table').first();
+            if (!$ordersTable.length || !$.fn.DataTable.isDataTable($ordersTable[0])) {
+                return;
             }
-            
-            var table = $('.data-table').DataTable({
+
+            var table = $ordersTable.DataTable();
+            var tableNode = table.table().node();
+
+            var filterState = {
+                status: 'all',
+                priority: 'all',
+                dateFrom: '',
+                dateTo: ''
+            };
+
+            var ordersCustomFilter = function(settings, data, dataIndex) {
+                if (settings.nTable !== tableNode) {
+                    return true;
+                }
+
+                var $tr = $(table.row(dataIndex).node());
+                var rowStatus = ($tr.data('status') || '').toString();
+                var rowPriority = ($tr.data('priority') || '').toString();
+                var rowDate = ($tr.data('date') || '').toString();
+
+                if (filterState.status !== 'all' && rowStatus !== filterState.status) return false;
+                if (filterState.priority !== 'all' && rowPriority !== filterState.priority) return false;
+                if (filterState.dateFrom && rowDate < filterState.dateFrom) return false;
+                if (filterState.dateTo && rowDate > filterState.dateTo) return false;
+
+                return true;
+            };
+
+            $.fn.dataTable.ext.search.push(ordersCustomFilter);
 
             function applyCustomFilters() {
-                var status = $('#statusFilter').val();
-                var priority = $('#priorityFilter').val();
-                var dateFrom = $('#dateFromFilter').val();
-                var dateTo = $('#dateToFilter').val();
-
-                $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
-                    var $tr = $(table.row(dataIndex).node());
-                    var rowStatus = $tr.data('status');
-                    var rowPriority = $tr.data('priority').toString();
-                    var rowDate = $tr.data('date');
-
-                    if (status !== 'all' && rowStatus !== status) return false;
-                    if (priority !== 'all' && rowPriority !== priority) return false;
-                    if (dateFrom && rowDate < dateFrom) return false;
-                    if (dateTo && rowDate > dateTo) return false;
-
-                    return true;
-                });
-                
+                filterState.status = $('#statusFilter').val();
+                filterState.priority = $('#priorityFilter').val();
+                filterState.dateFrom = $('#dateFromFilter').val();
+                filterState.dateTo = $('#dateToFilter').val();
                 table.draw();
-                $.fn.dataTable.ext.search.pop();
             }
 
             $('#statusFilter, #priorityFilter, #dateFromFilter, #dateToFilter').on('change', applyCustomFilters);

@@ -154,7 +154,7 @@
                                             <th class="ps-4 py-3 border-0">Заказ</th>
                                             <th class="py-3 border-0">Клиент</th>
                                             <th class="py-3 border-0">К оплате</th>
-                                            <th class="pe-4 py-3 border-0 text-end">Действия</th>
+                                            <th class="pe-4 py-3 border-0 text-end no-sort">Действия</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -166,7 +166,7 @@
                                                         <div class="fw-bold text-dark">Заказ #@order.OrderId</div>
                                                         <div class="small text-muted">@order.DeviceBrand @order.DeviceModel</div>
                                                     </td>
-                                                    <td class="py-3 border-bottom-0" data-order="@order.Customer?.FirstName @order.Customer?.LastName">
+                                                    <td class="py-3 border-bottom-0" data-order="@($"{order.Customer?.FirstName} {order.Customer?.LastName}".Trim())">
                                                         <div class="fw-medium text-dark">@order.Customer?.FirstName @order.Customer?.LastName</div>
                                                     </td>
                                                     <td class="py-3 border-bottom-0" data-order="@due">
@@ -216,7 +216,7 @@
                                             <th class="py-3 border-0">Заказ</th>
                                             <th class="py-3 border-0">Сумма</th>
                                             <th class="py-3 border-0">Статус</th>
-                                            <th class="pe-4 py-3 border-0 text-end">Действия</th>
+                                            <th class="pe-4 py-3 border-0 text-end no-sort">Действия</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -294,7 +294,7 @@
                                             <th class="py-3 border-0">Метод</th>
                                             <th class="py-3 border-0">Сумма</th>
                                             <th class="py-3 border-0">Статус</th>
-                                            <th class="pe-4 py-3 border-0 text-end">Действия</th>
+                                            <th class="pe-4 py-3 border-0 text-end no-sort">Действия</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -310,7 +310,7 @@
                                                     Заказ #@item.OrderId
                                                 </a>
                                             </td>
-                                            <td class="py-3 border-bottom-0" data-order="@item.ServiceOrder?.Customer?.FirstName @item.ServiceOrder?.Customer?.LastName">
+                                            <td class="py-3 border-bottom-0" data-order="@($"{item.ServiceOrder?.Customer?.FirstName} {item.ServiceOrder?.Customer?.LastName}".Trim())">
                                                 <div class="fw-medium text-dark">@item.ServiceOrder?.Customer?.FirstName @item.ServiceOrder?.Customer?.LastName</div>
                                             </td>
                                             <td class="py-3 border-bottom-0" data-order="@item.PaymentMethod">
