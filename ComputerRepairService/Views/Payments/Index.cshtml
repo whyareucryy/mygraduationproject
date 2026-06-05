@@ -148,13 +148,13 @@
                             else
                             {
                                 <div class="table-responsive">
-                                    <table class="table table-hover align-middle mb-0">
+                                    <table class="table table-hover align-middle mb-0 data-table w-100">
                                         <thead class="table-light text-muted small text-uppercase">
                                             <tr>
-                                                <th class="ps-4 py-3 border-0">Заказ</th>
-                                                <th class="py-3 border-0">Клиент</th>
-                                                <th class="py-3 border-0">К оплате</th>
-                                                <th class="pe-4 py-3 border-0 text-end">Действия</th>
+                                            <th class="ps-4 py-3 border-0">Заказ</th>
+                                            <th class="py-3 border-0">Клиент</th>
+                                            <th class="py-3 border-0">К оплате</th>
+                                            <th class="pe-4 py-3 border-0 text-end">Действия</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -162,14 +162,14 @@
                                             {
                                                 var due = OrderPaymentHelper.GetAmountDue(order);
                                                 <tr>
-                                                    <td class="ps-4 py-3 border-bottom-0">
+                                                    <td class="ps-4 py-3 border-bottom-0" data-order="@order.OrderId">
                                                         <div class="fw-bold text-dark">Заказ #@order.OrderId</div>
                                                         <div class="small text-muted">@order.DeviceBrand @order.DeviceModel</div>
                                                     </td>
-                                                    <td class="py-3 border-bottom-0">
+                                                    <td class="py-3 border-bottom-0" data-order="@order.Customer?.FirstName @order.Customer?.LastName">
                                                         <div class="fw-medium text-dark">@order.Customer?.FirstName @order.Customer?.LastName</div>
                                                     </td>
-                                                    <td class="py-3 border-bottom-0">
+                                                    <td class="py-3 border-bottom-0" data-order="@due">
                                                         <span class="badge bg-warning bg-opacity-10 text-dark border border-warning border-opacity-50 rounded-pill px-3 py-2 fs-6 fw-bold">
                                                             @due.ToString("C0")
                                                         </span>
@@ -209,28 +209,28 @@
                             </div>
                             <div class="card-body p-0">
                                 <div class="table-responsive">
-                                    <table class="table table-hover align-middle mb-0">
+                                    <table class="table table-hover align-middle mb-0 data-table w-100">
                                         <thead class="table-light text-muted small text-uppercase">
                                             <tr>
-                                                <th class="ps-4 py-3 border-0">ID Платежа</th>
-                                                <th class="py-3 border-0">Заказ</th>
-                                                <th class="py-3 border-0">Сумма</th>
-                                                <th class="py-3 border-0">Статус</th>
-                                                <th class="pe-4 py-3 border-0 text-end">Действия</th>
+                                            <th class="ps-4 py-3 border-0">ID Платежа</th>
+                                            <th class="py-3 border-0">Заказ</th>
+                                            <th class="py-3 border-0">Сумма</th>
+                                            <th class="py-3 border-0">Статус</th>
+                                            <th class="pe-4 py-3 border-0 text-end">Действия</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             @foreach (var item in activePayments)
                                             {
                                                 <tr>
-                                                    <td class="ps-4 py-3 border-bottom-0 fw-medium">#@item.PaymentId</td>
-                                                    <td class="py-3 border-bottom-0">
+                                                    <td class="ps-4 py-3 border-bottom-0 fw-medium" data-order="@item.PaymentId">#@item.PaymentId</td>
+                                                    <td class="py-3 border-bottom-0" data-order="@item.OrderId">
                                                         <a asp-controller="ServiceOrders" asp-action="Details" asp-route-id="@item.OrderId" class="text-decoration-none fw-medium text-primary">
                                                             Заказ #@item.OrderId
                                                         </a>
                                                     </td>
-                                                    <td class="py-3 border-bottom-0 fw-bold text-dark">@item.Amount.ToString("C")</td>
-                                                    <td class="py-3 border-bottom-0">
+                                                    <td class="py-3 border-bottom-0 fw-bold text-dark" data-order="@item.Amount">@item.Amount.ToString("C")</td>
+                                                    <td class="py-3 border-bottom-0" data-order="@item.Status">
                                                         @if (item.Status == "Pending")
                                                         {
                                                             <span class="badge bg-warning text-dark rounded-pill">Ожидание</span>
@@ -288,32 +288,32 @@
                             <table class="table table-hover align-middle mb-0 data-table w-100">
                                 <thead class="table-light text-muted small text-uppercase">
                                     <tr>
-                                        <th class="ps-4 py-3 border-0">Дата / ID</th>
-                                        <th class="py-3 border-0">Заказ</th>
-                                        <th class="py-3 border-0">Клиент</th>
-                                        <th class="py-3 border-0">Метод</th>
-                                        <th class="py-3 border-0">Сумма</th>
-                                        <th class="py-3 border-0">Статус</th>
-                                        <th class="pe-4 py-3 border-0 text-end">Действия</th>
+                                            <th class="ps-4 py-3 border-0">Дата / ID</th>
+                                            <th class="py-3 border-0">Заказ</th>
+                                            <th class="py-3 border-0">Клиент</th>
+                                            <th class="py-3 border-0">Метод</th>
+                                            <th class="py-3 border-0">Сумма</th>
+                                            <th class="py-3 border-0">Статус</th>
+                                            <th class="pe-4 py-3 border-0 text-end">Действия</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach (var item in completedPayments)
                                     {
                                         <tr>
-                                            <td class="ps-4 py-3 border-bottom-0">
+                                            <td class="ps-4 py-3 border-bottom-0" data-order="@item.PaymentDate.Ticks">
                                                 <div class="fw-medium text-dark mb-1">@item.PaymentDate.ToString("dd.MM.yyyy HH:mm")</div>
                                                 <div class="small text-muted">Транзакция #@item.PaymentId</div>
                                             </td>
-                                            <td class="py-3 border-bottom-0">
+                                            <td class="py-3 border-bottom-0" data-order="@item.OrderId">
                                                 <a asp-controller="ServiceOrders" asp-action="Details" asp-route-id="@item.OrderId" class="text-decoration-none fw-medium text-primary">
                                                     Заказ #@item.OrderId
                                                 </a>
                                             </td>
-                                            <td class="py-3 border-bottom-0">
+                                            <td class="py-3 border-bottom-0" data-order="@item.ServiceOrder?.Customer?.FirstName @item.ServiceOrder?.Customer?.LastName">
                                                 <div class="fw-medium text-dark">@item.ServiceOrder?.Customer?.FirstName @item.ServiceOrder?.Customer?.LastName</div>
                                             </td>
-                                            <td class="py-3 border-bottom-0">
+                                            <td class="py-3 border-bottom-0" data-order="@item.PaymentMethod">
                                                 @switch (item.PaymentMethod)
                                                 {
                                                     case "Cash":
@@ -330,8 +330,8 @@
                                                         break;
                                                 }
                                             </td>
-                                            <td class="py-3 border-bottom-0 fw-bold text-dark">@item.Amount.ToString("C")</td>
-                                            <td class="py-3 border-bottom-0">
+                                            <td class="py-3 border-bottom-0 fw-bold text-dark" data-order="@item.Amount">@item.Amount.ToString("C")</td>
+                                            <td class="py-3 border-bottom-0" data-order="@item.Status">
                                                 @if (item.Status == "Completed")
                                                 {
                                                     <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-2 py-1"><i class="fas fa-check me-1"></i>Завершен</span>
@@ -376,24 +376,4 @@
 }
 
 @section Scripts {
-    <script>
-        $(document).ready(function() {
-            // Инициализация data-table (с фильтрацией, пагинацией и поиском)
-            if ($.fn.DataTable.isDataTable('.data-table')) {
-                $('.data-table').DataTable().destroy();
-            }
-            
-            $('.data-table').DataTable({
-                language: {
-                    url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/ru.json'
-                },
-                responsive: true,
-                pageLength: 25,
-                order: [[ 0, "desc" ]], // сортировка по первому столбцу (Дата) по убыванию
-                dom: "<'row mb-3'<'col-sm-12 col-md-6 d-flex align-items-center justify-content-start'l><'col-sm-12 col-md-6 d-flex align-items-center justify-content-end'f>>" +
-                     "<'row'<'col-sm-12'tr>>" +
-                     "<'row mt-3'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>"
-            });
-        });
-    </script>
 }

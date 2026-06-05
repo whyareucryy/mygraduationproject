@@ -180,42 +180,42 @@
         <div class="card-body p-4">
             @if (Model.Any())
             {
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0 data-table w-100" id="ordersTable">
+                                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 data-table w-100">
                         <thead class="table-light text-muted small text-uppercase">
                             <tr>
-                                <th class="ps-4 border-0">Заказ</th>
-                                <th class="border-0">Клиент</th>
-                                <th class="border-0">Устройство</th>
-                                <th class="border-0">Статус</th>
-                                <th class="border-0">Приоритет</th>
-                                <th class="border-0">Сумма</th>
-                                <th class="pe-4 border-0 text-end">Действия</th>
+                                            <th class="ps-4 border-0">Заказ</th>
+                                            <th class="border-0">Клиент</th>
+                                            <th class="border-0">Устройство</th>
+                                            <th class="border-0">Статус</th>
+                                            <th class="border-0">Приоритет</th>
+                                            <th class="border-0">Сумма</th>
+                                            <th class="pe-4 border-0 text-end">Действия</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var item in Model.OrderByDescending(o => o.CreatedDate))
                             {
                                 <tr data-status="@item.OrderStatus?.StatusName?.ToLower()" data-priority="@item.Priority" data-date="@item.CreatedDate.ToString("yyyy-MM-dd")">
-                                    <td class="ps-4 border-bottom-0">
+                                    <td class="ps-4 border-bottom-0" data-order="@item.OrderId">
                                         <div class="fw-bold text-dark">#@item.OrderId</div>
                                         <div class="small text-muted">@item.CreatedDate.ToString("dd.MM.yy HH:mm")</div>
                                     </td>
-                                    <td class="border-bottom-0">
+                                    <td class="border-bottom-0" data-order="@item.Customer?.FirstName @item.Customer?.LastName">
                                         @if (item.Customer != null)
                                         {
                                             <div class="fw-medium text-dark">@item.Customer.FirstName @item.Customer.LastName</div>
                                             <div class="small text-muted"><i class="fas fa-phone-alt me-1"></i>@item.Customer.Phone</div>
                                         }
                                     </td>
-                                    <td class="border-bottom-0">
+                                    <td class="border-bottom-0" data-order="@item.DeviceBrand @item.DeviceModel">
                                         <div class="fw-medium text-dark">@item.DeviceBrand @item.DeviceModel</div>
                                         <span class="badge border" style="background-color: var(--bg-color); color: var(--text-main);">@(item.DeviceType?.TypeName ?? "Устройство")</span>
                                     </td>
-                                    <td class="border-bottom-0">
+                                    <td class="border-bottom-0" data-order="@item.OrderStatus?.StatusName">
                                         <partial name="_OrderStatusBadge" model="item.OrderStatus?.StatusName" />
                                     </td>
-                                    <td class="border-bottom-0">
+                                    <td class="border-bottom-0" data-order="@item.Priority">
                                         @{
                                             var priorityClass = item.Priority switch {
                                                 1 => "bg-success bg-opacity-10 text-success border border-success border-opacity-25",
@@ -229,7 +229,7 @@
                                         }
                                         <span class="badge rounded-pill px-2 py-1 @priorityClass">@priorityText</span>
                                     </td>
-                                    <td class="border-bottom-0">
+                                    <td class="border-bottom-0" data-order="@item.TotalCost">
                                         @if (item.TotalCost > 0)
                                         {
                                             <span class="fw-bold text-success">@item.TotalCost.ToString("C0")</span>
@@ -292,16 +292,6 @@
             }
             
             var table = $('.data-table').DataTable({
-                language: {
-                    url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/ru.json'
-                },
-                responsive: true,
-                pageLength: 25,
-                order: [[ 0, "desc" ]],
-                dom: "<'row mb-3'<'col-sm-12 col-md-6 d-flex align-items-center justify-content-start'l><'col-sm-12 col-md-6 d-flex align-items-center justify-content-end'f>>" +
-                     "<'row'<'col-sm-12'tr>>" +
-                     "<'row mt-3'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>"
-            });
 
             function applyCustomFilters() {
                 var status = $('#statusFilter').val();

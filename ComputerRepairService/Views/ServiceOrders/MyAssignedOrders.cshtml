@@ -167,25 +167,19 @@
             <div class="tab-pane fade show active" id="active-orders" role="tabpanel" aria-labelledby="active-tab">
                 <div class="card border-0 shadow-sm rounded-4">
                     <div class="card-body p-4">
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0 data-table w-100" id="activeOrdersTable">
-                                <thead class="table-light text-muted small text-uppercase">
-                                    <tr>
-                                        <th class="ps-4 border-0">Заказ / Устройство</th>
-                                        <th class="border-0">Клиент</th>
-                                        <th class="border-0">Проблема</th>
-                                        <th class="border-0">Статус</th>
-                                        <th class="border-0">Приоритет</th>
-                                        <th class="pe-4 border-0 text-end">Действия</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @if (!activeOrdersList.Any())
-                                    {
-                                        <tr>
-                                            <td colspan="6" class="text-center py-5 text-muted">Нет актуальных заказов</td>
-                                        </tr>
-                                    }
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0 data-table w-100">
+                                        <thead class="table-light text-muted small text-uppercase">
+                                            <tr>
+                                            <th class="ps-4 border-0">Заказ / Устройство</th>
+                                            <th class="border-0">Клиент</th>
+                                            <th class="border-0">Проблема</th>
+                                            <th class="border-0">Статус</th>
+                                            <th class="border-0">Приоритет</th>
+                                            <th class="pe-4 border-0 text-end">Действия</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
                                     @foreach (var order in activeOrdersList)
                                     {
                                         var statusName = order.OrderStatus?.StatusName ?? "Неизвестно";
@@ -195,28 +189,28 @@
                                         var customerName = order.Customer != null ? $"{order.Customer.FirstName} {order.Customer.LastName}".Trim() : "Не указан";
 
                                         <tr>
-                                            <td class="ps-4 border-bottom-0">
+                                            <td class="ps-4 border-bottom-0" data-order="@order.OrderId">
                                                 <div class="fw-bold text-dark">#@order.OrderId</div>
                                                 <div class="small text-muted text-truncate" style="max-width: 150px;" title="@deviceType: @deviceLabel">
                                                     @deviceType: @deviceLabel
                                                 </div>
                                             </td>
-                                            <td class="border-bottom-0">
+                                            <td class="border-bottom-0" data-order="@customerName">
                                                 <div class="fw-medium text-dark">@customerName</div>
                                                 @if (!string.IsNullOrWhiteSpace(order.Customer?.Phone))
                                                 {
                                                     <div class="small text-muted"><i class="fas fa-phone-alt me-1"></i>@order.Customer.Phone</div>
                                                 }
                                             </td>
-                                            <td class="border-bottom-0">
+                                            <td class="border-bottom-0" data-order="@problemText">
                                                 <div class="text-truncate small" style="max-width: 250px;" title="@problemText">
                                                     @problemText
                                                 </div>
                                             </td>
-                                            <td class="border-bottom-0">
+                                            <td class="border-bottom-0" data-order="@order.StatusId">
                                                 <partial name="_OrderStatusBadge" model="statusName" />
                                             </td>
-                                            <td class="border-bottom-0">
+                                            <td class="border-bottom-0" data-order="@order.Priority">
                                                 <span class="badge rounded-pill px-2 py-1 @GetPriorityClass(order.Priority)">@GetPriorityText(order.Priority)</span>
                                             </td>
                                             <td class="pe-4 border-bottom-0 text-end">
@@ -254,24 +248,18 @@
             <div class="tab-pane fade" id="completed-orders" role="tabpanel" aria-labelledby="completed-tab">
                 <div class="card border-0 shadow-sm rounded-4 opacity-75">
                     <div class="card-body p-4">
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0 data-table w-100" id="completedOrdersTable">
+                            <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0 data-table w-100">
                                 <thead class="table-light text-muted small text-uppercase">
                                     <tr>
-                                        <th class="ps-4 border-0">Заказ</th>
-                                        <th class="border-0">Устройство</th>
-                                        <th class="border-0">Статус</th>
-                                        <th class="border-0">Даты</th>
-                                        <th class="pe-4 border-0 text-end">Действия</th>
+                                            <th class="ps-4 border-0">Заказ</th>
+                                            <th class="border-0">Устройство</th>
+                                            <th class="border-0">Статус</th>
+                                            <th class="border-0">Даты</th>
+                                            <th class="pe-4 border-0 text-end">Действия</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @if (!completedOrdersList.Any())
-                                    {
-                                        <tr>
-                                            <td colspan="5" class="text-center py-5 text-muted">Нет завершенных заказов</td>
-                                        </tr>
-                                    }
                                     @foreach (var order in completedOrdersList)
                                     {
                                         var statusName = order.OrderStatus?.StatusName ?? "Неизвестно";
@@ -279,18 +267,18 @@
                                         var customerName = order.Customer != null ? $"{order.Customer.FirstName} {order.Customer.LastName}".Trim() : "Не указан";
 
                                         <tr>
-                                            <td class="ps-4 border-bottom-0">
+                                            <td class="ps-4 border-bottom-0" data-order="@order.OrderId">
                                                 <div class="fw-bold text-dark">#@order.OrderId</div>
                                                 <div class="small text-muted">@customerName</div>
                                             </td>
-                                            <td class="border-bottom-0">
+                                            <td class="border-bottom-0" data-order="@order.DeviceBrand @order.DeviceModel">
                                                 <div class="fw-medium text-dark">@order.DeviceBrand @order.DeviceModel</div>
                                                 <span class="badge border" style="background-color: var(--bg-color); color: var(--text-main);">@deviceType</span>
                                             </td>
-                                            <td class="border-bottom-0">
+                                            <td class="border-bottom-0" data-order="@order.StatusId">
                                                 <partial name="_OrderStatusBadge" model="statusName" />
                                             </td>
-                                            <td class="border-bottom-0">
+                                            <td class="border-bottom-0" data-order="@order.CreatedDate.Ticks">
                                                 <div class="small text-muted">Созд: @order.CreatedDate.ToString("dd.MM.yy")</div>
                                                 <div class="small text-dark fw-medium">Зав: @(order.ActualCompletionDate?.ToString("dd.MM.yy") ?? "—")</div>
                                             </td>
@@ -320,25 +308,9 @@
 @section Scripts {
     <script>
         $(document).ready(function() {
-            if ($.fn.DataTable.isDataTable('.data-table')) {
-                $('.data-table').DataTable().destroy();
-            }
-            
-            $('.data-table').DataTable({
-                language: {
-                    url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/ru.json'
-                },
-                responsive: true,
-                pageLength: 25,
-                order: [[ 0, "desc" ]],
-                dom: "<'row mb-3'<'col-sm-12 col-md-6 d-flex align-items-center justify-content-start'l><'col-sm-12 col-md-6 d-flex align-items-center justify-content-end'f>>" +
-                     "<'row'<'col-sm-12'tr>>" +
-                     "<'row mt-3'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>"
-            });
+            setTimeout(function () {
+                $('.alert').alert('close');
+            }, 5000);
         });
-
-        setTimeout(function () {
-            $('.alert').alert('close');
-        }, 5000);
     </script>
 }

@@ -47,12 +47,12 @@
                     <table class="table table-hover align-middle mb-0 data-table w-100">
                         <thead class="table-light text-muted small text-uppercase">
                             <tr>
-                                <th class="ps-4 border-0">Артикул / Название</th>
-                                <th class="border-0">Категория</th>
-                                <th class="border-0">Остаток</th>
-                                <th class="border-0">Цена за ед.</th>
-                                <th class="border-0">Поставщик</th>
-                                <th class="pe-4 border-0 text-end">Действия</th>
+                                            <th class="ps-4 border-0">Артикул / Название</th>
+                                            <th class="border-0">Категория</th>
+                                            <th class="border-0">Остаток</th>
+                                            <th class="border-0">Цена за ед.</th>
+                                            <th class="border-0">Поставщик</th>
+                                            <th class="pe-4 border-0 text-end">Действия</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -60,19 +60,19 @@
                             {
                                 var stockStatus = item.QuantityInStock <= item.ReorderLevel ? "danger" : (item.QuantityInStock <= item.ReorderLevel * 2 ? "warning" : "success");
                                 <tr>
-                                    <td class="ps-4 border-bottom-0">
+                                    <td class="ps-4 border-bottom-0" data-order="@item.PartName">
                                         <div class="fw-bold text-dark">@item.PartName</div>
                                         <div class="small text-muted font-monospace">#@item.PartId</div>
                                     </td>
-                                    <td class="border-bottom-0">@(item.PartCategory?.CategoryName ?? "—")</td>
-                                    <td class="border-bottom-0">
+                                    <td class="border-bottom-0" data-order="@item.PartCategory?.CategoryName">@(item.PartCategory?.CategoryName ?? "—")</td>
+                                    <td class="border-bottom-0" data-order="@item.QuantityInStock">
                                         <div class="d-flex align-items-center">
                                             <span class="badge bg-@stockStatus bg-opacity-10 text-@stockStatus border border-@stockStatus border-opacity-25 rounded-pill px-2 py-1 fs-6 me-2">@item.QuantityInStock</span>
                                             @if(stockStatus == "danger") { <i class="fas fa-exclamation-circle text-danger" title="Ниже порога (@item.ReorderLevel)"></i> }
                                         </div>
                                     </td>
-                                    <td class="border-bottom-0 fw-medium">@item.UnitPrice.ToString("C0")</td>
-                                    <td class="border-bottom-0 small">@(string.IsNullOrWhiteSpace(item.SupplierInfo) ? "—" : item.SupplierInfo)</td>
+                                    <td class="border-bottom-0 fw-medium" data-order="@item.UnitPrice">@item.UnitPrice.ToString("C0")</td>
+                                    <td class="border-bottom-0 small" data-order="@item.SupplierInfo">@(string.IsNullOrWhiteSpace(item.SupplierInfo) ? "—" : item.SupplierInfo)</td>
                                     <td class="pe-4 border-bottom-0 text-end">
                                         <div class="btn-group shadow-sm rounded-pill">
                                             <a asp-action="Restock" asp-route-id="@item.PartId" class="btn btn-light btn-sm text-success px-3" title="Пополнить">
@@ -113,23 +113,4 @@
 </div>
 
 @section Scripts {
-    <script>
-        $(document).ready(function() {
-            if ($.fn.DataTable.isDataTable('.data-table')) {
-                $('.data-table').DataTable().destroy();
-            }
-            
-            $('.data-table').DataTable({
-                language: {
-                    url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/ru.json'
-                },
-                responsive: true,
-                pageLength: 25,
-                order: [[ 0, "asc" ]],
-                dom: "<'row mb-3'<'col-sm-12 col-md-6 d-flex align-items-center justify-content-start'l><'col-sm-12 col-md-6 d-flex align-items-center justify-content-end'f>>" +
-                     "<'row'<'col-sm-12'tr>>" +
-                     "<'row mt-3'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>"
-            });
-        });
-    </script>
 }
